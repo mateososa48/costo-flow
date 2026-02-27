@@ -1,0 +1,7 @@
+{
+  "_comment": "Maps supplier names (case-insensitive) to their fixed Concepto and Cuenta P&L values. Add all known suppliers here. Keys should match exactly how they appear on invoices (the lookup is case-insensitive). Values must match the dropdown lists in your Google Sheets exactly.",
+  "EJEMPLO PROVEEDOR SA DE CV": {
+    "concepto": "Alimentos y Bebidas",
+    "cuentaPnl": "Costo de Ventas"
+  }
+}
