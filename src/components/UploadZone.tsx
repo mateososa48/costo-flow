@@ -21,6 +21,46 @@ const ALLOWED_TYPES = [
   "image/heif",
 ];
 
+const IMAGE_MAX_DIMENSION = 1600; // px — keeps quality high while halving most phone photos
+const IMAGE_QUALITY = 0.85;
+
+/**
+ * Resize + compress an image file client-side using Canvas.
+ * Returns the original file unchanged if it's already small or not a raster image.
+ */
+async function compressImage(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type === "image/heic" || file.type === "image/heif") {
+    return file; // HEIC can't be decoded by Canvas; return as-is
+  }
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, IMAGE_MAX_DIMENSION / Math.max(img.width, img.height));
+      // Skip compression if image is already small enough
+      if (scale === 1 && file.size < 800 * 1024) {
+        resolve(file);
+        return;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return; }
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        IMAGE_QUALITY
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -51,10 +91,14 @@ export default function UploadZone({ files, onChange }: UploadZoneProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback(
-    (incoming: FileList | File[]) => {
+    async (incoming: FileList | File[]) => {
       const arr = Array.from(incoming);
       const valid = arr.filter((f) => ALLOWED_TYPES.includes(f.type));
-      const newFiles: UploadFile[] = valid.map((file) => ({
+      // Compress images before adding
+      const processed = await Promise.all(
+        valid.map((f) => f.type.startsWith("image/") ? compressImage(f) : Promise.resolve(f))
+      );
+      const newFiles: UploadFile[] = processed.map((file) => ({
         file,
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       }));
@@ -133,7 +177,7 @@ export default function UploadZone({ files, onChange }: UploadZoneProps) {
           </p>
         </div>
 
-        {/* Hidden file inputs */}
+        {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -145,22 +189,27 @@ export default function UploadZone({ files, onChange }: UploadZoneProps) {
         />
       </div>
 
-      {/* Camera button (primarily for mobile) */}
+      {/* Mobile: scan / photo button — no capture= so iOS shows full picker including document scanner */}
       <label
-        htmlFor="camera-input"
-        className="w-full py-2.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] text-sm flex items-center justify-center gap-2 hover:border-[var(--gold-dim)] hover:text-[var(--text)] transition-all duration-150 active:scale-[0.99] cursor-pointer select-none"
+        htmlFor="mobile-input"
+        className="w-full py-2.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] text-sm flex flex-col items-center justify-center gap-0.5 hover:border-[var(--gold-dim)] hover:text-[var(--text)] transition-all duration-150 active:scale-[0.99] cursor-pointer select-none"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-          <circle cx="12" cy="13" r="4" />
-        </svg>
-        Tomar foto con la cámara
+        <span className="flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+          Escanear o fotografiar factura
+        </span>
+        <span className="text-[10px] text-[var(--text-dim)] leading-tight">
+          En iPhone: elige "Escanear documentos" para mejor calidad
+        </span>
       </label>
       <input
-        id="camera-input"
+        id="mobile-input"
         type="file"
-        accept="image/*"
-        capture="environment"
+        accept=".pdf,image/jpeg,image/png,image/webp,image/heic,image/heif"
+        multiple
         className="hidden"
         onChange={(e) => e.target.files && addFiles(e.target.files)}
       />
