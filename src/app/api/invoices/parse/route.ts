@@ -66,6 +66,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         extraction = await extractInvoiceFromImage(base64, file.type);
       }
 
+      // Validate extraction — model may return empty object for unreadable images
+      if (!extraction.supplier || !extraction.invoiceDate || extraction.total === undefined) {
+        throw new Error("No se pudieron extraer los datos. Verifica que la imagen muestre una factura legible.");
+      }
+
       // Look up supplier mapping
       const mapping = lookupSupplier(extraction.supplier);
 
