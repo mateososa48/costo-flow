@@ -50,12 +50,12 @@ const RESPONSE_SCHEMA = {
   properties: {
     invoiceDate: { type: "string", description: "Invoice date in YYYY-MM-DD format" },
     supplier: { type: "string", description: "Supplier/vendor full name" },
-    invoiceNumber: { type: ["string", "null"], description: "Invoice or folio number" },
+    invoiceNumber: { anyOf: [{ type: "string" }, { type: "null" }], description: "Invoice or folio number" },
     importe: { type: "number", description: "Net subtotal before IVA" },
     iva: { type: "number", description: "IVA / tax amount" },
     total: { type: "number", description: "Total including IVA" },
-    concepto: { type: ["string", "null"], description: "Best matching concepto from the valid list" },
-    cuentaPnl: { type: ["string", "null"], description: "Best matching cuentaPnl from the valid list" },
+    concepto: { anyOf: [{ type: "string" }, { type: "null" }], description: "Best matching concepto from the valid list" },
+    cuentaPnl: { anyOf: [{ type: "string" }, { type: "null" }], description: "Best matching cuentaPnl from the valid list" },
     extractionConfidence: { type: "number", description: "Confidence 0.0-1.0" },
   },
   required: ["invoiceDate", "supplier", "invoiceNumber", "importe", "iva", "total", "concepto", "cuentaPnl", "extractionConfidence"],
@@ -97,7 +97,9 @@ export async function extractInvoiceFromImage(
     max_completion_tokens: 1024,
   });
 
-  const raw = response.choices[0]?.message?.content || "{}";
+  const message = response.choices[0]?.message;
+  if (message?.refusal) throw new Error(`Model refused to extract: ${message.refusal}`);
+  const raw = message?.content || "{}";
   return JSON.parse(raw) as LLMExtraction;
 }
 
@@ -127,6 +129,8 @@ export async function extractInvoiceFromText(text: string): Promise<LLMExtractio
     max_completion_tokens: 1024,
   });
 
-  const raw = response.choices[0]?.message?.content || "{}";
+  const message = response.choices[0]?.message;
+  if (message?.refusal) throw new Error(`Model refused to extract: ${message.refusal}`);
+  const raw = message?.content || "{}";
   return JSON.parse(raw) as LLMExtraction;
 }
