@@ -45,6 +45,8 @@ export function invoiceToSheetRow(invoice: ExtractedInvoice): string[] {
 
 /**
  * Append a single row to the "Informe de Gastos" tab in a spreadsheet.
+ * Finds the first empty row in column A starting from row 8 (the sheet has
+ * pre-formatted formula rows below the header that fool the append API).
  * Returns the spreadsheet URL.
  */
 export async function appendToSheet(
@@ -54,11 +56,22 @@ export async function appendToSheet(
   const sheets = getSheetsClient();
   const row = invoiceToSheetRow(invoice);
 
-  await sheets.spreadsheets.values.append({
+  // Read column A from row 8 downward to find the first empty cell
+  const readResponse = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${SHEET_TAB}!A:I`,
+    range: `${SHEET_TAB}!A8:A`,
+  });
+
+  const colA = (readResponse.data.values ?? []) as string[][];
+  // Find the first index where A is blank
+  let emptyIndex = colA.findIndex((r) => !r[0] || r[0].trim() === "");
+  if (emptyIndex === -1) emptyIndex = colA.length; // all filled — go to next row
+  const targetRow = 8 + emptyIndex; // 1-indexed sheet row
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `${SHEET_TAB}!A${targetRow}:I${targetRow}`,
     valueInputOption: "USER_ENTERED",
-    insertDataOption: "INSERT_ROWS",
     requestBody: { values: [row] },
   });
 
