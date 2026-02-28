@@ -49,7 +49,6 @@ function FileIcon({ mimeType }: { mimeType: string }) {
 export default function UploadZone({ files, onChange }: UploadZoneProps) {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback(
     (incoming: FileList | File[]) => {
@@ -147,25 +146,25 @@ export default function UploadZone({ files, onChange }: UploadZoneProps) {
       </div>
 
       {/* Camera button (primarily for mobile) */}
-      <button
-        type="button"
-        onClick={(e) => { e.preventDefault(); cameraInputRef.current?.click(); }}
-        className="w-full py-2.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] text-sm flex items-center justify-center gap-2 hover:border-[var(--gold-dim)] hover:text-[var(--text)] transition-all duration-150 active:scale-[0.99]"
+      <label
+        htmlFor="camera-input"
+        className="w-full py-2.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] text-sm flex items-center justify-center gap-2 hover:border-[var(--gold-dim)] hover:text-[var(--text)] transition-all duration-150 active:scale-[0.99] cursor-pointer select-none"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
           <circle cx="12" cy="13" r="4" />
         </svg>
         Tomar foto con la cámara
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={(e) => e.target.files && addFiles(e.target.files)}
-        />
-      </button>
+      </label>
+      <input
+        id="camera-input"
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => e.target.files && addFiles(e.target.files)}
+      />
 
       {/* File list */}
       {files.length > 0 && (
