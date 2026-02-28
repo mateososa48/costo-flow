@@ -94,7 +94,7 @@ export async function extractInvoiceFromImage(
         ],
       },
     ],
-    max_completion_tokens: 1024,
+    max_completion_tokens: 4096,
   });
 
   const message = response.choices[0]?.message;
@@ -127,7 +127,7 @@ export async function extractInvoiceFromText(text: string): Promise<LLMExtractio
         content: `Extract all invoice fields from the following invoice text:\n\n${text}`,
       },
     ],
-    max_completion_tokens: 1024,
+    max_completion_tokens: 4096,
   });
 
   const message = response.choices[0]?.message;
