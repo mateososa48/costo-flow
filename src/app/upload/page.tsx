@@ -112,6 +112,11 @@ export default function UploadPage() {
 
       // Store in sessionStorage and navigate to review
       sessionStorage.setItem("invoices", JSON.stringify(data.invoices));
+
+      // If some files failed, stay on page so user sees the errors.
+      // The "Continue" button (shown when parseErrors exist) will navigate.
+      if (data.errors && data.errors.length > 0) return;
+
       router.push("/review");
     } catch {
       setError("Error de conexión. Intenta de nuevo.");
@@ -177,15 +182,21 @@ export default function UploadPage() {
 
         {/* Parse errors */}
         {parseErrors.length > 0 && (
-          <div className="rounded-[var(--radius)] border border-red-800/40 bg-[var(--danger-dim)] p-4 space-y-2 animate-fade-up">
+          <div className="rounded-[var(--radius)] border border-red-800/40 bg-[var(--danger-dim)] p-4 space-y-3 animate-fade-up">
             <p className="text-sm font-medium text-red-400">
-              {parseErrors.length} archivo{parseErrors.length !== 1 ? "s" : ""} con error:
+              {parseErrors.length} archivo{parseErrors.length !== 1 ? "s" : ""} no se pudo procesar:
             </p>
             {parseErrors.map((e) => (
               <p key={e.filename} className="text-xs text-red-300">
                 <span className="font-mono">{e.filename}</span>: {e.error}
               </p>
             ))}
+            <button
+              onClick={() => router.push("/review")}
+              className="text-xs text-[var(--gold)] underline underline-offset-2 hover:opacity-80 transition-opacity"
+            >
+              Continuar con las facturas extraídas →
+            </button>
           </div>
         )}
 
