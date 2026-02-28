@@ -73,6 +73,8 @@ export async function extractInvoiceFromImage(
 
   const response = await client.beta.chat.completions.parse({
     model: config.openai.model,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    reasoning_effort: "minimal" as any,
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -112,6 +114,8 @@ export async function extractInvoiceFromText(text: string): Promise<LLMExtractio
 
   const response = await client.beta.chat.completions.parse({
     model: config.openai.model,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    reasoning_effort: "minimal" as any,
     response_format: {
       type: "json_schema",
       json_schema: {
