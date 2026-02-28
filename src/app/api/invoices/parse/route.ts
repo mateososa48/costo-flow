@@ -81,7 +81,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Validate extraction — model may return empty object for unreadable images
     if (!extraction.supplier || !extraction.invoiceDate || extraction.total === undefined) {
-      throw new Error(`DEBUG raw: ${JSON.stringify(extraction)}`);
+      throw new Error(`DEBUG: supplier="${extraction.supplier}" date="${extraction.invoiceDate}" total=${extraction.total}`);
     }
 
     // Look up supplier mapping

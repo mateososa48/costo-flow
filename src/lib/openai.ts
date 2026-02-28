@@ -97,10 +97,11 @@ export async function extractInvoiceFromImage(
     max_completion_tokens: 1024,
   });
 
-  const message = response.choices[0]?.message;
+  const choice = response.choices[0];
+  const message = choice?.message;
+  console.log("[openai] image finish_reason:", choice?.finish_reason, "content:", JSON.stringify(message?.content)?.slice(0,200), "refusal:", message?.refusal);
   if (message?.refusal) throw new Error(`Model refused to extract: ${message.refusal}`);
   const raw = message?.content || "{}";
-  console.log("[openai] image extraction raw:", raw.slice(0, 500));
   return JSON.parse(raw) as LLMExtraction;
 }
 
@@ -130,9 +131,10 @@ export async function extractInvoiceFromText(text: string): Promise<LLMExtractio
     max_completion_tokens: 1024,
   });
 
-  const message = response.choices[0]?.message;
+  const choice = response.choices[0];
+  const message = choice?.message;
+  console.log("[openai] text finish_reason:", choice?.finish_reason, "content:", JSON.stringify(message?.content)?.slice(0,200), "refusal:", message?.refusal);
   if (message?.refusal) throw new Error(`Model refused to extract: ${message.refusal}`);
   const raw = message?.content || "{}";
-  console.log("[openai] text extraction raw:", raw.slice(0, 500));
   return JSON.parse(raw) as LLMExtraction;
 }
