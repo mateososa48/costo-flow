@@ -13,8 +13,11 @@ export async function extractFromPdf(buffer: Buffer): Promise<PdfExtractionResul
   // Dynamic import so this is not bundled for Edge runtime
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
-  // Disable worker in Node.js environment
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+  // In Node.js (Vercel), pdfjs-dist v4 requires an explicit worker path.
+  // Setting workerSrc to "" causes "fake worker" to throw; use the actual file.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const workerPath: string = require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `file://${workerPath}`;
 
   const data = new Uint8Array(buffer);
   const pdfDoc = await pdfjsLib.getDocument({ data, useSystemFonts: true }).promise;
