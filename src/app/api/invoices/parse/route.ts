@@ -51,19 +51,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         continue;
       }
 
-      const buffer = Buffer.from(await file.arrayBuffer());
+      let imageBuffer = Buffer.from(await file.arrayBuffer());
       let extraction;
 
       if (file.type === "application/pdf") {
-        const pdfResult = await extractFromPdf(buffer);
+        const pdfResult = await extractFromPdf(imageBuffer);
         if (pdfResult.mode === "text") {
           extraction = await extractInvoiceFromText(pdfResult.text);
         } else {
           extraction = await extractInvoiceFromImage(pdfResult.base64, pdfResult.mimeType);
         }
       } else {
-        const base64 = buffer.toString("base64");
-        extraction = await extractInvoiceFromImage(base64, file.type);
+        // Server-side compression: resize any image > 1.5 MB to max 1600px JPEG.
+        // Handles HEIC and images that weren't compressed client-side.
+        const SIZE_LIMIT = 1.5 * 1024 * 1024;
+        if (imageBuffer.length > SIZE_LIMIT) {
+          try {
+            const { createCanvas, loadImage } = await import("@napi-rs/canvas");
+            const img = await loadImage(imageBuffer);
+            const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+            const canvas = createCanvas(
+              Math.round(img.width * scale),
+              Math.round(img.height * scale)
+            );
+            canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+            imageBuffer = Buffer.from(canvas.toBuffer("image/jpeg", 85));
+          } catch {
+            // If server-side compression fails, proceed with the original buffer
+          }
+        }
+        const base64 = imageBuffer.toString("base64");
+        extraction = await extractInvoiceFromImage(base64, "image/jpeg");
       }
 
       // Validate extraction — model may return empty object for unreadable images
@@ -83,8 +101,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         importe: extraction.importe,
         iva: extraction.iva,
         total: extraction.total,
-        concepto: mapping?.concepto ?? "",
-        cuentaPnl: mapping?.cuentaPnl ?? "",
+        concepto: mapping?.concepto ?? extraction.concepto ?? "",
+        cuentaPnl: mapping?.cuentaPnl ?? extraction.cuentaPnl ?? "",
         comments: "",
         extractionConfidence: extraction.extractionConfidence,
         extractionMethod: file.type === "application/pdf" ? "llm_text" : "llm_vision",
