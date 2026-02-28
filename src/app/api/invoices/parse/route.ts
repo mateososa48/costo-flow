@@ -81,7 +81,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Validate extraction — model may return empty object for unreadable images
     if (!extraction.supplier || !extraction.invoiceDate || extraction.total === undefined) {
-      throw new Error("No se pudieron extraer los datos. Verifica que la imagen muestre una factura legible.");
+      throw new Error(`DEBUG raw: ${JSON.stringify(extraction)}`);
     }
 
     // Look up supplier mapping
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return {
       id: uuidv4(),
-      restaurant,
+      restaurant: restaurant as Restaurant,
       invoiceDate: extraction.invoiceDate,
       supplier: extraction.supplier,
       invoiceNumber: extraction.invoiceNumber ?? undefined,
