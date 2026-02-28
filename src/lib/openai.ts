@@ -42,7 +42,10 @@ Fields:
 - cuentaPnl: pick the single best match from this list (null if none fit): ${cuentaPnlList}
 - extractionConfidence: your confidence in the extraction, 0.0 to 1.0
 
-Do NOT invent values. If importe is not explicitly shown, calculate as total - iva.
+Do NOT invent values. Read only what is explicitly printed on the invoice.
+- If IVA/tax is not shown on the invoice, set iva=0 and importe=total.
+- If importe is not shown but IVA is, calculate importe as total - iva.
+- Never assume or calculate IVA from a percentage if it is not explicitly printed.
 Return only the JSON object, no extra text.`;
 
 const RESPONSE_SCHEMA = {
