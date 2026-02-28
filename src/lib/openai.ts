@@ -24,9 +24,9 @@ const SYSTEM_PROMPT = `You are an expert invoice parser for a Mexican restaurant
 Extract the following fields from the invoice and return STRICT JSON.
 Currency is MXN unless otherwise stated.
 If you are uncertain about a value, provide your best estimate and set extractionConfidence lower.
-Date format must be YYYY-MM-DD.
+Mexican invoices use DD/MM/YYYY date format. Always return invoiceDate as YYYY-MM-DD.
 Fields:
-- invoiceDate: date on the invoice (YYYY-MM-DD)
+- invoiceDate: date on the invoice, converted to YYYY-MM-DD
 - supplier: full legal name of the supplier/vendor
 - invoiceNumber: invoice/folio number (null if not present)
 - importe: net subtotal amount (before IVA/tax)
