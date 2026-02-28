@@ -158,7 +158,6 @@ export default function UploadZone({ files, onChange }: UploadZoneProps) {
       </label>
       <input
         id="camera-input"
-        ref={cameraInputRef}
         type="file"
         accept="image/*"
         capture="environment"
