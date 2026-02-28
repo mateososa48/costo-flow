@@ -14,9 +14,12 @@ export async function extractFromPdf(buffer: Buffer): Promise<PdfExtractionResul
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
   // In Node.js (Vercel), pdfjs-dist v4 requires an explicit worker path.
-  // Setting workerSrc to "" causes "fake worker" to throw; use the actual file.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const workerPath: string = require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
+  // eval('require') bypasses webpack's static analysis so it doesn't try to
+  // bundle the ESM worker file at build time — it resolves at runtime instead.
+  // eslint-disable-next-line no-eval
+  const workerPath: string = (eval("require") as NodeRequire).resolve(
+    "pdfjs-dist/legacy/build/pdf.worker.mjs"
+  );
   pdfjsLib.GlobalWorkerOptions.workerSrc = `file://${workerPath}`;
 
   const data = new Uint8Array(buffer);
