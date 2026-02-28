@@ -71,7 +71,7 @@ export async function extractInvoiceFromImage(
 ): Promise<LLMExtraction> {
   const client = getClient();
 
-  const response = await client.chat.completions.create({
+  const response = await client.beta.chat.completions.parse({
     model: config.openai.model,
     response_format: {
       type: "json_schema",
@@ -97,12 +97,11 @@ export async function extractInvoiceFromImage(
     max_completion_tokens: 1024,
   });
 
-  const choice = response.choices[0];
-  const message = choice?.message;
-  console.log("[openai] image finish_reason:", choice?.finish_reason, "content:", JSON.stringify(message?.content)?.slice(0,200), "refusal:", message?.refusal);
+  const message = response.choices[0]?.message;
   if (message?.refusal) throw new Error(`Model refused to extract: ${message.refusal}`);
-  const raw = message?.content || "{}";
-  return JSON.parse(raw) as LLMExtraction;
+  // .parse() puts structured result in message.parsed; fall back to content for older models
+  const result = message?.parsed ?? (message?.content ? JSON.parse(message.content) : {});
+  return result as LLMExtraction;
 }
 
 /**
@@ -111,7 +110,7 @@ export async function extractInvoiceFromImage(
 export async function extractInvoiceFromText(text: string): Promise<LLMExtraction> {
   const client = getClient();
 
-  const response = await client.chat.completions.create({
+  const response = await client.beta.chat.completions.parse({
     model: config.openai.model,
     response_format: {
       type: "json_schema",
@@ -131,10 +130,8 @@ export async function extractInvoiceFromText(text: string): Promise<LLMExtractio
     max_completion_tokens: 1024,
   });
 
-  const choice = response.choices[0];
-  const message = choice?.message;
-  console.log("[openai] text finish_reason:", choice?.finish_reason, "content:", JSON.stringify(message?.content)?.slice(0,200), "refusal:", message?.refusal);
+  const message = response.choices[0]?.message;
   if (message?.refusal) throw new Error(`Model refused to extract: ${message.refusal}`);
-  const raw = message?.content || "{}";
-  return JSON.parse(raw) as LLMExtraction;
+  const result = message?.parsed ?? (message?.content ? JSON.parse(message.content) : {});
+  return result as LLMExtraction;
 }
