@@ -2,8 +2,8 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
-import { extractFromPdf } from "@/lib/pdf";
-import { extractInvoiceFromImage, extractInvoiceFromText } from "@/lib/openai";
+import { pdfToImage } from "@/lib/pdf";
+import { extractInvoiceFromImage } from "@/lib/openai";
 import { lookupSupplier } from "@/lib/supplier-mapping";
 import { getSession } from "@/lib/session";
 import type { ExtractedInvoice, Restaurant, ParseApiResponse } from "@/types";
@@ -50,12 +50,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     let extraction;
 
     if (file.type === "application/pdf") {
-      const pdfResult = await extractFromPdf(imageBuffer);
-      if (pdfResult.mode === "text") {
-        extraction = await extractInvoiceFromText(pdfResult.text);
-      } else {
-        extraction = await extractInvoiceFromImage(pdfResult.base64, pdfResult.mimeType);
-      }
+      const { base64, mimeType } = await pdfToImage(imageBuffer);
+      extraction = await extractInvoiceFromImage(base64, mimeType);
     } else {
       // Server-side compression: resize any image > 1.5 MB to max 1600px JPEG.
       // Handles HEIC and images that weren't compressed client-side.
@@ -100,7 +96,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       cuentaPnl: mapping?.cuentaPnl ?? extraction.cuentaPnl ?? "",
       comments: "",
       extractionConfidence: extraction.extractionConfidence,
-      extractionMethod: file.type === "application/pdf" ? "llm_text" : "llm_vision",
+      extractionMethod: "llm_vision",
     };
   }
 
