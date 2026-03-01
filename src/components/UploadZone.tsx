@@ -189,51 +189,25 @@ export default function UploadZone({ files, onChange }: UploadZoneProps) {
         />
       </div>
 
-      {/* Mobile buttons: camera + document scanner */}
-      <div className="grid grid-cols-2 gap-2">
-        {/* Direct camera */}
-        <label
-          htmlFor="camera-input"
-          className="py-2.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] text-sm flex flex-col items-center justify-center gap-1 hover:border-[var(--gold-dim)] hover:text-[var(--text)] transition-all duration-150 active:scale-[0.99] cursor-pointer select-none"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-            <circle cx="12" cy="13" r="4" />
-          </svg>
-          <span>Tomar foto</span>
-        </label>
-        <input
-          id="camera-input"
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={(e) => e.target.files && addFiles(e.target.files)}
-        />
-
-        {/* File picker — no capture, so iOS shows full picker including document scanner */}
-        <label
-          htmlFor="scanner-input"
-          className="py-2.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] text-sm flex flex-col items-center justify-center gap-1 hover:border-[var(--gold-dim)] hover:text-[var(--text)] transition-all duration-150 active:scale-[0.99] cursor-pointer select-none"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="5" y="2" width="14" height="20" rx="2" />
-            <path d="M9 7h6M9 11h6M9 15h4" />
-          </svg>
-          <span>Escanear doc.</span>
-        </label>
-        <input
-          id="scanner-input"
-          type="file"
-          accept=".pdf,image/jpeg,image/png,image/webp,image/heic,image/heif"
-          multiple
-          className="hidden"
-          onChange={(e) => e.target.files && addFiles(e.target.files)}
-        />
-      </div>
-      <p className="text-[10px] text-[var(--text-dim)] text-center -mt-1">
-        "Escanear doc." → abre la app Archivos → "Escanear documentos" para mejor calidad
-      </p>
+      {/* Mobile: camera button */}
+      <label
+        htmlFor="camera-input"
+        className="w-full py-2.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] text-sm flex items-center justify-center gap-2 hover:border-[var(--gold-dim)] hover:text-[var(--text)] transition-all duration-150 active:scale-[0.99] cursor-pointer select-none"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+        <span>Tomar foto</span>
+      </label>
+      <input
+        id="camera-input"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => e.target.files && addFiles(e.target.files)}
+      />
 
       {/* File list */}
       {files.length > 0 && (
