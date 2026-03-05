@@ -39,6 +39,7 @@ export type DropdownsResponse = {
   cuentaPnl: string[];
   restaurants: Array<{ value: Restaurant; label: string }>;
   adminNames: string[];
+  sheetRegistry: Record<string, string>;
 };
 
 export type ParseApiResponse = {

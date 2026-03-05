@@ -17,6 +17,20 @@ function getSheetsClient() {
   return google.sheets({ version: "v4", auth: getAuth() });
 }
 
+async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isRetryable = err instanceof Error &&
+        (err.message.includes("429") || err.message.includes("5") || err.message.includes("ECONNRESET"));
+      if (!isRetryable || attempt === retries - 1) throw err;
+      await new Promise((res) => setTimeout(res, 500 * 2 ** attempt));
+    }
+  }
+  throw new Error("Max retries exceeded");
+}
+
 /**
  * Format a yyyy-mm-dd date as dd/mm/yyyy (Spanish locale for Sheets).
  */
@@ -57,10 +71,10 @@ export async function appendToSheet(
   const row = invoiceToSheetRow(invoice);
 
   // Read column A from row 8 downward to find the first empty cell
-  const readResponse = await sheets.spreadsheets.values.get({
+  const readResponse = await withRetry(() => sheets.spreadsheets.values.get({
     spreadsheetId,
     range: `${SHEET_TAB}!A8:A`,
-  });
+  }));
 
   const colA = (readResponse.data.values ?? []) as string[][];
   // Find the first index where A is blank
@@ -68,12 +82,12 @@ export async function appendToSheet(
   if (emptyIndex === -1) emptyIndex = colA.length; // all filled — go to next row
   const targetRow = 8 + emptyIndex; // 1-indexed sheet row
 
-  await sheets.spreadsheets.values.update({
+  await withRetry(() => sheets.spreadsheets.values.update({
     spreadsheetId,
     range: `${SHEET_TAB}!A${targetRow}:I${targetRow}`,
     valueInputOption: "USER_ENTERED",
     requestBody: { values: [row] },
-  });
+  }));
 
   return `https://docs.google.com/spreadsheets/d/${spreadsheetId}`;
 }
@@ -90,10 +104,10 @@ export async function checkDuplicates(
 
   let rows: string[][];
   try {
-    const response = await sheets.spreadsheets.values.get({
+    const response = await withRetry(() => sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${SHEET_TAB}!A:I`,
-    });
+    }));
     rows = (response.data.values ?? []) as string[][];
   } catch {
     // If sheet doesn't exist yet or is empty, no duplicates

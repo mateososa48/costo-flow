@@ -3,19 +3,26 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { config } from "@/config";
 import { appendToSheet, checkDuplicates, appendAuditLog } from "@/lib/sheets";
+import dropdownOptions from "../../../../../data/dropdown_options.json";
 import type { ExtractedInvoice, SubmitApiResponse, SubmitResult } from "@/types";
+
+const validConceptos = new Set<string>(dropdownOptions.concepto as string[]);
+const validCuentasPnl = new Set<string>(dropdownOptions.cuentaPnl as string[]);
 
 const invoiceSchema = z.object({
   id: z.string(),
   restaurant: z.enum(["motin_juarez", "motin_roma", "queseria"]),
-  invoiceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  invoiceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((val) => {
+    const d = new Date(val);
+    return !isNaN(d.getTime()) && d.toISOString().startsWith(val);
+  }, "Fecha inválida"),
   supplier: z.string().min(1),
   invoiceNumber: z.string().optional(),
   importe: z.number(),
   iva: z.number(),
   total: z.number(),
-  concepto: z.string().min(1, "Concepto is required"),
-  cuentaPnl: z.string().min(1, "Cuenta P&L is required"),
+  concepto: z.string().min(1, "Concepto is required").refine((v) => validConceptos.has(v), "Concepto inválido"),
+  cuentaPnl: z.string().min(1, "Cuenta P&L is required").refine((v) => validCuentasPnl.has(v), "Cuenta P&L inválida"),
   comments: z.string().optional(),
   extractionConfidence: z.number().optional(),
   extractionMethod: z.enum(["llm_vision", "llm_text"]),

@@ -21,16 +21,16 @@ export default function DuplicateWarningModal({
   return (
     <Modal open={open} title="Posible duplicado detectado" onClose={onCancel}>
       <div className="space-y-4">
-        <div className="flex items-start gap-3 p-3 rounded-[var(--radius-sm)] bg-[var(--warning-dim)] border border-amber-700/30">
+        <div className="flex items-start gap-3 p-3 rounded-[var(--radius-sm)] bg-[var(--warning-dim)] border border-[var(--warning)]/30">
           <svg
-            className="flex-shrink-0 mt-0.5 text-amber-400"
+            className="flex-shrink-0 mt-0.5 text-[var(--warning)]"
             width="16" height="16" viewBox="0 0 16 16" fill="none"
           >
             <path d="M8 1.5L14.5 14H1.5L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
             <path d="M8 6v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
             <circle cx="8" cy="11.5" r="0.6" fill="currentColor" />
           </svg>
-          <p className="text-sm text-amber-200 leading-relaxed">
+          <p className="text-sm text-[var(--warning)] leading-relaxed">
             Se encontraron filas que podrían coincidir con{" "}
             {matches.length === 1 ? "esta factura" : "estas facturas"} en la hoja de destino.
             Revisa antes de continuar.
@@ -59,7 +59,7 @@ export default function DuplicateWarningModal({
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">{dup.invoiceDate}</p>
                   </div>
-                  <span className="text-sm font-medium text-[var(--gold)]">
+                  <span className="text-sm font-medium text-[var(--warning)]">
                     ${dup.total.toFixed(2)}
                   </span>
                 </div>

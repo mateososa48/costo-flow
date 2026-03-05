@@ -2,6 +2,7 @@ import dropdownOptionsRaw from "../../data/dropdown_options.json";
 import { RESTAURANT_LABELS } from "@/types";
 import type { Restaurant, DropdownsResponse } from "@/types";
 import { config } from "@/config";
+import { readOverride } from "@/lib/settings-override";
 
 type DropdownFile = {
   concepto: string[];
@@ -11,6 +12,7 @@ type DropdownFile = {
 const options = dropdownOptionsRaw as unknown as DropdownFile;
 
 export function getDropdownOptions(): DropdownsResponse {
+  const override = readOverride();
   return {
     concepto: options.concepto ?? [],
     cuentaPnl: options.cuentaPnl ?? [],
@@ -18,6 +20,7 @@ export function getDropdownOptions(): DropdownsResponse {
       value,
       label: RESTAURANT_LABELS[value],
     })),
-    adminNames: config.auth.adminNames,
+    adminNames: override.adminNames ?? config.auth.adminNames,
+    sheetRegistry: config.sheets.registry,
   };
 }

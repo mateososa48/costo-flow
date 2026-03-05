@@ -14,14 +14,15 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<Variant, string> = {
   primary: [
-    "bg-[var(--gold)] text-[#1a1714] font-semibold",
-    "hover:bg-[var(--gold-dim)] hover:brightness-110",
+    "bg-[var(--blue)] text-white font-semibold",
+    "hover:bg-[var(--blue-dim)]",
     "active:scale-[0.98]",
     "disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100",
+    "focus-visible:ring-[var(--blue)]",
   ].join(" "),
   secondary: [
-    "bg-[var(--surface-raised)] text-[var(--text)] border border-[var(--border)]",
-    "hover:bg-[var(--surface)] hover:border-[var(--gold-dim)]",
+    "bg-[var(--surface)] text-[var(--text)] border border-[var(--border)]",
+    "hover:bg-[var(--surface-raised)] hover:border-[var(--text-dim)]",
     "active:scale-[0.98]",
     "disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100",
   ].join(" "),
@@ -32,8 +33,8 @@ const variantStyles: Record<Variant, string> = {
     "disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100",
   ].join(" "),
   danger: [
-    "bg-[var(--danger-dim)] text-red-400 border border-red-900/40",
-    "hover:bg-red-900/30 hover:text-red-300",
+    "bg-[var(--danger-dim)] text-[var(--danger)] border border-[var(--danger)]/20",
+    "hover:bg-[var(--danger)]/15",
     "active:scale-[0.98]",
     "disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100",
   ].join(" "),
@@ -59,7 +60,7 @@ export default function Button({
       className={[
         "inline-flex items-center justify-center gap-2 font-medium",
         "transition-all duration-150",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gold)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]",
         variantStyles[variant],
         sizeStyles[size],
         className,

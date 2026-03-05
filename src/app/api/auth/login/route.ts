@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { config } from "@/config";
+import { readOverride } from "@/lib/settings-override";
 
 const loginSchema = z.object({
   name: z.string().min(1),
@@ -22,7 +23,9 @@ export async function POST(request: NextRequest) {
   }
 
   const { name, password } = parsed.data;
-  const { adminNames, sharedPassword } = config.auth;
+  const override = readOverride();
+  const adminNames = override.adminNames ?? config.auth.adminNames;
+  const sharedPassword = override.sharedPassword ?? config.auth.sharedPassword;
 
   if (!adminNames.includes(name)) {
     return NextResponse.json({ error: "Usuario no encontrado" }, { status: 401 });

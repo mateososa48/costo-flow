@@ -28,7 +28,7 @@ const cuentaPnlList = (dropdownOptions.cuentaPnl as string[]).join(" | ");
 
 const SYSTEM_PROMPT = `You are an expert invoice parser for a Mexican restaurant group.
 Extract the following fields from the invoice and return STRICT JSON.
-Currency is MXN unless otherwise stated.
+Currency is MXN unless otherwise stated. IMPORTANT - Number formatting: Mexican invoices use a period as the DECIMAL separator, not a thousands separator. "230.000" means $230.00, NOT $230,000. Always treat digits after a period as cents. Sanity-check: does the total make sense for the items on this invoice?
 If you are uncertain about a value, provide your best estimate and set extractionConfidence lower.
 Mexican invoices use DD/MM/YYYY date format. Always return invoiceDate as YYYY-MM-DD.
 Fields:
@@ -98,7 +98,7 @@ export async function extractInvoiceFromImage(
       },
     ],
     max_completion_tokens: 4096,
-  });
+  }, { signal: AbortSignal.timeout(45_000) });
 
   const message = response.choices[0]?.message;
   if (message?.refusal) throw new Error(`Model refused to extract: ${message.refusal}`);
@@ -131,7 +131,7 @@ export async function extractInvoiceFromText(text: string): Promise<LLMExtractio
       },
     ],
     max_completion_tokens: 4096,
-  });
+  }, { signal: AbortSignal.timeout(45_000) });
 
   const message = response.choices[0]?.message;
   if (message?.refusal) throw new Error(`Model refused to extract: ${message.refusal}`);
