@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { name, password } = parsed.data;
-  const override = readOverride();
+  const override = await readOverride();
   const adminNames = override.adminNames ?? config.auth.adminNames;
   const sharedPassword = override.sharedPassword ?? config.auth.sharedPassword;
 

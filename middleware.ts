@@ -4,7 +4,7 @@ import type { SessionData } from "@/types";
 
 const SESSION_PASSWORD = process.env.SESSION_PASSWORD ?? "";
 
-const protectedPaths = ["/upload", "/review", "/success", "/history", "/settings"];
+const protectedPaths = ["/upload", "/review", "/success", "/history", "/settings", "/compras"];
 
 function redirectToLogin(request: NextRequest) {
   const loginUrl = new URL("/login", request.url);
@@ -48,5 +48,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/upload/:path*", "/review/:path*", "/success/:path*", "/history/:path*", "/settings/:path*"],
+  matcher: ["/upload/:path*", "/review/:path*", "/success/:path*", "/history/:path*", "/settings/:path*", "/compras/:path*"],
 };

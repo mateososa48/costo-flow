@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import type { ExtractedInvoice } from "@/types";
+import type { ExtractedInvoice, LineItem } from "@/types";
 import Input from "./ui/Input";
 import Select from "./ui/Select";
 
@@ -247,6 +247,156 @@ export default function InvoiceCard({
               onChange={(e) => update({ comments: e.target.value })}
             />
           </div>
+
+          {/* Line Items Section */}
+          <LineItemsSection
+            items={invoice.lineItems ?? []}
+            onChange={(items) => update({ lineItems: items })}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Line Items Sub-section ─────────────────────────────────────── */
+
+function LineItemsSection({
+  items,
+  onChange,
+}: {
+  items: LineItem[];
+  onChange: (items: LineItem[]) => void;
+}) {
+  const [showItems, setShowItems] = useState(false);
+
+  const updateItem = (idx: number, fields: Partial<LineItem>) => {
+    const updated = items.map((item, i) => (i === idx ? { ...item, ...fields } : item));
+    onChange(updated);
+  };
+
+  const removeItem = (idx: number) => {
+    onChange(items.filter((_, i) => i !== idx));
+  };
+
+  const addItem = () => {
+    onChange([...items, { description: "", quantity: null, unit: null, unitPrice: null, total: 0 }]);
+    setShowItems(true);
+  };
+
+  return (
+    <div className="border-t pt-3" style={{ borderColor: "var(--border-subtle)" }}>
+      <button
+        type="button"
+        className="flex items-center gap-2 w-full text-left group"
+        onClick={() => setShowItems((v) => !v)}
+      >
+        <svg
+          width="10" height="10" viewBox="0 0 10 10" fill="none"
+          className={`transition-transform duration-200 ${showItems ? "rotate-90" : ""}`}
+          style={{ color: "var(--text-muted)" }}
+        >
+          <path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+          Artículos extraídos
+        </span>
+        <span
+          className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold"
+          style={{ background: "var(--blue-light)", color: "var(--blue)" }}
+        >
+          {items.length}
+        </span>
+      </button>
+
+      {showItems && (
+        <div className="mt-3 space-y-2">
+          {items.length === 0 && (
+            <p className="text-xs py-2" style={{ color: "var(--text-dim)" }}>
+              No se detectaron artículos individuales.
+            </p>
+          )}
+
+          {items.map((item, idx) => (
+            <div
+              key={idx}
+              className="grid grid-cols-[1fr_auto] gap-2 p-2.5 rounded-[var(--radius-sm)] border"
+              style={{ background: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 items-center">
+                <input
+                  type="text"
+                  value={item.description}
+                  placeholder="Descripción"
+                  className="w-full px-2 py-1.5 rounded border text-xs focus:outline-none focus:ring-1"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)", focusRingColor: "var(--blue)" } as React.CSSProperties}
+                  onChange={(e) => updateItem(idx, { description: e.target.value })}
+                />
+                <input
+                  type="number"
+                  value={item.quantity ?? ""}
+                  placeholder="Cant."
+                  step="any"
+                  className="w-full px-2 py-1.5 rounded border text-xs focus:outline-none focus:ring-1"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                  onChange={(e) => updateItem(idx, { quantity: e.target.value ? parseFloat(e.target.value) : null })}
+                />
+                <input
+                  type="text"
+                  value={item.unit ?? ""}
+                  placeholder="Unidad"
+                  className="w-full px-2 py-1.5 rounded border text-xs focus:outline-none focus:ring-1"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                  onChange={(e) => updateItem(idx, { unit: e.target.value || null })}
+                />
+                <input
+                  type="number"
+                  value={item.unitPrice ?? ""}
+                  placeholder="P. Unit."
+                  step="0.01"
+                  className="w-full px-2 py-1.5 rounded border text-xs focus:outline-none focus:ring-1"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                  onChange={(e) => updateItem(idx, { unitPrice: e.target.value ? parseFloat(e.target.value) : null })}
+                />
+                <input
+                  type="number"
+                  value={item.total}
+                  placeholder="Total"
+                  step="0.01"
+                  className="w-full px-2 py-1.5 rounded border text-xs focus:outline-none focus:ring-1"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                  onChange={(e) => updateItem(idx, { total: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <button
+                type="button"
+                className="self-center w-6 h-6 rounded flex items-center justify-center transition-colors duration-150"
+                style={{ color: "var(--text-dim)" }}
+                onClick={() => removeItem(idx)}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--danger)"; (e.currentTarget as HTMLElement).style.background = "var(--danger-dim)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = ""; }}
+                aria-label="Eliminar artículo"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors duration-150"
+            style={{ color: "var(--blue)", background: "var(--blue-light)" }}
+            onClick={addItem}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--blue)"; (e.currentTarget as HTMLElement).style.color = "white"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--blue-light)"; (e.currentTarget as HTMLElement).style.color = "var(--blue)"; }}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M5 1v8M1 5h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            Agregar artículo
+          </button>
         </div>
       )}
     </div>

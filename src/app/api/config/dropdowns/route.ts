@@ -3,7 +3,7 @@ import { getDropdownOptions } from "@/lib/dropdowns";
 
 export async function GET() {
   try {
-    const options = getDropdownOptions();
+    const options = await getDropdownOptions();
     return NextResponse.json(options);
   } catch (err) {
     console.error("[dropdowns] Error:", err);

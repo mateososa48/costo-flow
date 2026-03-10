@@ -27,6 +27,17 @@ function HistoryIcon({ active }: { active?: boolean }) {
   );
 }
 
+function ComprasIcon({ active }: { active?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 01-8 0" />
+    </svg>
+  );
+}
+
 function SettingsIcon({ active }: { active?: boolean }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -39,9 +50,10 @@ function SettingsIcon({ active }: { active?: boolean }) {
 
 // ─── Nav items config ─────────────────────────────────────────────────
 const NAV = [
-  { href: "/upload",   label: "Subir",          Icon: UploadIcon },
-  { href: "/history",  label: "Historial",      Icon: HistoryIcon },
-  { href: "/settings", label: "Configuración",  Icon: SettingsIcon },
+  { href: "/upload",   label: "Subir",      Icon: UploadIcon },
+  { href: "/history",  label: "Historial",  Icon: HistoryIcon },
+  { href: "/compras",  label: "Compras",    Icon: ComprasIcon },
+  { href: "/settings", label: "Config",     Icon: SettingsIcon },
 ];
 
 // ─── Shell ────────────────────────────────────────────────────────────
@@ -51,8 +63,22 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<string>("");
 
   useEffect(() => {
-    const u = sessionStorage.getItem("user") ?? "";
-    setUser(u);
+    const cached = sessionStorage.getItem("user");
+    if (cached) {
+      setUser(cached);
+      return;
+    }
+    // Session cookie is still valid but sessionStorage was cleared (tab closed / direct URL).
+    // Fetch the username from the server session so the display name isn't "?".
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user) {
+          sessionStorage.setItem("user", data.user);
+          setUser(data.user);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   async function handleLogout() {

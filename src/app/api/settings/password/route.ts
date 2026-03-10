@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { currentPassword, newPassword } = parsed.data;
-  const override = readOverride();
+  const override = await readOverride();
   const effectivePassword = override.sharedPassword ?? config.auth.sharedPassword;
 
   if (currentPassword !== effectivePassword) {
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    writeOverride({ sharedPassword: newPassword });
+    await writeOverride({ sharedPassword: newPassword });
   } catch (err) {
     console.error("[settings/password] writeOverride failed:", err);
     return NextResponse.json({ error: "No se pudo guardar. Intenta de nuevo." }, { status: 500 });

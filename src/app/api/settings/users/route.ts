@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const override = readOverride();
+  const override = await readOverride();
   const names = override.adminNames ?? config.auth.adminNames;
   return NextResponse.json({ names });
 }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    writeOverride({ adminNames: parsed.data.names });
+    await writeOverride({ adminNames: parsed.data.names });
   } catch (err) {
     console.error("[settings/users] writeOverride failed:", err);
     return NextResponse.json({ error: "No se pudo guardar. Intenta de nuevo." }, { status: 500 });

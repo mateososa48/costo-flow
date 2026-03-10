@@ -5,9 +5,31 @@ import { config } from "@/config";
 import { appendToSheet, checkDuplicates, appendAuditLog } from "@/lib/sheets";
 import dropdownOptions from "../../../../../data/dropdown_options.json";
 import type { ExtractedInvoice, SubmitApiResponse, SubmitResult } from "@/types";
+import { saveInvoiceWithItems } from "@/lib/supabase";
 
 const validConceptos = new Set<string>(dropdownOptions.concepto as string[]);
 const validCuentasPnl = new Set<string>(dropdownOptions.cuentaPnl as string[]);
+
+function friendlySheetError(raw: string): string {
+  if (!raw) return "Error desconocido al enviar a Google Sheets.";
+  const msg = raw.toLowerCase();
+  if (msg.includes("protected cell") || msg.includes("protected range")) {
+    return "La hoja tiene celdas protegidas. Para solucionarlo: abre la hoja → menú Datos → Hojas y rangos protegidos → elimina la protección del rango o pestaña correspondiente.";
+  }
+  if (msg.includes("caller does not have permission") || msg.includes("403")) {
+    return "El sistema no tiene permiso para escribir en esta hoja. Verifica que la hoja esté compartida con la cuenta de servicio como Editor.";
+  }
+  if (msg.includes("unable to parse range") || msg.includes("invalid range") || msg.includes("no sheet")) {
+    return "No se encontró la pestaña 'Informe de Gastos' en la hoja. Verifica que exista con ese nombre exacto.";
+  }
+  if (msg.includes("spreadsheet not found") || msg.includes("404") || msg.includes("no spreadsheet registered")) {
+    return "No hay hoja registrada para este restaurante y mes. Agrega el ID en la variable SHEET_REGISTRY en Vercel.";
+  }
+  if (msg.includes("quota") || msg.includes("rate limit") || msg.includes("429")) {
+    return "Se alcanzó el límite de solicitudes de Google Sheets. Espera unos segundos e intenta de nuevo.";
+  }
+  return raw;
+}
 
 const invoiceSchema = z.object({
   id: z.string(),
@@ -24,6 +46,13 @@ const invoiceSchema = z.object({
   concepto: z.string().min(1, "Concepto is required").refine((v) => validConceptos.has(v), "Concepto inválido"),
   cuentaPnl: z.string().min(1, "Cuenta P&L is required").refine((v) => validCuentasPnl.has(v), "Cuenta P&L inválida"),
   comments: z.string().optional(),
+  lineItems: z.array(z.object({
+    description: z.string(),
+    quantity: z.number().nullable(),
+    unit: z.string().nullable(),
+    unitPrice: z.number().nullable(),
+    total: z.number(),
+  })).optional().default([]),
   extractionConfidence: z.number().optional(),
   extractionMethod: z.enum(["llm_vision", "llm_text"]),
 });
@@ -111,12 +140,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         status: "appended",
         spreadsheetUrl,
       });
+
+      // Fire-and-forget: save invoice + line items to Supabase
+      saveInvoiceWithItems(invoice, spreadsheetUrl, user).catch((err) =>
+        console.error(`[supabase] background save failed for ${invoice.id}:`, err)
+      );
     } catch (err) {
       console.error(`[submit] Error for invoice ${invoice.id}:`, err);
       results.push({
         invoiceId: invoice.id,
         status: "error",
-        error: err instanceof Error ? err.message : "Unknown error",
+        error: friendlySheetError(err instanceof Error ? err.message : ""),
       });
     }
   }

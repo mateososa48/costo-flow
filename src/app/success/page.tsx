@@ -96,13 +96,18 @@ export default function SuccessPage() {
         )}
 
         {errors.length > 0 && (
-          <div className="p-4 rounded-[var(--radius)] border space-y-1"
-            style={{ borderColor: "var(--danger)", background: "var(--danger-dim)" }}>
-            <p className="text-sm font-medium" style={{ color: "var(--danger)" }}>
-              {errors.length} factura{errors.length !== 1 ? "s" : ""} con error:
-            </p>
+          <div className="rounded-[var(--radius)] border overflow-hidden"
+            style={{ borderColor: "var(--danger)" }}>
+            <div className="px-4 py-2.5" style={{ background: "var(--danger)", }}>
+              <p className="text-sm font-semibold text-white">
+                {errors.length} factura{errors.length !== 1 ? "s" : ""} con error
+              </p>
+            </div>
             {errors.map((r) => (
-              <p key={r.invoiceId} className="text-xs" style={{ color: "var(--danger)" }}>{r.error}</p>
+              <div key={r.invoiceId} className="px-4 py-3 space-y-1" style={{ background: "var(--danger-dim)" }}>
+                <p className="text-xs font-medium" style={{ color: "var(--danger)" }}>¿Cómo solucionarlo?</p>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--danger)" }}>{r.error}</p>
+              </div>
             ))}
           </div>
         )}

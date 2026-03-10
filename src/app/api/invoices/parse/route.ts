@@ -99,6 +99,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       concepto: mapping?.concepto ?? extraction.concepto ?? "",
       cuentaPnl: mapping?.cuentaPnl ?? extraction.cuentaPnl ?? "",
       comments: "",
+      lineItems: extraction.lineItems ?? [],
       extractionConfidence: extraction.extractionConfidence,
       extractionMethod: "llm_vision",
     };

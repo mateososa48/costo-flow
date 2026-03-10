@@ -11,8 +11,8 @@ type DropdownFile = {
 
 const options = dropdownOptionsRaw as unknown as DropdownFile;
 
-export function getDropdownOptions(): DropdownsResponse {
-  const override = readOverride();
+export async function getDropdownOptions(): Promise<DropdownsResponse> {
+  const override = await readOverride();
   return {
     concepto: options.concepto ?? [],
     cuentaPnl: options.cuentaPnl ?? [],

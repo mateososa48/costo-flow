@@ -11,6 +11,14 @@ function getClient(): OpenAI {
   return _client;
 }
 
+export type LLMLineItem = {
+  description: string;
+  quantity: number | null;
+  unit: string | null;
+  unitPrice: number | null;
+  total: number;
+};
+
 export type LLMExtraction = {
   invoiceDate: string;           // yyyy-mm-dd
   supplier: string;
@@ -20,6 +28,7 @@ export type LLMExtraction = {
   total: number;
   concepto: string | null;       // best-guess from valid list, or null
   cuentaPnl: string | null;      // best-guess from valid list, or null
+  lineItems: LLMLineItem[];     // individual products/services
   extractionConfidence: number;  // 0-1
 };
 
@@ -40,6 +49,7 @@ Fields:
 - total: total amount including IVA
 - concepto: pick the single best match from this list (null if none fit): ${conceptoList}
 - cuentaPnl: pick the single best match from this list (null if none fit): ${cuentaPnlList}
+- lineItems: extract every individual line item on the invoice. Each item should have: description (product/service name), quantity (number or null), unit (kg, pz, lt, caja, etc. or null), unitPrice (unit price or null), total (line total). If no itemized breakdown is visible, return an empty array.
 - extractionConfidence: your confidence in the extraction, 0.0 to 1.0
 
 Do NOT invent values. Read only what is explicitly printed on the invoice.
@@ -59,9 +69,25 @@ const RESPONSE_SCHEMA = {
     total: { type: "number", description: "Total including IVA" },
     concepto: { anyOf: [{ type: "string" }, { type: "null" }], description: "Best matching concepto from the valid list" },
     cuentaPnl: { anyOf: [{ type: "string" }, { type: "null" }], description: "Best matching cuentaPnl from the valid list" },
+    lineItems: {
+      type: "array",
+      description: "Individual line items from the invoice",
+      items: {
+        type: "object",
+        properties: {
+          description: { type: "string", description: "Product or service name" },
+          quantity: { anyOf: [{ type: "number" }, { type: "null" }], description: "Quantity" },
+          unit: { anyOf: [{ type: "string" }, { type: "null" }], description: "Unit of measure (kg, pz, lt, etc.)" },
+          unitPrice: { anyOf: [{ type: "number" }, { type: "null" }], description: "Price per unit" },
+          total: { type: "number", description: "Line item total" },
+        },
+        required: ["description", "quantity", "unit", "unitPrice", "total"],
+        additionalProperties: false,
+      },
+    },
     extractionConfidence: { type: "number", description: "Confidence 0.0-1.0" },
   },
-  required: ["invoiceDate", "supplier", "invoiceNumber", "importe", "iva", "total", "concepto", "cuentaPnl", "extractionConfidence"],
+  required: ["invoiceDate", "supplier", "invoiceNumber", "importe", "iva", "total", "concepto", "cuentaPnl", "lineItems", "extractionConfidence"],
   additionalProperties: false,
 };
 
@@ -97,7 +123,7 @@ export async function extractInvoiceFromImage(
         ],
       },
     ],
-    max_completion_tokens: 4096,
+    max_completion_tokens: 8192,
   }, { signal: AbortSignal.timeout(45_000) });
 
   const message = response.choices[0]?.message;
@@ -130,7 +156,7 @@ export async function extractInvoiceFromText(text: string): Promise<LLMExtractio
         content: `Extract all invoice fields from the following invoice text:\n\n${text}`,
       },
     ],
-    max_completion_tokens: 4096,
+    max_completion_tokens: 8192,
   }, { signal: AbortSignal.timeout(45_000) });
 
   const message = response.choices[0]?.message;

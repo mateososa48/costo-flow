@@ -6,6 +6,14 @@ export const RESTAURANT_LABELS: Record<Restaurant, string> = {
   queseria: "Quesería",
 };
 
+export type LineItem = {
+  description: string;
+  quantity: number | null;
+  unit: string | null;           // kg, pz, lt, caja, etc.
+  unitPrice: number | null;
+  total: number;
+};
+
 export type ExtractedInvoice = {
   id: string;                    // uuid v4 assigned at parse time
   restaurant: Restaurant;
@@ -19,6 +27,8 @@ export type ExtractedInvoice = {
   concepto: string;              // must match sheet dropdown; "" means user must fill
   cuentaPnl: string;             // must match sheet dropdown; "" means user must fill
   comments?: string;             // Comentarios adicionales
+
+  lineItems?: LineItem[];        // individual products/services from invoice
 
   extractionConfidence?: number; // 0-1 from LLM
   extractionMethod: "llm_vision" | "llm_text";
