@@ -4,7 +4,7 @@ import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
 
 const filtersSchema = z.object({
-  view: z.enum(["items", "invoices", "suppliers"]).default("items"),
+  view: z.enum(["items", "invoices", "suppliers", "normalize"]).default("items"),
   search: z.string().optional(),
   restaurant: z.string().optional(),
   supplier: z.string().optional(),
@@ -20,8 +20,10 @@ const createItemSchema = z.object({
   description: z.string().min(1),
   quantity: z.number().nullable().optional().default(null),
   unit: z.string().nullable().optional().default(null),
+  unitNormalized: z.string().nullable().optional().default(null),
   unitPrice: z.number().nullable().optional().default(null),
   total: z.number(),
+  category: z.string().nullable().optional().default(null),
   restaurant: z.string().min(1),
   supplier: z.string().min(1),
   invoiceDate: z.string().optional().default(new Date().toISOString().slice(0, 10)),
@@ -48,7 +50,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const { view, search, restaurant, supplier, dateFrom, dateTo, sortBy, sortDir, page, pageSize } = parsed.data;
 
   if (view === "items") {
-    let query = supabase.from("line_items").select("*", { count: "exact" });
+    let query = supabase.from("line_items").select("id, invoice_id, restaurant, supplier, invoice_date, description, quantity, unit, unit_normalized, unit_price, total, category, ingredient_id, created_at, updated_at", { count: "exact" });
 
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
@@ -113,7 +115,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (view === "suppliers") {
     // Get unique suppliers with aggregated data
-    let query = supabase.from("line_items").select("supplier, total, invoice_date, description, id, restaurant, quantity, unit, unit_price, invoice_id, created_at, updated_at");
+    let query = supabase.from("line_items").select("supplier, total, invoice_date, description, id, restaurant, quantity, unit, unit_normalized, unit_price, category, ingredient_id, invoice_id, created_at, updated_at");
 
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
@@ -149,6 +151,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
   }
 
+  if (view === "normalize") {
+    let query = supabase.from("line_items").select("description").is("ingredient_id", null);
+    if (restaurant) query = query.eq("restaurant", restaurant);
+
+    const { data, error } = await query;
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const grouped: Record<string, number> = {};
+    for (const item of data ?? []) {
+      const desc = item.description as string;
+      grouped[desc] = (grouped[desc] ?? 0) + 1;
+    }
+    const unmatched = Object.entries(grouped)
+      .map(([description, count]) => ({ description, count }))
+      .sort((a, b) => b.count - a.count);
+
+    return NextResponse.json({ unmatched, pagination: { page: 1, pageSize: unmatched.length, total: unmatched.length, totalPages: 1 } });
+  }
+
   return NextResponse.json({ error: "Invalid view" }, { status: 400 });
 }
 
@@ -175,7 +196,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 422 });
   }
 
-  const { description, quantity, unit, unitPrice, total, restaurant, supplier, invoiceDate, invoiceId } = parsed.data;
+  const { description, quantity, unit, unitNormalized, unitPrice, total, category, restaurant, supplier, invoiceDate, invoiceId } = parsed.data;
 
   const { data, error } = await supabase
     .from("line_items")
@@ -187,8 +208,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       description,
       quantity,
       unit,
+      unit_normalized: unitNormalized,
       unit_price: unitPrice,
       total,
+      category,
     })
     .select()
     .single();

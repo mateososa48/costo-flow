@@ -10,8 +10,10 @@ export type LineItem = {
   description: string;
   quantity: number | null;
   unit: string | null;           // kg, pz, lt, caja, etc.
+  unitNormalized: string | null; // normalized unit: kg, g, l, ml, pz, caja, docena, bolsa, otros
   unitPrice: number | null;
   total: number;
+  category: string | null;       // concepto value for this line item
 };
 
 export type ExtractedInvoice = {

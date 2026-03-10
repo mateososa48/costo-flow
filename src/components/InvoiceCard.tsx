@@ -280,7 +280,7 @@ function LineItemsSection({
   };
 
   const addItem = () => {
-    onChange([...items, { description: "", quantity: null, unit: null, unitPrice: null, total: 0 }]);
+    onChange([...items, { description: "", quantity: null, unit: null, unitNormalized: null, unitPrice: null, total: 0, category: null }]);
     setShowItems(true);
   };
 

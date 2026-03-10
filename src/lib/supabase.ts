@@ -53,6 +53,22 @@ export async function saveInvoiceWithItems(
 
   // Insert line items
   if (invoice.lineItems && invoice.lineItems.length > 0) {
+    // Fetch existing ingredients for auto-matching
+    const { data: ingredients } = await supabase
+      .from("ingredients")
+      .select("id, canonical_name, aliases");
+
+    function matchIngredient(description: string): string | null {
+      if (!ingredients) return null;
+      const lower = description.toLowerCase().trim();
+      for (const ing of ingredients) {
+        if ((ing.canonical_name as string).toLowerCase().trim() === lower) return ing.id as string;
+        const aliases = (ing.aliases as string[]) ?? [];
+        if (aliases.some((a) => a.toLowerCase().trim() === lower)) return ing.id as string;
+      }
+      return null;
+    }
+
     const { error: itemsError } = await supabase.from("line_items").insert(
       invoice.lineItems.map((item) => ({
         invoice_id: invoice.id,
@@ -62,8 +78,11 @@ export async function saveInvoiceWithItems(
         description: item.description,
         quantity: item.quantity,
         unit: item.unit,
+        unit_normalized: item.unitNormalized ?? null,
         unit_price: item.unitPrice,
         total: item.total,
+        category: item.category ?? null,
+        ingredient_id: matchIngredient(item.description),
       }))
     );
 

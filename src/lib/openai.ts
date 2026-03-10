@@ -11,12 +11,18 @@ function getClient(): OpenAI {
   return _client;
 }
 
+// Normalized units returned by the LLM
+export const UNIT_NORMALIZED_VALUES = ["kg", "g", "l", "ml", "pz", "caja", "docena", "bolsa", "metro", "lata", "botella", "galon", "costal", "sobre", "rollo", "otros"] as const;
+export type UnitNormalized = typeof UNIT_NORMALIZED_VALUES[number];
+
 export type LLMLineItem = {
   description: string;
   quantity: number | null;
   unit: string | null;
+  unitNormalized: UnitNormalized;
   unitPrice: number | null;
   total: number;
+  category: string | null;
 };
 
 export type LLMExtraction = {
@@ -49,7 +55,15 @@ Fields:
 - total: total amount including IVA
 - concepto: pick the single best match from this list (null if none fit): ${conceptoList}
 - cuentaPnl: pick the single best match from this list (null if none fit): ${cuentaPnlList}
-- lineItems: extract every individual line item on the invoice. Each item should have: description (product/service name), quantity (number or null), unit (kg, pz, lt, caja, etc. or null), unitPrice (unit price or null), total (line total). If no itemized breakdown is visible, return an empty array.
+- lineItems: extract every individual line item on the invoice. Each item should have:
+  - description: product/service name as written on the invoice
+  - quantity: number or null
+  - unit: unit as written on the invoice (kg, pz, lt, caja, etc.) or null
+  - unitNormalized: normalize unit to one of: kg, g, l, ml, pz, caja, docena, bolsa, metro, lata, botella, galon, costal, sobre, rollo, otros. Use "otros" if the unit doesn't match any of these.
+  - unitPrice: unit price or null
+  - total: line item total
+  - category: pick the single best match from this list for THIS specific item (null if none fit): ${conceptoList}
+  If no itemized breakdown is visible, return an empty array.
 - extractionConfidence: your confidence in the extraction, 0.0 to 1.0
 
 Do NOT invent values. Read only what is explicitly printed on the invoice.
@@ -75,13 +89,15 @@ const RESPONSE_SCHEMA = {
       items: {
         type: "object",
         properties: {
-          description: { type: "string", description: "Product or service name" },
+          description: { type: "string", description: "Product or service name as written on invoice" },
           quantity: { anyOf: [{ type: "number" }, { type: "null" }], description: "Quantity" },
-          unit: { anyOf: [{ type: "string" }, { type: "null" }], description: "Unit of measure (kg, pz, lt, etc.)" },
+          unit: { anyOf: [{ type: "string" }, { type: "null" }], description: "Unit as written on invoice (kg, pz, lt, etc.)" },
+          unitNormalized: { type: "string", enum: [...UNIT_NORMALIZED_VALUES], description: "Normalized unit" },
           unitPrice: { anyOf: [{ type: "number" }, { type: "null" }], description: "Price per unit" },
           total: { type: "number", description: "Line item total" },
+          category: { anyOf: [{ type: "string" }, { type: "null" }], description: "Best matching concepto category for this specific item" },
         },
-        required: ["description", "quantity", "unit", "unitPrice", "total"],
+        required: ["description", "quantity", "unit", "unitNormalized", "unitPrice", "total", "category"],
         additionalProperties: false,
       },
     },

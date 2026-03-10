@@ -1,14 +1,19 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer,
+} from "recharts";
 import Shell from "@/components/Shell";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { RESTAURANT_LABELS } from "@/types";
 import type { Restaurant } from "@/types";
+import dropdownOptions from "../../../data/dropdown_options.json";
 
 // ─── Types ──────────────────────────────────────────────────────────
-type ViewMode = "items" | "invoices" | "suppliers";
+type ViewMode = "items" | "invoices" | "suppliers" | "analytics" | "normalize";
 
 type DbLineItem = {
   id: string;
@@ -19,11 +24,39 @@ type DbLineItem = {
   description: string;
   quantity: number | null;
   unit: string | null;
+  unit_normalized: string | null;
   unit_price: number | null;
   total: number;
+  category: string | null;
+  ingredient_id: string | null;
   created_at: string;
   updated_at: string;
 };
+
+type Ingredient = {
+  id: string;
+  canonical_name: string;
+  aliases: string[];
+  category: string | null;
+};
+
+type UnmatchedGroup = {
+  description: string;
+  count: number;
+};
+
+type AnalyticsData = {
+  monthlySpend: Array<Record<string, string | number>>;
+  categories: string[];
+  topItems: Array<{ description: string; totalSpend: number; count: number }>;
+  spendByRestaurant: Array<{ restaurant: string; total: number }>;
+};
+
+const CHART_COLORS = [
+  "#3b82f6", "#f59e0b", "#10b981", "#ef4444",
+  "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16",
+  "#f97316", "#64748b",
+];
 
 type DbInvoice = {
   id: string;
@@ -111,6 +144,50 @@ export default function ComprasPage() {
   const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(new Set());
   const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
 
+  // Analytics state
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+
+  // Normalize state
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [unmatched, setUnmatched] = useState<UnmatchedGroup[]>([]);
+  const [normalizeLoading, setNormalizeLoading] = useState(false);
+  const [createIngredientFor, setCreateIngredientFor] = useState<string | null>(null);
+  const [mergeFor, setMergeFor] = useState<string | null>(null);
+  const [mergingIntoId, setMergingIntoId] = useState("");
+  const [normalizeSaving, setNormalizeSaving] = useState(false);
+
+  // ── Fetch analytics ─────────────────────────────────────────────
+  const fetchAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (restaurant) params.set("restaurant", restaurant);
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo) params.set("dateTo", dateTo);
+      const res = await fetch(`/api/compras/analytics?${params}`);
+      if (res.ok) setAnalyticsData(await res.json());
+    } catch { /* ignore */ }
+    finally { setAnalyticsLoading(false); }
+  }, [restaurant, dateFrom, dateTo]);
+
+  // ── Fetch normalize data ─────────────────────────────────────────
+  const fetchNormalize = useCallback(async () => {
+    setNormalizeLoading(true);
+    try {
+      const [ingRes, unmatchedRes] = await Promise.all([
+        fetch("/api/compras/ingredients"),
+        fetch("/api/compras?view=normalize&pageSize=100"),
+      ]);
+      if (ingRes.ok) setIngredients(await ingRes.json());
+      if (unmatchedRes.ok) {
+        const data = await unmatchedRes.json();
+        setUnmatched(data.unmatched ?? []);
+      }
+    } catch { /* ignore */ }
+    finally { setNormalizeLoading(false); }
+  }, []);
+
   // ── Fetch stats ─────────────────────────────────────────────────
   const fetchStats = useCallback(async () => {
     try {
@@ -148,9 +225,11 @@ export default function ComprasPage() {
   }, [view, page, sortBy, sortDir, search, restaurant, supplier, dateFrom, dateTo]);
 
   useEffect(() => { document.title = "Compras — Aventura Gourmet"; }, []);
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (view !== "analytics" && view !== "normalize") fetchData(); }, [fetchData, view]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, dateFrom, dateTo]);
+  useEffect(() => { if (view === "analytics") fetchAnalytics(); }, [view, fetchAnalytics]);
+  useEffect(() => { if (view === "normalize") fetchNormalize(); }, [view, fetchNormalize]);
 
   // ── Inline edit ─────────────────────────────────────────────────
   async function saveEdit(id: string, field: string, value: string) {
@@ -283,11 +362,13 @@ export default function ComprasPage() {
 
         {/* View toggle + Filter toggle */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex rounded-[var(--radius-sm)] border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+          <div className="flex rounded-[var(--radius-sm)] border overflow-hidden flex-wrap" style={{ borderColor: "var(--border)" }}>
             {([
               { key: "items", label: "Por artículo" },
               { key: "invoices", label: "Por factura" },
               { key: "suppliers", label: "Por proveedor" },
+              { key: "analytics", label: "Análisis" },
+              { key: "normalize", label: "Ingredientes" },
             ] as const).map(({ key, label }) => (
               <button
                 key={key}
@@ -703,7 +784,279 @@ export default function ComprasPage() {
             </div>
           </div>
         )}
+
+        {/* ─── ANALYTICS VIEW ──────────────────────────────────────── */}
+        {view === "analytics" && (
+          <div className="space-y-6">
+            {analyticsLoading && (
+              <div className="flex justify-center py-12">
+                <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
+              </div>
+            )}
+            {!analyticsLoading && analyticsData && (
+              <>
+                {/* Monthly spend by category */}
+                <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                  <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Gasto mensual por categoría</h3>
+                  {analyticsData.monthlySpend.length === 0 ? (
+                    <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={analyticsData.monthlySpend} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
+                        <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          formatter={(value: any, name: any) => [formatCurrency(Number(value)), String(name ?? "")]}
+                          contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
+                          labelStyle={{ color: "var(--text)", fontWeight: 600 }}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        {analyticsData.categories.slice(0, 10).map((cat, i) => (
+                          <Bar key={cat} dataKey={cat} stackId="a" fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                        ))}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+
+                {/* Top 10 items */}
+                <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                  <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Top 10 artículos por gasto</h3>
+                  {analyticsData.topItems.length === 0 ? (
+                    <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={320}>
+                      <BarChart
+                        layout="vertical"
+                        data={analyticsData.topItems}
+                        margin={{ top: 0, right: 40, left: 8, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                        <YAxis type="category" dataKey="description" width={140}
+                          tick={{ fontSize: 10, fill: "var(--text)" }} />
+                        <Tooltip
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          formatter={(value: any) => [formatCurrency(Number(value)), "Gasto total"]}
+                          contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
+                        />
+                        <Bar dataKey="totalSpend" fill={CHART_COLORS[0]} radius={[0, 3, 3, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+
+                {/* Spend by restaurant */}
+                {analyticsData.spendByRestaurant.length > 1 && (
+                  <div className="grid grid-cols-3 gap-3">
+                    {analyticsData.spendByRestaurant.map((r) => (
+                      <div key={r.restaurant} className="rounded-[var(--radius)] border p-3"
+                        style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                        <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                          {restaurantLabel(r.restaurant)}
+                        </p>
+                        <p className="text-lg font-bold mt-1" style={{ color: "var(--blue)" }}>
+                          {formatCurrency(r.total)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            {!analyticsLoading && !analyticsData && (
+              <p className="text-sm text-center py-12" style={{ color: "var(--text-dim)" }}>Sin datos de análisis</p>
+            )}
+          </div>
+        )}
+
+        {/* ─── NORMALIZE VIEW ──────────────────────────────────────── */}
+        {view === "normalize" && (
+          <div className="space-y-5">
+            {normalizeLoading && (
+              <div className="flex justify-center py-12">
+                <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
+              </div>
+            )}
+            {!normalizeLoading && (
+              <div className="grid md:grid-cols-2 gap-5">
+                {/* Unmatched descriptions */}
+                <div className="rounded-[var(--radius)] border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+                  <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
+                    <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+                      Sin identificar
+                      {unmatched.length > 0 && (
+                        <span className="ml-2 text-xs font-normal px-1.5 py-0.5 rounded-full" style={{ background: "var(--blue-glow)", color: "var(--blue)" }}>
+                          {unmatched.length}
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>Artículos sin ingrediente canónico asignado</p>
+                  </div>
+                  {unmatched.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                      <p className="text-sm" style={{ color: "var(--text-dim)" }}>Todo identificado ✓</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
+                      {unmatched.map((u) => (
+                        <div key={u.description} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm truncate" style={{ color: "var(--text)" }}>{u.description}</p>
+                            <p className="text-xs" style={{ color: "var(--text-dim)" }}>{u.count} artículo{u.count !== 1 ? "s" : ""}</p>
+                          </div>
+                          <div className="flex gap-1.5 flex-shrink-0">
+                            <button type="button"
+                              className="px-2 py-1 rounded text-xs font-medium transition-colors duration-150"
+                              style={{ background: "var(--blue-glow)", color: "var(--blue)" }}
+                              onClick={() => { setCreateIngredientFor(u.description); setMergeFor(null); }}
+                            >
+                              Nuevo
+                            </button>
+                            <button type="button"
+                              className="px-2 py-1 rounded text-xs font-medium transition-colors duration-150"
+                              style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}
+                              onClick={() => { setMergeFor(u.description); setCreateIngredientFor(null); setMergingIntoId(""); }}
+                            >
+                              Unir
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Registered ingredients */}
+                <div className="rounded-[var(--radius)] border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+                  <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
+                    <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+                      Ingredientes registrados
+                      {ingredients.length > 0 && (
+                        <span className="ml-2 text-xs font-normal px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
+                          {ingredients.length}
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>Nombres canónicos con todos sus alias</p>
+                  </div>
+                  {ingredients.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                      <p className="text-sm" style={{ color: "var(--text-dim)" }}>Ningún ingrediente registrado aún</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
+                      {ingredients.map((ing) => (
+                        <div key={ing.id} className="px-4 py-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{ing.canonical_name}</p>
+                              {ing.category && (
+                                <p className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>{ing.category}</p>
+                              )}
+                              {ing.aliases.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {ing.aliases.map((a) => (
+                                    <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-full"
+                                      style={{ background: "var(--surface-raised)", color: "var(--text-dim)" }}>
+                                      {a}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
+
+      {/* Create Ingredient Modal */}
+      <Modal
+        open={!!createIngredientFor}
+        onClose={() => setCreateIngredientFor(null)}
+        title="Crear ingrediente"
+        maxWidth="max-w-sm"
+      >
+        <CreateIngredientForm
+          initialName={createIngredientFor ?? ""}
+          onSave={async (canonicalName, category) => {
+            setNormalizeSaving(true);
+            try {
+              const res = await fetch("/api/compras/ingredients", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ canonicalName, aliases: [createIngredientFor], category: category || null }),
+              });
+              if (res.ok) { setCreateIngredientFor(null); fetchNormalize(); }
+            } finally { setNormalizeSaving(false); }
+          }}
+          onClose={() => setCreateIngredientFor(null)}
+          saving={normalizeSaving}
+        />
+      </Modal>
+
+      {/* Merge Modal */}
+      <Modal
+        open={!!mergeFor}
+        onClose={() => setMergeFor(null)}
+        title="Unir con ingrediente existente"
+        maxWidth="max-w-sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Agregar <span className="font-medium" style={{ color: "var(--text)" }}>"{mergeFor}"</span> como alias de:
+          </p>
+          <div className="relative">
+            <select
+              value={mergingIntoId}
+              className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: mergingIntoId ? "var(--text)" : "var(--text-dim)" }}
+              onChange={(e) => setMergingIntoId(e.target.value)}
+            >
+              <option value="">Seleccionar ingrediente...</option>
+              {ingredients.map((ing) => (
+                <option key={ing.id} value={ing.id}>{ing.canonical_name}</option>
+              ))}
+            </select>
+            <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
+              <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setMergeFor(null)}>Cancelar</Button>
+            <Button size="sm" loading={normalizeSaving} disabled={!mergingIntoId}
+              onClick={async () => {
+                if (!mergeFor || !mergingIntoId) return;
+                setNormalizeSaving(true);
+                try {
+                  const res = await fetch(`/api/compras/ingredients/${mergingIntoId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ addAlias: mergeFor }),
+                  });
+                  if (res.ok) { setMergeFor(null); setMergingIntoId(""); fetchNormalize(); }
+                } finally { setNormalizeSaving(false); }
+              }}
+            >
+              Guardar
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Add Item Modal */}
       <AddItemModal
@@ -1115,5 +1468,59 @@ function AddItemModal({
         </div>
       </div>
     </Modal>
+  );
+}
+
+// ─── Create Ingredient Form ────────────────────────────────────────
+function CreateIngredientForm({
+  initialName,
+  onSave,
+  onClose,
+  saving,
+}: {
+  initialName: string;
+  onSave: (canonicalName: string, category: string) => void;
+  onClose: () => void;
+  saving: boolean;
+}) {
+  const [name, setName] = useState(initialName);
+  const [category, setCategory] = useState("");
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Nombre canónico *</label>
+        <input type="text" value={name}
+          className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+          style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+          onChange={(e) => setName(e.target.value)} />
+        <p className="text-[10px] mt-1" style={{ color: "var(--text-dim)" }}>
+          El alias "{initialName}" se agrega automáticamente.
+        </p>
+      </div>
+      <div>
+        <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Categoría</label>
+        <div className="relative mt-1">
+          <select value={category}
+            className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: category ? "var(--text)" : "var(--text-dim)" }}
+            onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Sin categoría</option>
+            {(dropdownOptions.concepto as string[]).map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
+            <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
+        <Button size="sm" loading={saving} disabled={!name.trim()} onClick={() => onSave(name.trim(), category)}>
+          Crear
+        </Button>
+      </div>
+    </div>
   );
 }

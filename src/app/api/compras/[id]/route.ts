@@ -7,8 +7,10 @@ const updateSchema = z.object({
   description: z.string().min(1).optional(),
   quantity: z.number().nullable().optional(),
   unit: z.string().nullable().optional(),
+  unitNormalized: z.string().nullable().optional(),
   unitPrice: z.number().nullable().optional(),
   total: z.number().optional(),
+  category: z.string().nullable().optional(),
   supplier: z.string().min(1).optional(),
   restaurant: z.string().min(1).optional(),
   invoiceDate: z.string().optional(),
@@ -47,8 +49,10 @@ export async function PUT(
   if (d.description !== undefined) updates.description = d.description;
   if (d.quantity !== undefined) updates.quantity = d.quantity;
   if (d.unit !== undefined) updates.unit = d.unit;
+  if (d.unitNormalized !== undefined) updates.unit_normalized = d.unitNormalized;
   if (d.unitPrice !== undefined) updates.unit_price = d.unitPrice;
   if (d.total !== undefined) updates.total = d.total;
+  if (d.category !== undefined) updates.category = d.category;
   if (d.supplier !== undefined) updates.supplier = d.supplier;
   if (d.restaurant !== undefined) updates.restaurant = d.restaurant;
   if (d.invoiceDate !== undefined) updates.invoice_date = d.invoiceDate;
