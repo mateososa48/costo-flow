@@ -316,16 +316,29 @@ export default function ComprasPage() {
   // ─── Render ─────────────────────────────────────────────────────
   return (
     <Shell>
-      <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-5 animate-fade-up">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="font-display text-2xl md:text-3xl font-bold" style={{ color: "var(--text)" }}>
+      <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-0 animate-fade-up">
+        {/* Header row: title + inline stats + action */}
+        <div className="flex items-center justify-between gap-4 pb-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <h1 className="font-display text-2xl font-bold flex-shrink-0" style={{ color: "var(--text)" }}>
               Compras
             </h1>
-            <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
-              Artículos extraídos de tus facturas
-            </p>
+            {/* Inline stats */}
+            <div className="hidden sm:flex items-center gap-0 divide-x rounded-[var(--radius-sm)] border overflow-hidden"
+              style={{ borderColor: "var(--border)" }}>
+              {[
+                { label: "artículos", value: stats.totalItems.toLocaleString("es-MX"), highlight: false },
+                { label: "gasto total", value: formatCurrency(stats.totalSpend), highlight: true },
+                { label: "proveedores", value: stats.uniqueSuppliers.toLocaleString("es-MX"), highlight: false },
+              ].map((stat) => (
+                <div key={stat.label} className="px-3 py-1.5" style={{ background: stat.highlight ? "var(--blue-glow)" : "var(--surface)" }}>
+                  <span className="text-xs font-semibold" style={{ color: stat.highlight ? "var(--blue)" : "var(--text)" }}>
+                    {stat.value}
+                  </span>
+                  <span className="text-xs ml-1" style={{ color: "var(--text-dim)" }}>{stat.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
           <Button size="sm" onClick={() => setAddModalOpen(true)}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -335,48 +348,33 @@ export default function ComprasPage() {
           </Button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 stagger">
-          {[
-            { label: "Artículos", value: stats.totalItems.toLocaleString("es-MX") },
-            { label: "Gasto total", value: formatCurrency(stats.totalSpend) },
-            { label: "Proveedores", value: stats.uniqueSuppliers.toLocaleString("es-MX") },
-          ].map((stat, idx) => (
-            <div
-              key={stat.label}
-              className="rounded-[var(--radius)] border p-3 md:p-4"
-              style={{
-                background: idx === 1 ? "var(--blue-glow)" : "var(--surface)",
-                borderColor: idx === 1 ? "color-mix(in srgb, var(--blue) 25%, transparent)" : "var(--border)",
-              }}
-            >
-              <p className="text-[10px] md:text-xs font-medium uppercase tracking-wider" style={{ color: idx === 1 ? "var(--blue)" : "var(--text-muted)" }}>
-                {stat.label}
-              </p>
-              <p className={`font-bold mt-1 ${idx === 1 ? "text-xl md:text-2xl" : "text-lg md:text-xl"}`} style={{ color: "var(--blue)" }}>
-                {stat.value}
-              </p>
-            </div>
-          ))}
+        {/* Mobile stats */}
+        <div className="flex sm:hidden items-center gap-3 pb-4 text-xs">
+          <span style={{ color: "var(--text)" }}><strong>{stats.totalItems}</strong> <span style={{ color: "var(--text-dim)" }}>artículos</span></span>
+          <span style={{ color: "var(--border)" }}>·</span>
+          <span style={{ color: "var(--blue)", fontWeight: 600 }}>{formatCurrency(stats.totalSpend)}</span>
+          <span style={{ color: "var(--border)" }}>·</span>
+          <span style={{ color: "var(--text)" }}><strong>{stats.uniqueSuppliers}</strong> <span style={{ color: "var(--text-dim)" }}>proveedores</span></span>
         </div>
 
-        {/* View toggle + Filter toggle */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex rounded-[var(--radius-sm)] border overflow-hidden flex-wrap" style={{ borderColor: "var(--border)" }}>
+        {/* Tabs + filter toggle */}
+        <div className="flex items-center justify-between gap-2 border-b" style={{ borderColor: "var(--border)" }}>
+          <div className="flex items-center gap-0 -mb-px overflow-x-auto">
             {([
-              { key: "items", label: "Por artículo" },
-              { key: "invoices", label: "Por factura" },
-              { key: "suppliers", label: "Por proveedor" },
+              { key: "items", label: "Artículos" },
+              { key: "invoices", label: "Facturas" },
+              { key: "suppliers", label: "Proveedores" },
               { key: "analytics", label: "Análisis" },
               { key: "normalize", label: "Ingredientes" },
             ] as const).map(({ key, label }) => (
               <button
                 key={key}
                 type="button"
-                className="px-3 py-1.5 text-xs font-medium transition-colors duration-150"
+                className="px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors duration-150"
                 style={{
-                  background: view === key ? "var(--blue)" : "var(--surface)",
-                  color: view === key ? "white" : "var(--text-muted)",
+                  borderBottomColor: view === key ? "var(--blue)" : "transparent",
+                  color: view === key ? "var(--blue)" : "var(--text-muted)",
+                  background: "transparent",
                 }}
                 onClick={() => { setView(key); setSortBy("date"); setSortDir("desc"); }}
               >
@@ -384,22 +382,25 @@ export default function ComprasPage() {
               </button>
             ))}
           </div>
-
           <button
             type="button"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border text-xs font-medium transition-colors duration-150 md:hidden"
-            style={{ borderColor: "var(--border)", color: "var(--text-muted)", background: "var(--surface)" }}
+            className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors duration-150 mb-1"
+            style={{
+              color: hasFilters ? "var(--blue)" : "var(--text-muted)",
+              background: hasFilters ? "var(--blue-glow)" : "transparent",
+            }}
             onClick={() => setShowFilters((v) => !v)}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 3h12M3 7h8M5 11h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M1 2.5h11M3.5 6.5h6M6 10.5h1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
             </svg>
-            Filtros
+            <span className="hidden sm:inline">Filtros</span>
+            {hasFilters && <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--blue)" }} />}
           </button>
         </div>
 
         {/* Filters */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 ${showFilters ? "" : "hidden md:grid"}`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-3 ${showFilters ? "" : "hidden"}`}>
           <div className="sm:col-span-2 md:col-span-2">
             <input
               type="text"
@@ -463,6 +464,8 @@ export default function ComprasPage() {
             </div>
           )}
         </div>
+
+        <div className="pt-4" />
 
         {/* Save error banner */}
         {saveError && (
