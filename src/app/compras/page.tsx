@@ -120,6 +120,8 @@ export default function ComprasPage() {
   const [supplier, setSupplier] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedWeek, setSelectedWeek] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
@@ -293,9 +295,68 @@ export default function ComprasPage() {
     }
   }
 
+  // ── Date shortcut helpers ─────────────────────────────────────────
+  function getMonthOptions() {
+    const opts: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 18; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString("es-MX", { month: "long", year: "numeric" });
+      opts.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
+    }
+    return opts;
+  }
+
+  function getWeekOptions() {
+    const opts: { value: string; label: string; dateFrom: string; dateTo: string }[] = [];
+    const now = new Date();
+    const day = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+    monday.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 12; i++) {
+      const mon = new Date(monday);
+      mon.setDate(monday.getDate() - i * 7);
+      const sun = new Date(mon);
+      sun.setDate(mon.getDate() + 6);
+      const fmt = (d: Date) => d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+      const toISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      opts.push({ value: toISO(mon), label: `${fmt(mon)} – ${fmt(sun)}`, dateFrom: toISO(mon), dateTo: toISO(sun) });
+    }
+    return opts;
+  }
+
+  function handleMonthSelect(value: string) {
+    setSelectedMonth(value);
+    setSelectedWeek("");
+    if (value) {
+      const [y, m] = value.split("-").map(Number);
+      const first = new Date(y, m - 1, 1);
+      const last = new Date(y, m, 0);
+      const toISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      setDateFrom(toISO(first));
+      setDateTo(toISO(last));
+    } else {
+      setDateFrom(""); setDateTo("");
+    }
+  }
+
+  function handleWeekSelect(value: string) {
+    setSelectedWeek(value);
+    setSelectedMonth("");
+    if (value) {
+      const week = getWeekOptions().find((w) => w.value === value);
+      if (week) { setDateFrom(week.dateFrom); setDateTo(week.dateTo); }
+    } else {
+      setDateFrom(""); setDateTo("");
+    }
+  }
+
   // ── Reset filters ────────────────────────────────────────────────
   function resetFilters() {
     setSearch(""); setRestaurant(""); setSupplier(""); setDateFrom(""); setDateTo("");
+    setSelectedMonth(""); setSelectedWeek("");
   }
 
   // ── Sort toggle ─────────────────────────────────────────────────
@@ -310,36 +371,18 @@ export default function ComprasPage() {
     setEditValue(currentValue);
   }
 
-  const hasFilters = !!(search || restaurant || supplier || dateFrom || dateTo);
+  const hasFilters = !!(search || restaurant || supplier || dateFrom || dateTo || selectedMonth || selectedWeek);
   const deleteTarget = items.find((i) => i.id === deleteConfirmId);
 
   // ─── Render ─────────────────────────────────────────────────────
   return (
     <Shell>
       <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-0 animate-fade-up">
-        {/* Header row: title + inline stats + action */}
-        <div className="flex items-center justify-between gap-4 pb-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <h1 className="font-display text-2xl font-bold flex-shrink-0" style={{ color: "var(--text)" }}>
-              Compras
-            </h1>
-            {/* Inline stats */}
-            <div className="hidden sm:flex items-center gap-0 divide-x rounded-[var(--radius-sm)] border overflow-hidden"
-              style={{ borderColor: "var(--border)" }}>
-              {[
-                { label: "artículos", value: stats.totalItems.toLocaleString("es-MX"), highlight: false },
-                { label: "gasto total", value: formatCurrency(stats.totalSpend), highlight: true },
-                { label: "proveedores", value: stats.uniqueSuppliers.toLocaleString("es-MX"), highlight: false },
-              ].map((stat) => (
-                <div key={stat.label} className="px-3 py-1.5" style={{ background: stat.highlight ? "var(--blue-glow)" : "var(--surface)" }}>
-                  <span className="text-xs font-semibold" style={{ color: stat.highlight ? "var(--blue)" : "var(--text)" }}>
-                    {stat.value}
-                  </span>
-                  <span className="text-xs ml-1" style={{ color: "var(--text-dim)" }}>{stat.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Header row: title + action */}
+        <div className="flex items-center justify-between gap-4 pb-2">
+          <h1 className="font-display text-2xl font-bold" style={{ color: "var(--text)" }}>
+            Compras
+          </h1>
           <Button size="sm" onClick={() => setAddModalOpen(true)}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -348,13 +391,21 @@ export default function ComprasPage() {
           </Button>
         </div>
 
-        {/* Mobile stats */}
-        <div className="flex sm:hidden items-center gap-3 pb-4 text-xs">
-          <span style={{ color: "var(--text)" }}><strong>{stats.totalItems}</strong> <span style={{ color: "var(--text-dim)" }}>artículos</span></span>
-          <span style={{ color: "var(--border)" }}>·</span>
-          <span style={{ color: "var(--blue)", fontWeight: 600 }}>{formatCurrency(stats.totalSpend)}</span>
-          <span style={{ color: "var(--border)" }}>·</span>
-          <span style={{ color: "var(--text)" }}><strong>{stats.uniqueSuppliers}</strong> <span style={{ color: "var(--text-dim)" }}>proveedores</span></span>
+        {/* Stats strip below title */}
+        <div className="flex items-center gap-0 divide-x rounded-[var(--radius-sm)] border overflow-hidden mb-4 w-fit"
+          style={{ borderColor: "var(--border)" }}>
+          {[
+            { label: "gasto total", value: formatCurrency(stats.totalSpend), highlight: true },
+            { label: "proveedores", value: stats.uniqueSuppliers.toLocaleString("es-MX"), highlight: false },
+            { label: "artículos", value: stats.totalItems.toLocaleString("es-MX"), highlight: false },
+          ].map((stat) => (
+            <div key={stat.label} className="px-3 py-1.5" style={{ background: stat.highlight ? "var(--blue-glow)" : "var(--surface)" }}>
+              <span className="text-xs font-semibold" style={{ color: stat.highlight ? "var(--blue)" : "var(--text)" }}>
+                {stat.value}
+              </span>
+              <span className="text-xs ml-1" style={{ color: "var(--text-dim)" }}>{stat.label}</span>
+            </div>
+          ))}
         </div>
 
         {/* Tabs + filter toggle */}
@@ -400,69 +451,94 @@ export default function ComprasPage() {
         </div>
 
         {/* Filters */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-3 ${showFilters ? "" : "hidden"}`}>
-          <div className="sm:col-span-2 md:col-span-2">
-            <input
-              type="text"
-              value={search}
-              placeholder="Buscar artículo..."
-              className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
-              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        <div className={`flex flex-col gap-2 pt-3 ${showFilters ? "" : "hidden"}`}>
+          {/* Row 1: search + restaurant + supplier */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="sm:col-span-2 md:col-span-2">
+              <input
+                type="text"
+                value={search}
+                placeholder="Buscar artículo..."
+                className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <select
+              value={restaurant}
+              className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: restaurant ? "var(--text)" : "var(--text-dim)" }}
+              onChange={(e) => setRestaurant(e.target.value)}
+            >
+              <option value="">Todos los restaurantes</option>
+              <option value="motin_juarez">Motín Juárez</option>
+              <option value="motin_roma">Motín Roma</option>
+              <option value="queseria">Quesería</option>
+            </select>
+            <select
+              value={supplier}
+              className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: supplier ? "var(--text)" : "var(--text-dim)" }}
+              onChange={(e) => setSupplier(e.target.value)}
+            >
+              <option value="">Todos los proveedores</option>
+              {stats.supplierList.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
-          <select
-            value={restaurant}
-            className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
-            style={{ background: "var(--surface)", borderColor: "var(--border)", color: restaurant ? "var(--text)" : "var(--text-dim)" }}
-            onChange={(e) => setRestaurant(e.target.value)}
-          >
-            <option value="">Todos los restaurantes</option>
-            <option value="motin_juarez">Motín Juárez</option>
-            <option value="motin_roma">Motín Roma</option>
-            <option value="queseria">Quesería</option>
-          </select>
-          <select
-            value={supplier}
-            className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
-            style={{ background: "var(--surface)", borderColor: "var(--border)", color: supplier ? "var(--text)" : "var(--text-dim)" }}
-            onChange={(e) => setSupplier(e.target.value)}
-          >
-            <option value="">Todos los proveedores</option>
-            {stats.supplierList.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <div>
-            <label className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Desde</label>
-            <input
-              type="date"
-              value={dateFrom}
-              className="w-full mt-0.5 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
-              style={{ background: "var(--surface)", borderColor: "var(--border)", color: dateFrom ? "var(--text)" : "var(--text-dim)" }}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Hasta</label>
-            <input
-              type="date"
-              value={dateTo}
-              className="w-full mt-0.5 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
-              style={{ background: "var(--surface)", borderColor: "var(--border)", color: dateTo ? "var(--text)" : "var(--text-dim)" }}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-          </div>
-          {hasFilters && (
-            <div className="flex items-end">
+
+          {/* Row 2: month + week + desde/hasta (compact) + limpiar */}
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={selectedMonth}
+              className="px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: selectedMonth ? "var(--blue)" : "var(--border)", color: selectedMonth ? "var(--text)" : "var(--text-dim)", minWidth: 160 }}
+              onChange={(e) => handleMonthSelect(e.target.value)}
+            >
+              <option value="">Mes</option>
+              {getMonthOptions().map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <select
+              value={selectedWeek}
+              className="px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: selectedWeek ? "var(--blue)" : "var(--border)", color: selectedWeek ? "var(--text)" : "var(--text-dim)", minWidth: 160 }}
+              onChange={(e) => handleWeekSelect(e.target.value)}
+            >
+              <option value="">Semana</option>
+              {getWeekOptions().map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-1 ml-1">
+              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "var(--text-muted)" }}>Desde</span>
+              <input
+                type="date"
+                value={dateFrom}
+                className="px-2 py-1 rounded-[var(--radius-sm)] border text-xs focus:outline-none focus:ring-2"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: dateFrom ? "var(--text)" : "var(--text-dim)" }}
+                onChange={(e) => { setDateFrom(e.target.value); setSelectedMonth(""); setSelectedWeek(""); }}
+              />
+              <span className="text-[10px] uppercase tracking-wider font-medium ml-1" style={{ color: "var(--text-muted)" }}>Hasta</span>
+              <input
+                type="date"
+                value={dateTo}
+                className="px-2 py-1 rounded-[var(--radius-sm)] border text-xs focus:outline-none focus:ring-2"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: dateTo ? "var(--text)" : "var(--text-dim)" }}
+                onChange={(e) => { setDateTo(e.target.value); setSelectedMonth(""); setSelectedWeek(""); }}
+              />
+            </div>
+            {hasFilters && (
               <Button variant="ghost" size="sm" onClick={resetFilters}>
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
                 Limpiar
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div className="pt-4" />
