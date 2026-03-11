@@ -947,8 +947,9 @@ export default function ComprasPage() {
                         <Tooltip
                           // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           formatter={(value: any) => [formatCurrency(Number(value)), "Gasto"]}
-                          labelFormatter={(label: string) => {
-                            const d = new Date(label + "T00:00:00");
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          labelFormatter={(label: any) => {
+                            const d = new Date(String(label) + "T00:00:00");
                             return `Semana del ${d.toLocaleDateString("es-MX", { day: "numeric", month: "long" })}`;
                           }}
                           contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
