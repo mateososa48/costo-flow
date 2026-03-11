@@ -168,8 +168,10 @@ export default function ComprasPage() {
   const [unmatchedCount, setUnmatchedCount] = useState(0);
   const [normalizeLoading, setNormalizeLoading] = useState(false);
   const [createIngredientFor, setCreateIngredientFor] = useState<string | null>(null);
-  const [deleteIngredientId, setDeleteIngredientId] = useState<string | null>(null);
-  const [deletingIngredient, setDeletingIngredient] = useState(false);
+  const [ingredientEditMode, setIngredientEditMode] = useState(false);
+  const [selectedIngredientIds, setSelectedIngredientIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteIngredients, setConfirmDeleteIngredients] = useState(false);
+  const [deletingIngredients, setDeletingIngredients] = useState(false);
   const [mergeFor, setMergeFor] = useState<string | null>(null);
   const [mergingIntoId, setMergingIntoId] = useState("");
   const [mergeQuery, setMergeQuery] = useState("");
@@ -339,19 +341,23 @@ export default function ComprasPage() {
     }
   }
 
-  // ── Delete ingredient ─────────────────────────────────────────────
-  async function confirmDeleteIngredient() {
-    if (!deleteIngredientId) return;
-    setDeletingIngredient(true);
+  // ── Delete ingredients (bulk) ─────────────────────────────────────
+  async function deleteSelectedIngredients() {
+    setDeletingIngredients(true);
     try {
-      await fetch(`/api/compras/ingredients/${deleteIngredientId}`, { method: "DELETE" });
-      setIngredients((prev) => prev.filter((i) => i.id !== deleteIngredientId));
-      setUnmatchedCount((c) => c); // will refresh on next normalize load
+      await Promise.all(
+        Array.from(selectedIngredientIds).map((id) =>
+          fetch(`/api/compras/ingredients/${id}`, { method: "DELETE" })
+        )
+      );
+      setIngredients((prev) => prev.filter((i) => !selectedIngredientIds.has(i.id)));
+      setSelectedIngredientIds(new Set());
+      setIngredientEditMode(false);
       fetchNormalize();
     } catch { /* ignore */ }
     finally {
-      setDeletingIngredient(false);
-      setDeleteIngredientId(null);
+      setDeletingIngredients(false);
+      setConfirmDeleteIngredients(false);
     }
   }
 
@@ -828,8 +834,8 @@ export default function ComprasPage() {
                       onClick={(e) => { e.stopPropagation(); setDeleteInvoiceId(inv.id); }}
                       title="Eliminar factura"
                     >
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M6 6.5v4M8 6.5v4M3 3.5l.7 7a.5.5 0 00.5.5h5.6a.5.5 0 00.5-.5l.7-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                        <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9M6.5 8v4M9.5 8v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </button>
                   </div>
@@ -1231,16 +1237,41 @@ export default function ComprasPage() {
 
                 {/* Registered ingredients */}
                 <div className="rounded-[var(--radius)] border overflow-hidden" style={{ borderColor: "var(--border)" }}>
-                  <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
-                    <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>
-                      Ingredientes registrados
-                      {ingredients.length > 0 && (
-                        <span className="ml-2 text-xs font-normal px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
-                          {ingredients.length}
-                        </span>
-                      )}
-                    </h3>
-                    <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>Nombres canónicos con todos sus alias</p>
+                  <div className="px-4 py-3 border-b flex items-center justify-between gap-2" style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
+                    <div>
+                      <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+                        Ingredientes registrados
+                        {ingredients.length > 0 && (
+                          <span className="ml-2 text-xs font-normal px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
+                            {ingredients.length}
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>Nombres canónicos con todos sus alias</p>
+                    </div>
+                    {ingredients.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        {ingredientEditMode && selectedIngredientIds.size > 0 && (
+                          <button type="button"
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+                            style={{ background: "#fee2e2", color: "#b91c1c" }}
+                            onClick={() => setConfirmDeleteIngredients(true)}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                              <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9M6.5 8v4M9.5 8v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            Eliminar ({selectedIngredientIds.size})
+                          </button>
+                        )}
+                        <button type="button"
+                          className="px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+                          style={{ background: ingredientEditMode ? "var(--surface)" : "var(--blue-glow)", color: ingredientEditMode ? "var(--text-muted)" : "var(--blue)", border: "1px solid", borderColor: ingredientEditMode ? "var(--border)" : "color-mix(in srgb, var(--blue) 25%, transparent)" }}
+                          onClick={() => { setIngredientEditMode((m) => !m); setSelectedIngredientIds(new Set()); }}
+                        >
+                          {ingredientEditMode ? "Cancelar" : "Editar"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {ingredients.length === 0 ? (
                     <div className="px-4 py-8 text-center">
@@ -1248,39 +1279,45 @@ export default function ComprasPage() {
                     </div>
                   ) : (
                     <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
-                      {ingredients.map((ing) => (
-                        <div key={ing.id} className="px-4 py-2.5">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{ing.canonical_name}</p>
-                              {ing.category && (
-                                <p className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>{ing.category}</p>
+                      {ingredients.map((ing) => {
+                        const checked = selectedIngredientIds.has(ing.id);
+                        return (
+                          <div key={ing.id}
+                            className={`px-4 py-2.5 ${ingredientEditMode ? "cursor-pointer" : ""}`}
+                            style={{ background: checked ? "var(--blue-glow)" : undefined }}
+                            onClick={ingredientEditMode ? () => {
+                              setSelectedIngredientIds((prev) => {
+                                const next = new Set(prev);
+                                checked ? next.delete(ing.id) : next.add(ing.id);
+                                return next;
+                              });
+                            } : undefined}
+                          >
+                            <div className="flex items-start gap-3">
+                              {ingredientEditMode && (
+                                <input type="checkbox" readOnly checked={checked}
+                                  className="mt-0.5 flex-shrink-0 accent-[#0450A9]" />
                               )}
-                              {ing.aliases.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {ing.aliases.map((a) => (
-                                    <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-full"
-                                      style={{ background: "var(--surface-raised)", color: "var(--text-dim)" }}>
-                                      {a}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{ing.canonical_name}</p>
+                                {ing.category && (
+                                  <p className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>{ing.category}</p>
+                                )}
+                                {ing.aliases.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {ing.aliases.map((a) => (
+                                      <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-full"
+                                        style={{ background: "var(--surface-raised)", color: "var(--text-dim)" }}>
+                                        {a}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <button
-                              type="button"
-                              className="flex-shrink-0 opacity-30 hover:opacity-100 transition-opacity p-1"
-                              style={{ color: "var(--red, #ef4444)" }}
-                              onClick={() => setDeleteIngredientId(ing.id)}
-                              title="Eliminar ingrediente"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                                <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M6 6.5v4M8 6.5v4M3 3.5l.7 7a.5.5 0 00.5.5h5.6a.5.5 0 00.5-.5l.7-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            </button>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1451,24 +1488,20 @@ export default function ComprasPage() {
         </div>
       </Modal>
 
-      {/* Delete ingredient confirmation modal */}
+      {/* Delete ingredients confirmation modal */}
       <Modal
-        open={!!deleteIngredientId}
-        onClose={() => setDeleteIngredientId(null)}
-        title="Eliminar ingrediente"
+        open={confirmDeleteIngredients}
+        onClose={() => setConfirmDeleteIngredients(false)}
+        title="Eliminar ingredientes"
         maxWidth="max-w-sm"
       >
         <div className="space-y-4">
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            ¿Eliminar{" "}
-            <span className="font-medium" style={{ color: "var(--text)" }}>
-              {ingredients.find((i) => i.id === deleteIngredientId)?.canonical_name ?? "este ingrediente"}
-            </span>
-            ? Los artículos vinculados quedarán sin asignar.
+            ¿Eliminar <span className="font-medium" style={{ color: "var(--text)" }}>{selectedIngredientIds.size} ingrediente{selectedIngredientIds.size !== 1 ? "s" : ""}</span>? Los artículos vinculados quedarán sin asignar. Esta acción no se puede deshacer.
           </p>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setDeleteIngredientId(null)}>Cancelar</Button>
-            <Button variant="danger" size="sm" loading={deletingIngredient} onClick={confirmDeleteIngredient}>Eliminar</Button>
+            <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteIngredients(false)}>Cancelar</Button>
+            <Button variant="danger" size="sm" loading={deletingIngredients} onClick={deleteSelectedIngredients}>Eliminar</Button>
           </div>
         </div>
       </Modal>
