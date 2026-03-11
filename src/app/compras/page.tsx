@@ -146,6 +146,8 @@ export default function ComprasPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteInvoiceId, setDeleteInvoiceId] = useState<string | null>(null);
+  const [deletingInvoice, setDeletingInvoice] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(new Set());
   const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
@@ -296,6 +298,21 @@ export default function ComprasPage() {
     finally {
       setDeleting(false);
       setDeleteConfirmId(null);
+    }
+  }
+
+  // ── Delete invoice ───────────────────────────────────────────────
+  async function confirmDeleteInvoice() {
+    if (!deleteInvoiceId) return;
+    setDeletingInvoice(true);
+    try {
+      await fetch(`/api/compras/invoices/${deleteInvoiceId}`, { method: "DELETE" });
+      setInvoices((prev) => prev.filter((i) => i.id !== deleteInvoiceId));
+      fetchStats();
+    } catch { /* ignore */ }
+    finally {
+      setDeletingInvoice(false);
+      setDeleteInvoiceId(null);
     }
   }
 
@@ -725,39 +742,52 @@ export default function ComprasPage() {
               return (
                 <div key={inv.id} className="rounded-[var(--radius)] border overflow-hidden"
                   style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left"
-                    onClick={() => {
-                      setExpandedInvoices((prev) => {
-                        const next = new Set(prev);
-                        isExpanded ? next.delete(inv.id) : next.add(inv.id);
-                        return next;
-                      });
-                    }}
-                  >
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
-                      className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`}
-                      style={{ color: "var(--text-muted)" }}>
-                      <path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{inv.supplier}</span>
-                        {inv.invoice_number && (
-                          <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>#{inv.invoice_number}</span>
-                        )}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--pink-glow)", color: "var(--pink-dark)" }}>
-                          {restaurantLabel(inv.restaurant)}
-                        </span>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      className="flex-1 flex items-center gap-3 px-4 py-3 text-left"
+                      onClick={() => {
+                        setExpandedInvoices((prev) => {
+                          const next = new Set(prev);
+                          isExpanded ? next.delete(inv.id) : next.add(inv.id);
+                          return next;
+                        });
+                      }}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+                        className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`}
+                        style={{ color: "var(--text-muted)" }}>
+                        <path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{inv.supplier}</span>
+                          {inv.invoice_number && (
+                            <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>#{inv.invoice_number}</span>
+                          )}
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--pink-glow)", color: "var(--pink-dark)" }}>
+                            {restaurantLabel(inv.restaurant)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                          <span>{formatDate(inv.invoice_date)}</span>
+                          <span className="font-semibold" style={{ color: "var(--blue)" }}>{formatCurrency(inv.total)}</span>
+                          <span>{inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
-                        <span>{formatDate(inv.invoice_date)}</span>
-                        <span className="font-semibold" style={{ color: "var(--blue)" }}>{formatCurrency(inv.total)}</span>
-                        <span>{inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}</span>
-                      </div>
-                    </div>
-                  </button>
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-3 flex-shrink-0 opacity-40 hover:opacity-100 transition-opacity"
+                      style={{ color: "var(--red, #ef4444)" }}
+                      onClick={(e) => { e.stopPropagation(); setDeleteInvoiceId(inv.id); }}
+                      title="Eliminar factura"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M6 6.5v4M8 6.5v4M3 3.5l.7 7a.5.5 0 00.5.5h5.6a.5.5 0 00.5-.5l.7-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  </div>
                   {isExpanded && (
                     <div className="border-t px-4 py-3 space-y-1.5" style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
                       {inv.lineItems.length === 0 ? (
@@ -1306,6 +1336,28 @@ export default function ComprasPage() {
               Cancelar
             </Button>
             <Button variant="danger" size="sm" loading={deleting} onClick={confirmDelete}>
+              Eliminar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete invoice confirmation modal */}
+      <Modal
+        open={!!deleteInvoiceId}
+        onClose={() => setDeleteInvoiceId(null)}
+        title="Eliminar factura"
+        maxWidth="max-w-sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            ¿Eliminar esta factura y todos sus artículos? Esta acción no se puede deshacer.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setDeleteInvoiceId(null)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" size="sm" loading={deletingInvoice} onClick={confirmDeleteInvoice}>
               Eliminar
             </Button>
           </div>
