@@ -168,6 +168,8 @@ export default function ComprasPage() {
   const [unmatchedCount, setUnmatchedCount] = useState(0);
   const [normalizeLoading, setNormalizeLoading] = useState(false);
   const [createIngredientFor, setCreateIngredientFor] = useState<string | null>(null);
+  const [deleteIngredientId, setDeleteIngredientId] = useState<string | null>(null);
+  const [deletingIngredient, setDeletingIngredient] = useState(false);
   const [mergeFor, setMergeFor] = useState<string | null>(null);
   const [mergingIntoId, setMergingIntoId] = useState("");
   const [mergeQuery, setMergeQuery] = useState("");
@@ -192,6 +194,8 @@ export default function ComprasPage() {
   // ── Fetch normalize data ─────────────────────────────────────────
   const fetchNormalize = useCallback(async () => {
     setNormalizeLoading(true);
+    // Backfill category from ingredients → line_items (safe no-op if already done)
+    fetch("/api/compras/ingredients/backfill", { method: "POST" }).catch(() => {});
     try {
       const [ingRes, unmatchedRes] = await Promise.all([
         fetch("/api/compras/ingredients"),
@@ -332,6 +336,22 @@ export default function ComprasPage() {
     finally {
       setDeletingInvoice(false);
       setDeleteInvoiceId(null);
+    }
+  }
+
+  // ── Delete ingredient ─────────────────────────────────────────────
+  async function confirmDeleteIngredient() {
+    if (!deleteIngredientId) return;
+    setDeletingIngredient(true);
+    try {
+      await fetch(`/api/compras/ingredients/${deleteIngredientId}`, { method: "DELETE" });
+      setIngredients((prev) => prev.filter((i) => i.id !== deleteIngredientId));
+      setUnmatchedCount((c) => c); // will refresh on next normalize load
+      fetchNormalize();
+    } catch { /* ignore */ }
+    finally {
+      setDeletingIngredient(false);
+      setDeleteIngredientId(null);
     }
   }
 
@@ -1247,6 +1267,17 @@ export default function ComprasPage() {
                                 </div>
                               )}
                             </div>
+                            <button
+                              type="button"
+                              className="flex-shrink-0 opacity-30 hover:opacity-100 transition-opacity p-1"
+                              style={{ color: "var(--red, #ef4444)" }}
+                              onClick={() => setDeleteIngredientId(ing.id)}
+                              title="Eliminar ingrediente"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M6 6.5v4M8 6.5v4M3 3.5l.7 7a.5.5 0 00.5.5h5.6a.5.5 0 00.5-.5l.7-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1416,6 +1447,28 @@ export default function ComprasPage() {
             <Button variant="danger" size="sm" loading={deletingInvoice} onClick={confirmDeleteInvoice}>
               Eliminar
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete ingredient confirmation modal */}
+      <Modal
+        open={!!deleteIngredientId}
+        onClose={() => setDeleteIngredientId(null)}
+        title="Eliminar ingrediente"
+        maxWidth="max-w-sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            ¿Eliminar{" "}
+            <span className="font-medium" style={{ color: "var(--text)" }}>
+              {ingredients.find((i) => i.id === deleteIngredientId)?.canonical_name ?? "este ingrediente"}
+            </span>
+            ? Los artículos vinculados quedarán sin asignar.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setDeleteIngredientId(null)}>Cancelar</Button>
+            <Button variant="danger" size="sm" loading={deletingIngredient} onClick={confirmDeleteIngredient}>Eliminar</Button>
           </div>
         </div>
       </Modal>

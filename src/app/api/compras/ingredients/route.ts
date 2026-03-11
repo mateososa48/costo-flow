@@ -49,11 +49,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Auto-assign this new ingredient to all unmatched line items with a matching description
+  // and propagate category to those line items
   const allDescriptions = [canonicalName, ...aliases];
   for (const desc of allDescriptions) {
     await supabase
       .from("line_items")
-      .update({ ingredient_id: data.id })
+      .update({ ingredient_id: data.id, ...(category ? { category } : {}) })
       .is("ingredient_id", null)
       .ilike("description", desc);
   }

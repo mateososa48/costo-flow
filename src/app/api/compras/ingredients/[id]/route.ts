@@ -35,7 +35,7 @@ export async function PUT(
   if (addAlias) {
     const { data: existing, error: fetchError } = await supabase
       .from("ingredients")
-      .select("aliases")
+      .select("aliases, category")
       .eq("id", id)
       .single();
 
@@ -56,9 +56,11 @@ export async function PUT(
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     // Map all unmatched line items with this description to this ingredient
+    // and propagate the ingredient's category
+    const ingCategory = existing?.category as string | null;
     await supabase
       .from("line_items")
-      .update({ ingredient_id: id })
+      .update({ ingredient_id: id, ...(ingCategory ? { category: ingCategory } : {}) })
       .is("ingredient_id", null)
       .ilike("description", addAlias);
 
@@ -80,6 +82,15 @@ export async function PUT(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // If category changed, backfill all already-linked line_items
+  if (category !== undefined) {
+    await supabase
+      .from("line_items")
+      .update({ category: category ?? null })
+      .eq("ingredient_id", id);
+  }
+
   return NextResponse.json(data);
 }
 
