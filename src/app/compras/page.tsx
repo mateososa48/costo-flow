@@ -1764,6 +1764,21 @@ function CreateIngredientForm({
 }) {
   const [name, setName] = useState(initialName);
   const [category, setCategory] = useState("");
+  const [catQuery, setCatQuery] = useState("");
+  const [catOpen, setCatOpen] = useState(false);
+  const [catHighlight, setCatHighlight] = useState(-1);
+
+  const allCats = ["Sin categoría", ...(dropdownOptions.concepto as string[])];
+  const filteredCats = catQuery.trim()
+    ? allCats.filter((c) => c.toLowerCase().includes(catQuery.toLowerCase()))
+    : allCats;
+
+  function selectCat(val: string) {
+    setCategory(val === "Sin categoría" ? "" : val);
+    setCatQuery("");
+    setCatOpen(false);
+    setCatHighlight(-1);
+  }
 
   return (
     <div className="space-y-3">
@@ -1780,18 +1795,45 @@ function CreateIngredientForm({
       <div>
         <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Categoría</label>
         <div className="relative mt-1">
-          <select value={category}
-            className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
-            style={{ background: "var(--surface)", borderColor: "var(--border)", color: category ? "var(--text)" : "var(--text-dim)" }}
-            onChange={(e) => setCategory(e.target.value)}>
-            <option value="">Sin categoría</option>
-            {(dropdownOptions.concepto as string[]).map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <input
+            type="text"
+            value={catOpen ? catQuery : (category || "")}
+            placeholder="Sin categoría"
+            className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: category && !catOpen ? "var(--text)" : "var(--text-dim)" }}
+            onFocus={() => { setCatOpen(true); setCatQuery(""); }}
+            onChange={(e) => { setCatQuery(e.target.value); setCatHighlight(-1); }}
+            onBlur={() => setTimeout(() => setCatOpen(false), 150)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown") { e.preventDefault(); setCatHighlight((i) => Math.min(i + 1, filteredCats.length - 1)); }
+              else if (e.key === "ArrowUp") { e.preventDefault(); setCatHighlight((i) => Math.max(i - 1, 0)); }
+              else if (e.key === "Enter") { e.preventDefault(); if (catHighlight >= 0 && filteredCats[catHighlight]) selectCat(filteredCats[catHighlight]); }
+              else if (e.key === "Escape") setCatOpen(false);
+            }}
+          />
           <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
             <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
+          {catOpen && (
+            <div className="absolute z-50 w-full mt-1 rounded-[var(--radius-sm)] border shadow-lg overflow-y-auto"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", maxHeight: 200 }}>
+              {filteredCats.length === 0 ? (
+                <div className="px-3 py-2 text-xs" style={{ color: "var(--text-dim)" }}>Sin resultados</div>
+              ) : filteredCats.map((c, i) => (
+                <button key={c} type="button"
+                  className="w-full text-left px-3 py-2 text-sm"
+                  style={{
+                    background: i === catHighlight ? "var(--blue-glow)" : "transparent",
+                    color: i === catHighlight ? "var(--blue)" : "var(--text)",
+                  }}
+                  onMouseDown={() => selectCat(c)}
+                  onMouseEnter={() => setCatHighlight(i)}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-2">
