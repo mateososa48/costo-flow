@@ -459,7 +459,13 @@ export default function ComprasPage() {
                 }}
                 onClick={() => { setView(key); setSortBy("date"); setSortDir("desc"); }}
               >
-                {label}
+                <span className="relative inline-flex items-center gap-1.5">
+                  {label}
+                  {key === "normalize" && unmatched.length > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      style={{ background: "var(--pink-dark)" }} />
+                  )}
+                </span>
               </button>
             ))}
           </div>

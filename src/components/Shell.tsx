@@ -61,6 +61,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<string>("");
+  const [hasUnmatched, setHasUnmatched] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/compras?view=normalize")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data?.unmatched?.length > 0) setHasUnmatched(true); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const cached = sessionStorage.getItem("user");
@@ -120,7 +128,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                     : "text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]",
                 ].join(" ")}
               >
-                <Icon active={active} />
+                <div className="relative flex-shrink-0">
+                  <Icon active={active} />
+                  {href === "/compras" && hasUnmatched && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white"
+                      style={{ background: "var(--pink-dark)" }} />
+                  )}
+                </div>
                 {label}
               </Link>
             );
@@ -208,7 +222,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
               className="flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors duration-150"
               style={{ color: active ? "var(--blue)" : "var(--text-muted)" }}
             >
-              <Icon active={active} />
+              <div className="relative">
+                <Icon active={active} />
+                {href === "/compras" && hasUnmatched && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white"
+                    style={{ background: "var(--pink-dark)" }} />
+                )}
+              </div>
               <span className="text-[10px] font-medium">{label}</span>
             </Link>
           );
