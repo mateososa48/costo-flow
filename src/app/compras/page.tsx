@@ -56,10 +56,16 @@ type AnalyticsData = {
   spendByRestaurant: Array<{ restaurant: string; total: number }>;
 };
 
-const CHART_COLORS = [
-  "#4a90e2", "#f5a623", "#7ed321", "#d0021b",
-  "#9b59b6", "#1abc9c", "#e67e22", "#3498db",
-  "#e91e63", "#78909c",
+const BLUE_SHADES = [
+  "#0450A9", "#2E6EC4", "#5589D4", "#7AA5E0",
+  "#9DC0EC", "#C0D9F5", "#033D82", "#1A5DB8",
+  "#3A7FCC", "#042F6B",
+];
+
+const PINK_SHADES = [
+  "#C97F7E", "#D99998", "#B36564", "#E8B3B2",
+  "#9D4F4E", "#F2CDCC", "#874040", "#DEBDBC",
+  "#A06160", "#F7E4E4",
 ];
 
 type DbInvoice = {
@@ -955,8 +961,8 @@ export default function ComprasPage() {
                           contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
                           labelStyle={{ color: "var(--text)", fontWeight: 600 }}
                         />
-                        <Line type="monotone" dataKey="total" stroke="var(--blue)" strokeWidth={2}
-                          dot={{ fill: "var(--blue)", r: 3, strokeWidth: 0 }}
+                        <Line type="monotone" dataKey="total" stroke="#0450A9" strokeWidth={2}
+                          dot={{ fill: "#0450A9", r: 3, strokeWidth: 0 }}
                           activeDot={{ r: 5, strokeWidth: 0 }} />
                       </LineChart>
                     </ResponsiveContainer>
@@ -983,7 +989,7 @@ export default function ComprasPage() {
                         />
                         <Legend wrapperStyle={{ fontSize: 11 }} />
                         {analyticsData.categories.slice(0, 10).map((cat, i) => (
-                          <Bar key={cat} dataKey={cat} stackId="a" fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                          <Bar key={cat} dataKey={cat} stackId="a" fill={BLUE_SHADES[i % BLUE_SHADES.length]} />
                         ))}
                       </BarChart>
                     </ResponsiveContainer>
@@ -1012,7 +1018,7 @@ export default function ComprasPage() {
                               paddingAngle={2}
                             >
                               {analyticsData.categoryBreakdown.map((_, i) => (
-                                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                <Cell key={i} fill={PINK_SHADES[i % PINK_SHADES.length]} />
                               ))}
                             </Pie>
                             <Tooltip
@@ -1030,7 +1036,7 @@ export default function ComprasPage() {
                             return (
                               <div key={c.name} className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2 min-w-0">
-                                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: PINK_SHADES[i % PINK_SHADES.length] }} />
                                   <span className="text-xs truncate" style={{ color: "var(--text)" }}>{c.name}</span>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -1067,7 +1073,7 @@ export default function ComprasPage() {
                             formatter={(value: any) => [formatCurrency(Number(value)), "Gasto"]}
                             contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
                           />
-                          <Bar dataKey="total" fill={CHART_COLORS[0]} radius={[0, 3, 3, 0]} />
+                          <Bar dataKey="total" fill="#0450A9" radius={[0, 3, 3, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     )}
@@ -1096,7 +1102,7 @@ export default function ComprasPage() {
                           formatter={(value: any) => [formatCurrency(Number(value)), "Gasto total"]}
                           contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
                         />
-                        <Bar dataKey="totalSpend" fill={CHART_COLORS[2]} radius={[0, 3, 3, 0]} />
+                        <Bar dataKey="totalSpend" fill="#C97F7E" radius={[0, 3, 3, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
