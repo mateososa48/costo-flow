@@ -169,6 +169,9 @@ export default function ComprasPage() {
   const [createIngredientFor, setCreateIngredientFor] = useState<string | null>(null);
   const [mergeFor, setMergeFor] = useState<string | null>(null);
   const [mergingIntoId, setMergingIntoId] = useState("");
+  const [mergeQuery, setMergeQuery] = useState("");
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [mergeHighlight, setMergeHighlight] = useState(-1);
   const [normalizeSaving, setNormalizeSaving] = useState(false);
 
   // ── Fetch analytics ─────────────────────────────────────────────
@@ -1269,7 +1272,7 @@ export default function ComprasPage() {
       {/* Merge Modal */}
       <Modal
         open={!!mergeFor}
-        onClose={() => setMergeFor(null)}
+        onClose={() => { setMergeFor(null); setMergeQuery(""); setMergeOpen(false); setMergeHighlight(-1); }}
         title="Unir con ingrediente existente"
         maxWidth="max-w-sm"
       >
@@ -1278,23 +1281,53 @@ export default function ComprasPage() {
             Agregar <span className="font-medium" style={{ color: "var(--text)" }}>"{mergeFor}"</span> como alias de:
           </p>
           <div className="relative">
-            <select
-              value={mergingIntoId}
-              className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
-              style={{ background: "var(--surface)", borderColor: "var(--border)", color: mergingIntoId ? "var(--text)" : "var(--text-dim)" }}
-              onChange={(e) => setMergingIntoId(e.target.value)}
-            >
-              <option value="">Seleccionar ingrediente...</option>
-              {ingredients.map((ing) => (
-                <option key={ing.id} value={ing.id}>{ing.canonical_name}</option>
-              ))}
-            </select>
+            <input
+              type="text"
+              placeholder="Seleccionar ingrediente..."
+              value={mergeOpen ? mergeQuery : (ingredients.find((i) => i.id === mergingIntoId)?.canonical_name ?? "")}
+              className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: mergingIntoId && !mergeOpen ? "var(--text)" : "var(--text-dim)" }}
+              onFocus={() => { setMergeOpen(true); setMergeQuery(""); }}
+              onChange={(e) => { setMergeQuery(e.target.value); setMergeHighlight(-1); }}
+              onBlur={() => setTimeout(() => setMergeOpen(false), 150)}
+              onKeyDown={(e) => {
+                const filtered = mergeQuery.trim()
+                  ? ingredients.filter((i) => i.canonical_name.toLowerCase().includes(mergeQuery.toLowerCase()))
+                  : ingredients;
+                if (e.key === "ArrowDown") { e.preventDefault(); setMergeHighlight((h) => Math.min(h + 1, filtered.length - 1)); }
+                else if (e.key === "ArrowUp") { e.preventDefault(); setMergeHighlight((h) => Math.max(h - 1, 0)); }
+                else if (e.key === "Enter") { e.preventDefault(); if (mergeHighlight >= 0 && filtered[mergeHighlight]) { setMergingIntoId(filtered[mergeHighlight].id); setMergeQuery(""); setMergeOpen(false); setMergeHighlight(-1); } }
+                else if (e.key === "Escape") setMergeOpen(false);
+              }}
+            />
             <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
               <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
+            {mergeOpen && (() => {
+              const filtered = mergeQuery.trim()
+                ? ingredients.filter((i) => i.canonical_name.toLowerCase().includes(mergeQuery.toLowerCase()))
+                : ingredients;
+              return (
+                <div className="absolute z-50 w-full mt-1 rounded-[var(--radius-sm)] border shadow-lg overflow-y-auto"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", maxHeight: 200 }}>
+                  {filtered.length === 0 ? (
+                    <div className="px-3 py-2 text-xs" style={{ color: "var(--text-dim)" }}>Sin resultados</div>
+                  ) : filtered.map((ing, i) => (
+                    <button key={ing.id} type="button"
+                      className="w-full text-left px-3 py-2 text-sm"
+                      style={{ background: i === mergeHighlight ? "var(--blue-glow)" : "transparent", color: i === mergeHighlight ? "var(--blue)" : "var(--text)" }}
+                      onMouseDown={() => { setMergingIntoId(ing.id); setMergeQuery(""); setMergeOpen(false); setMergeHighlight(-1); }}
+                      onMouseEnter={() => setMergeHighlight(i)}
+                    >
+                      {ing.canonical_name}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setMergeFor(null)}>Cancelar</Button>
+            <Button variant="secondary" size="sm" onClick={() => { setMergeFor(null); setMergeQuery(""); setMergeOpen(false); setMergeHighlight(-1); }}>Cancelar</Button>
             <Button size="sm" loading={normalizeSaving} disabled={!mergingIntoId}
               onClick={async () => {
                 if (!mergeFor || !mergingIntoId) return;
@@ -1305,7 +1338,7 @@ export default function ComprasPage() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ addAlias: mergeFor }),
                   });
-                  if (res.ok) { setMergeFor(null); setMergingIntoId(""); fetchNormalize(); }
+                  if (res.ok) { setMergeFor(null); setMergingIntoId(""); setMergeQuery(""); setMergeOpen(false); setMergeHighlight(-1); fetchNormalize(); }
                 } finally { setNormalizeSaving(false); }
               }}
             >
