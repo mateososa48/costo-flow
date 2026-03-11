@@ -14,10 +14,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const dateFrom = searchParams.get("dateFrom");
   const dateTo = searchParams.get("dateTo");
 
-  // Fetch all line items in range (only the fields we need)
   let query = supabase
     .from("line_items")
-    .select("invoice_date, category, total, description, ingredient_id, restaurant");
+    .select("invoice_date, category, total, description, ingredient_id, restaurant, supplier, invoice_id");
 
   if (restaurant) query = query.eq("restaurant", restaurant);
   if (dateFrom) query = query.gte("invoice_date", dateFrom);
@@ -28,14 +27,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const items = data ?? [];
 
-  // ── Monthly spend by category ────────────────────────────────────
-  // Returns last 12 months worth of data grouped by month + category
+  // ── KPIs ─────────────────────────────────────────────────────────────
+  const totalSpend = items.reduce((s, i) => s + Number(i.total ?? 0), 0);
+  const uniqueInvoices = new Set(items.map((i) => i.invoice_id).filter(Boolean)).size;
+  const uniqueSuppliers = new Set(items.map((i) => i.supplier)).size;
+  const avgPerInvoice = uniqueInvoices > 0 ? totalSpend / uniqueInvoices : 0;
+  const kpis = { totalSpend, uniqueInvoices, uniqueSuppliers, avgPerInvoice };
+
+  // ── Monthly spend by category ─────────────────────────────────────────
   const monthlyMap: Record<string, Record<string, number>> = {};
   const categorySet = new Set<string>();
 
   for (const item of items) {
     if (!item.invoice_date) continue;
-    const month = (item.invoice_date as string).slice(0, 7); // yyyy-mm
+    const month = (item.invoice_date as string).slice(0, 7);
     const cat = (item.category as string | null) ?? "Sin categoría";
     categorySet.add(cat);
     if (!monthlyMap[month]) monthlyMap[month] = {};
@@ -47,13 +52,47 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const monthlySpend = sortedMonths.map((month) => {
     const entry: Record<string, string | number> = { month };
-    for (const cat of categories) {
-      entry[cat] = monthlyMap[month][cat] ?? 0;
-    }
+    for (const cat of categories) entry[cat] = monthlyMap[month][cat] ?? 0;
     return entry;
   });
 
-  // ── Top 10 items by spend ────────────────────────────────────────
+  // ── Weekly trend ──────────────────────────────────────────────────────
+  const weekMap: Record<string, number> = {};
+  for (const item of items) {
+    if (!item.invoice_date) continue;
+    const d = new Date((item.invoice_date as string) + "T00:00:00");
+    const day = d.getDay();
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    const key = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+    weekMap[key] = (weekMap[key] ?? 0) + Number(item.total ?? 0);
+  }
+  const weeklyTrend = Object.entries(weekMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([week, total]) => ({ week, total }));
+
+  // ── Category totals for donut ─────────────────────────────────────────
+  const categoryTotals: Record<string, number> = {};
+  for (const item of items) {
+    const cat = (item.category as string | null) ?? "Sin categoría";
+    categoryTotals[cat] = (categoryTotals[cat] ?? 0) + Number(item.total ?? 0);
+  }
+  const categoryBreakdown = Object.entries(categoryTotals)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+
+  // ── Top suppliers ─────────────────────────────────────────────────────
+  const supplierMap: Record<string, number> = {};
+  for (const item of items) {
+    const s = item.supplier as string;
+    supplierMap[s] = (supplierMap[s] ?? 0) + Number(item.total ?? 0);
+  }
+  const spendBySupplier = Object.entries(supplierMap)
+    .map(([supplier, total]) => ({ supplier, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 12);
+
+  // ── Top 10 items ──────────────────────────────────────────────────────
   const itemMap: Record<string, { label: string; total: number; count: number }> = {};
   for (const item of items) {
     const key = (item.ingredient_id as string | null) ?? (item.description as string);
@@ -62,13 +101,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     itemMap[key].total += Number(item.total ?? 0);
     itemMap[key].count++;
   }
-
   const topItems = Object.values(itemMap)
     .sort((a, b) => b.total - a.total)
     .slice(0, 10)
     .map((i) => ({ description: i.label, totalSpend: i.total, count: i.count }));
 
-  // ── Spend by restaurant ──────────────────────────────────────────
+  // ── Spend by restaurant ───────────────────────────────────────────────
   const restaurantMap: Record<string, number> = {};
   for (const item of items) {
     const r = item.restaurant as string;
@@ -76,5 +114,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
   const spendByRestaurant = Object.entries(restaurantMap).map(([restaurant, total]) => ({ restaurant, total }));
 
-  return NextResponse.json({ monthlySpend, categories, topItems, spendByRestaurant });
+  return NextResponse.json({
+    kpis,
+    monthlySpend,
+    categories,
+    weeklyTrend,
+    categoryBreakdown,
+    spendBySupplier,
+    topItems,
+    spendByRestaurant,
+  });
 }

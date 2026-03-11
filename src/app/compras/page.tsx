@@ -2,8 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer,
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import Shell from "@/components/Shell";
 import Modal from "@/components/ui/Modal";
@@ -46,16 +46,20 @@ type UnmatchedGroup = {
 };
 
 type AnalyticsData = {
+  kpis: { totalSpend: number; uniqueInvoices: number; uniqueSuppliers: number; avgPerInvoice: number };
   monthlySpend: Array<Record<string, string | number>>;
   categories: string[];
+  weeklyTrend: Array<{ week: string; total: number }>;
+  categoryBreakdown: Array<{ name: string; value: number }>;
+  spendBySupplier: Array<{ supplier: string; total: number }>;
   topItems: Array<{ description: string; totalSpend: number; count: number }>;
   spendByRestaurant: Array<{ restaurant: string; total: number }>;
 };
 
 const CHART_COLORS = [
-  "#3b82f6", "#f59e0b", "#10b981", "#ef4444",
-  "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16",
-  "#f97316", "#64748b",
+  "#4a90e2", "#f5a623", "#7ed321", "#d0021b",
+  "#9b59b6", "#1abc9c", "#e67e22", "#3498db",
+  "#e91e63", "#78909c",
 ];
 
 type DbInvoice = {
@@ -866,7 +870,7 @@ export default function ComprasPage() {
 
         {/* ─── ANALYTICS VIEW ──────────────────────────────────────── */}
         {view === "analytics" && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             {analyticsLoading && (
               <div className="flex justify-center py-12">
                 <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
@@ -875,13 +879,66 @@ export default function ComprasPage() {
             )}
             {!analyticsLoading && analyticsData && (
               <>
-                {/* Monthly spend by category */}
+                {/* ── KPI Cards ── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: "Gasto total", value: formatCurrency(analyticsData.kpis.totalSpend), accent: true },
+                    { label: "Facturas", value: analyticsData.kpis.uniqueInvoices.toLocaleString("es-MX"), accent: false },
+                    { label: "Proveedores", value: analyticsData.kpis.uniqueSuppliers.toLocaleString("es-MX"), accent: false },
+                    { label: "Promedio / factura", value: formatCurrency(analyticsData.kpis.avgPerInvoice), accent: false },
+                  ].map((kpi) => (
+                    <div key={kpi.label} className="rounded-[var(--radius)] border p-4"
+                      style={{
+                        borderColor: kpi.accent ? "color-mix(in srgb, var(--blue) 30%, transparent)" : "var(--border)",
+                        background: kpi.accent ? "var(--blue-glow)" : "var(--surface)",
+                      }}>
+                      <p className="text-[10px] font-medium uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>{kpi.label}</p>
+                      <p className="text-xl font-bold" style={{ color: kpi.accent ? "var(--blue)" : "var(--text)" }}>{kpi.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Weekly trend ── */}
+                <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                  <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Tendencia semanal</h3>
+                  {analyticsData.weeklyTrend.length === 0 ? (
+                    <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart data={analyticsData.weeklyTrend} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                        <XAxis dataKey="week" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                          tickFormatter={(v: string) => {
+                            const d = new Date(v + "T00:00:00");
+                            return d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+                          }} />
+                        <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          formatter={(value: any) => [formatCurrency(Number(value)), "Gasto"]}
+                          labelFormatter={(label: string) => {
+                            const d = new Date(label + "T00:00:00");
+                            return `Semana del ${d.toLocaleDateString("es-MX", { day: "numeric", month: "long" })}`;
+                          }}
+                          contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
+                          labelStyle={{ color: "var(--text)", fontWeight: 600 }}
+                        />
+                        <Line type="monotone" dataKey="total" stroke="var(--blue)" strokeWidth={2}
+                          dot={{ fill: "var(--blue)", r: 3, strokeWidth: 0 }}
+                          activeDot={{ r: 5, strokeWidth: 0 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+
+                {/* ── Monthly stacked bar ── */}
                 <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                   <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Gasto mensual por categoría</h3>
                   {analyticsData.monthlySpend.length === 0 ? (
                     <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
                   ) : (
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height={260}>
                       <BarChart data={analyticsData.monthlySpend} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                         <XAxis dataKey="month" tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
@@ -902,17 +959,101 @@ export default function ComprasPage() {
                   )}
                 </div>
 
-                {/* Top 10 items */}
+                {/* ── Category donut + Top suppliers ── */}
+                <div className="grid md:grid-cols-2 gap-5">
+                  {/* Category donut */}
+                  <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                    <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Distribución por categoría</h3>
+                    {analyticsData.categoryBreakdown.length === 0 ? (
+                      <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        <ResponsiveContainer width="100%" height={200}>
+                          <PieChart>
+                            <Pie
+                              data={analyticsData.categoryBreakdown}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={55}
+                              outerRadius={90}
+                              paddingAngle={2}
+                            >
+                              {analyticsData.categoryBreakdown.map((_, i) => (
+                                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              formatter={(value: any, name: any) => [formatCurrency(Number(value)), String(name ?? "")]}
+                              contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="flex flex-col gap-1.5">
+                          {analyticsData.categoryBreakdown.slice(0, 6).map((c, i) => {
+                            const pct = analyticsData.kpis.totalSpend > 0
+                              ? ((c.value / analyticsData.kpis.totalSpend) * 100).toFixed(1)
+                              : "0";
+                            return (
+                              <div key={c.name} className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                  <span className="text-xs truncate" style={{ color: "var(--text)" }}>{c.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <span className="text-xs" style={{ color: "var(--text-dim)" }}>{pct}%</span>
+                                  <span className="text-xs font-medium" style={{ color: "var(--text)" }}>{formatCurrency(c.value)}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Top suppliers */}
+                  <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                    <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Top proveedores por gasto</h3>
+                    {analyticsData.spendBySupplier.length === 0 ? (
+                      <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={320}>
+                        <BarChart
+                          layout="vertical"
+                          data={analyticsData.spendBySupplier}
+                          margin={{ top: 0, right: 48, left: 8, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                            tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                          <YAxis type="category" dataKey="supplier" width={120}
+                            tick={{ fontSize: 10, fill: "var(--text)" }} />
+                          <Tooltip
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            formatter={(value: any) => [formatCurrency(Number(value)), "Gasto"]}
+                            contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
+                          />
+                          <Bar dataKey="total" fill={CHART_COLORS[0]} radius={[0, 3, 3, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Top 10 items ── */}
                 <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                   <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Top 10 artículos por gasto</h3>
                   {analyticsData.topItems.length === 0 ? (
                     <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
                   ) : (
-                    <ResponsiveContainer width="100%" height={320}>
+                    <ResponsiveContainer width="100%" height={300}>
                       <BarChart
                         layout="vertical"
                         data={analyticsData.topItems}
-                        margin={{ top: 0, right: 40, left: 8, bottom: 0 }}
+                        margin={{ top: 0, right: 48, left: 8, bottom: 0 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                         <XAxis type="number" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
@@ -924,13 +1065,13 @@ export default function ComprasPage() {
                           formatter={(value: any) => [formatCurrency(Number(value)), "Gasto total"]}
                           contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
                         />
-                        <Bar dataKey="totalSpend" fill={CHART_COLORS[0]} radius={[0, 3, 3, 0]} />
+                        <Bar dataKey="totalSpend" fill={CHART_COLORS[2]} radius={[0, 3, 3, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
                 </div>
 
-                {/* Spend by restaurant */}
+                {/* ── Spend by restaurant (if multiple) ── */}
                 {analyticsData.spendByRestaurant.length > 1 && (
                   <div className="grid grid-cols-3 gap-3">
                     {analyticsData.spendByRestaurant.map((r) => (
