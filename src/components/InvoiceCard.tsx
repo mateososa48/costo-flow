@@ -311,6 +311,15 @@ function LineItemsSection({
 
       {showItems && (
         <div className="mt-3 space-y-2">
+          {items.length > 0 && (
+            <div className="hidden sm:grid grid-cols-[1fr_auto] gap-2 px-2.5 pb-1">
+              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2">
+                {["Descripción", "Cantidad", "Unidad", "P. Unit.", "Total"].map((h) => (
+                  <span key={h} className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{h}</span>
+                ))}
+              </div>
+            </div>
+          )}
           {items.length === 0 && (
             <p className="text-xs py-2" style={{ color: "var(--text-dim)" }}>
               No se detectaron artículos individuales.
