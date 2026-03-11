@@ -165,6 +165,7 @@ export default function ComprasPage() {
   // Normalize state
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [unmatched, setUnmatched] = useState<UnmatchedGroup[]>([]);
+  const [unmatchedCount, setUnmatchedCount] = useState(0);
   const [normalizeLoading, setNormalizeLoading] = useState(false);
   const [createIngredientFor, setCreateIngredientFor] = useState<string | null>(null);
   const [mergeFor, setMergeFor] = useState<string | null>(null);
@@ -247,6 +248,15 @@ export default function ComprasPage() {
   useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, dateFrom, dateTo]);
   useEffect(() => { if (view === "analytics") fetchAnalytics(); }, [view, fetchAnalytics]);
   useEffect(() => { if (view === "normalize") fetchNormalize(); }, [view, fetchNormalize]);
+  // Keep unmatchedCount up to date whenever unmatched list changes
+  useEffect(() => { setUnmatchedCount(unmatched.length); }, [unmatched]);
+  // Also fetch count on mount so the dot shows even before visiting the Ingredientes tab
+  useEffect(() => {
+    fetch("/api/compras?view=normalize&pageSize=1")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data?.pagination?.total != null) setUnmatchedCount(data.pagination.total); })
+      .catch(() => {});
+  }, []);
 
   // ── Inline edit ─────────────────────────────────────────────────
   async function saveEdit(id: string, field: string, value: string) {
@@ -461,7 +471,7 @@ export default function ComprasPage() {
               >
                 <span className="relative inline-flex items-center gap-1.5">
                   {label}
-                  {key === "normalize" && unmatched.length > 0 && (
+                  {key === "normalize" && unmatchedCount > 0 && (
                     <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                       style={{ background: "var(--pink-dark)" }} />
                   )}

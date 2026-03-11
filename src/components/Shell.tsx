@@ -122,20 +122,18 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             return (
               <Link key={href} href={href}
                 className={[
-                  "flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-sm font-medium transition-all duration-150",
+                  "relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-sm font-medium transition-all duration-150",
                   active
                     ? "bg-[var(--blue)] text-white"
                     : "text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]",
                 ].join(" ")}
               >
-                <div className="relative flex-shrink-0">
-                  <Icon active={active} />
-                  {href === "/compras" && hasUnmatched && (
-                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white"
-                      style={{ background: "var(--pink-dark)" }} />
-                  )}
-                </div>
+                <Icon active={active} />
                 {label}
+                {href === "/compras" && hasUnmatched && (
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full"
+                    style={{ background: "var(--pink-dark)" }} />
+                )}
               </Link>
             );
           })}
@@ -219,17 +217,15 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           const active = pathname === href || (href !== "/upload" && pathname.startsWith(href));
           return (
             <Link key={href} href={href}
-              className="flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors duration-150"
+              className="relative flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors duration-150"
               style={{ color: active ? "var(--blue)" : "var(--text-muted)" }}
             >
-              <div className="relative">
-                <Icon active={active} />
-                {href === "/compras" && hasUnmatched && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white"
-                    style={{ background: "var(--pink-dark)" }} />
-                )}
-              </div>
+              <Icon active={active} />
               <span className="text-[10px] font-medium">{label}</span>
+              {href === "/compras" && hasUnmatched && (
+                <span className="absolute top-1.5 right-1/4 w-2 h-2 rounded-full translate-x-3"
+                  style={{ background: "var(--pink-dark)" }} />
+              )}
             </Link>
           );
         })}
