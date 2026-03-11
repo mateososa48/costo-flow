@@ -400,7 +400,7 @@ export default function ComprasPage() {
     <Shell>
       <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-0 animate-fade-up">
         {/* Header row: title + action */}
-        <div className="flex items-center justify-between gap-4 pb-2">
+        <div className="flex items-center justify-between gap-4 pb-4">
           <h1 className="font-display text-2xl font-bold" style={{ color: "var(--text)" }}>
             Compras
           </h1>
@@ -413,7 +413,7 @@ export default function ComprasPage() {
         </div>
 
         {/* Stats strip below title */}
-        <div className="flex items-center gap-0 divide-x rounded-[var(--radius-sm)] border overflow-hidden mb-4 w-fit"
+        <div className="flex items-center gap-0 divide-x rounded-[var(--radius-sm)] border overflow-hidden mb-6 w-fit"
           style={{ borderColor: "var(--border)" }}>
           {[
             { label: "gasto total", value: formatCurrency(stats.totalSpend), highlight: true },
@@ -442,7 +442,7 @@ export default function ComprasPage() {
               <button
                 key={key}
                 type="button"
-                className="px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors duration-150"
+                className="px-3 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors duration-150"
                 style={{
                   borderBottomColor: view === key ? "var(--blue)" : "transparent",
                   color: view === key ? "var(--blue)" : "var(--text-muted)",
