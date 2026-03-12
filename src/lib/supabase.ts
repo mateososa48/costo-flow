@@ -1,5 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { ExtractedInvoice } from "@/types";
+import { getCostType } from "@/lib/cost-classification";
+import { normalizeUnit } from "@/lib/unit-normalizer";
 
 let _client: SupabaseClient | null = null;
 
@@ -69,6 +71,8 @@ export async function saveInvoiceWithItems(
       return null;
     }
 
+    const costType = getCostType(invoice.cuentaPnl);
+
     const { error: itemsError } = await supabase.from("line_items").insert(
       invoice.lineItems.map((item) => ({
         invoice_id: invoice.id,
@@ -78,11 +82,12 @@ export async function saveInvoiceWithItems(
         description: item.description,
         quantity: item.quantity,
         unit: item.unit,
-        unit_normalized: item.unitNormalized ?? null,
+        unit_normalized: normalizeUnit(item.unit),
         unit_price: item.unitPrice,
         total: item.total,
         category: item.category ?? null,
         ingredient_id: matchIngredient(item.description),
+        cost_type: costType,
       }))
     );
 

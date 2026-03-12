@@ -38,6 +38,16 @@ function ComprasIcon({ active }: { active?: boolean }) {
   );
 }
 
+function GastosIcon({ active }: { active?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <line x1="2" y1="10" x2="22" y2="10" />
+    </svg>
+  );
+}
+
 function SettingsIcon({ active }: { active?: boolean }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -53,6 +63,7 @@ const NAV = [
   { href: "/upload",   label: "Subir",      Icon: UploadIcon },
   { href: "/history",  label: "Historial",  Icon: HistoryIcon },
   { href: "/compras",  label: "Compras",    Icon: ComprasIcon },
+  { href: "/gastos",   label: "Gastos",     Icon: GastosIcon },
   { href: "/settings", label: "Config",     Icon: SettingsIcon },
 ];
 

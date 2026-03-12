@@ -52,6 +52,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (view === "items") {
     let query = supabase.from("line_items").select("id, invoice_id, restaurant, supplier, invoice_date, description, quantity, unit, unit_normalized, unit_price, total, category, ingredient_id, created_at, updated_at", { count: "exact" });
 
+    // Compras tab shows only food/beverage items (COGS), not operational expenses
+    query = query.in("cost_type", ["food", "beverage"]);
+
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
     if (supplier) query = query.eq("supplier", supplier);
@@ -73,6 +76,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (view === "invoices") {
     let invoiceQuery = supabase.from("invoices").select("*", { count: "exact" });
+
+    // Only show food/beverage invoices in Compras tab
+    invoiceQuery = invoiceQuery.in("cuenta_pnl", ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"]);
 
     if (restaurant) invoiceQuery = invoiceQuery.eq("restaurant", restaurant);
     if (supplier) invoiceQuery = invoiceQuery.ilike("supplier", `%${supplier}%`);
@@ -114,8 +120,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   if (view === "suppliers") {
-    // Get unique suppliers with aggregated data
+    // Get unique suppliers with aggregated data (food/beverage only)
     let query = supabase.from("line_items").select("supplier, total, invoice_date, description, id, restaurant, quantity, unit, unit_normalized, unit_price, category, ingredient_id, invoice_id, created_at, updated_at");
+    query = query.in("cost_type", ["food", "beverage"]);
 
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
@@ -152,7 +159,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   if (view === "normalize") {
-    let query = supabase.from("line_items").select("description").is("ingredient_id", null);
+    // Only unmatched food/beverage items need ingredient assignment
+    let query = supabase.from("line_items").select("description").is("ingredient_id", null).in("cost_type", ["food", "beverage"]);
     if (restaurant) query = query.eq("restaurant", restaurant);
 
     const { data, error } = await query;

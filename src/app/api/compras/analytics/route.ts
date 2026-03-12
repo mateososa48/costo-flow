@@ -16,7 +16,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   let query = supabase
     .from("line_items")
-    .select("invoice_date, category, total, description, ingredient_id, restaurant, supplier, invoice_id");
+    .select("invoice_date, category, total, description, ingredient_id, restaurant, supplier, invoice_id")
+    .in("cost_type", ["food", "beverage"]); // Analytics only shows COGS, not operational expenses
 
   if (restaurant) query = query.eq("restaurant", restaurant);
   if (dateFrom) query = query.gte("invoice_date", dateFrom);

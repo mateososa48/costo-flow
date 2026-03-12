@@ -63,6 +63,7 @@ Fields:
   - unitPrice: unit price or null
   - total: line item total
   - category: pick the single best match from this list for THIS specific item (null if none fit): ${conceptoList}
+    IMPORTANT: You MUST pick a category for each line item. For produce/vegetables/fruits always use "Frutas y Verduras". For meat use "Carnes". For poultry use "Aves". For fish/seafood use "Pescados y Mariscos". For dairy use "Lácteos". Only return null if the item truly does not fit any category.
   If no itemized breakdown is visible, return an empty array.
 - extractionConfidence: your confidence in the extraction, 0.0 to 1.0
 

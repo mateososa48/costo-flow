@@ -7,6 +7,7 @@ const updateSchema = z.object({
   canonicalName: z.string().min(1).optional(),
   aliases: z.array(z.string()).optional(),
   category: z.string().nullable().optional(),
+  defaultUnit: z.string().nullable().optional(),
   // Add a new alias without replacing the whole array
   addAlias: z.string().optional(),
 });
@@ -29,7 +30,7 @@ export async function PUT(
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 422 });
 
-  const { canonicalName, aliases, category, addAlias } = parsed.data;
+  const { canonicalName, aliases, category, defaultUnit, addAlias } = parsed.data;
 
   // If addAlias is provided, append to existing aliases
   if (addAlias) {
@@ -71,6 +72,7 @@ export async function PUT(
   if (canonicalName !== undefined) updates.canonical_name = canonicalName;
   if (aliases !== undefined) updates.aliases = aliases;
   if (category !== undefined) updates.category = category;
+  if (defaultUnit !== undefined) updates.default_unit = defaultUnit;
 
   if (Object.keys(updates).length === 0) return NextResponse.json({ error: "No fields to update" }, { status: 400 });
 
