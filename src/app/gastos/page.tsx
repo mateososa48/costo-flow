@@ -6,6 +6,8 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import Shell from "@/components/Shell";
+import Modal from "@/components/ui/Modal";
+import Button from "@/components/ui/Button";
 import { RESTAURANT_LABELS } from "@/types";
 import type { Restaurant } from "@/types";
 import dropdownOptions from "../../../data/dropdown_options.json";
@@ -64,10 +66,17 @@ export default function GastosPage() {
 
   // Invoices state
   const [invoices, setInvoices] = useState<DbInvoice[]>([]);
-  const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null);
+  const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(new Set());
   const [invPage, setInvPage] = useState(1);
   const [invTotal, setInvTotal] = useState(0);
   const invPageSize = 50;
+  const [invoiceSelectMode, setInvoiceSelectMode] = useState(false);
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteInvoices, setConfirmDeleteInvoices] = useState(false);
+  const [deletingInvoice, setDeletingInvoice] = useState(false);
+  const [reclassifyingId, setReclassifyingId] = useState<string | null>(null);
+  const [reclassifyValue, setReclassifyValue] = useState("");
+  const [reclassifyingSaving, setReclassifyingSaving] = useState(false);
 
   type SupplierInvoice = { id: string; invoice_date: string; invoice_number: string | null; cuenta_pnl: string | null; concepto: string | null; total: number; restaurant: string };
   // Suppliers state
@@ -94,6 +103,25 @@ export default function GastosPage() {
     if (res.ok) {
       const data = await res.json();
       setStats({ total: data.kpis?.totalSpend ?? 0, invoiceCount: data.kpis?.invoiceCount ?? 0, supplierCount: data.kpis?.uniqueSuppliers ?? 0 });
+    }
+  }
+
+  async function deleteSelectedInvoices() {
+    setDeletingInvoice(true);
+    try {
+      await Promise.all(
+        Array.from(selectedInvoiceIds).map((id) =>
+          fetch(`/api/compras/invoices/${id}`, { method: "DELETE" })
+        )
+      );
+      setInvoices((prev) => prev.filter((i) => !selectedInvoiceIds.has(i.id)));
+      setSelectedInvoiceIds(new Set());
+      setInvoiceSelectMode(false);
+      fetchStats();
+    } catch { /* ignore */ }
+    finally {
+      setDeletingInvoice(false);
+      setConfirmDeleteInvoices(false);
     }
   }
 
@@ -224,33 +252,101 @@ export default function GastosPage() {
           }
           const groupKeys = Object.keys(groups).sort();
           return (
-            <div className="space-y-6">
+            <div className="space-y-2">
+              {/* Select mode toolbar */}
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs" style={{ color: "var(--text-dim)" }}>
+                  {invoiceSelectMode && selectedInvoiceIds.size > 0
+                    ? `${selectedInvoiceIds.size} seleccionada${selectedInvoiceIds.size !== 1 ? "s" : ""}`
+                    : ""}
+                </span>
+                <div className="flex items-center gap-2">
+                  {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
+                    <button type="button"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+                      style={{ background: "var(--danger-dim, #fee2e2)", color: "var(--danger, #ef4444)", border: "1px solid var(--danger-border, #fca5a5)" }}
+                      onClick={() => setConfirmDeleteInvoices(true)}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                        <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Eliminar ({selectedInvoiceIds.size})
+                    </button>
+                  )}
+                  <button type="button"
+                    className="px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+                    style={{ background: invoiceSelectMode ? "var(--surface)" : "var(--blue-glow)", color: invoiceSelectMode ? "var(--text-muted)" : "var(--blue)", border: "1px solid", borderColor: invoiceSelectMode ? "var(--border)" : "color-mix(in srgb, var(--blue) 25%, transparent)" }}
+                    onClick={() => { setInvoiceSelectMode((m) => !m); setSelectedInvoiceIds(new Set()); }}
+                  >
+                    {invoiceSelectMode ? "Cancelar" : "Seleccionar"}
+                  </button>
+                </div>
+              </div>
+
               {groupKeys.map((groupKey) => (
-                <div key={groupKey}>
-                  <div className="flex items-center justify-between mb-2">
+                <div key={groupKey} className="space-y-2">
+                  <div className="flex items-center justify-between pt-2">
                     <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>{groupKey}</h3>
                     <span className="text-xs" style={{ color: "var(--text-dim)" }}>
                       {fmt(groups[groupKey].reduce((s, i) => s + i.total, 0))}
                     </span>
                   </div>
-                  <div className="space-y-2">
-                    {groups[groupKey].map((inv) => {
-                      const open = expandedInvoice === inv.id;
-                      return (
-                        <div key={inv.id} className="rounded-[var(--radius)] border overflow-hidden"
-                          style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                          <button className="w-full flex items-center gap-3 px-4 py-3 text-left"
-                            onClick={() => setExpandedInvoice(open ? null : inv.id)}>
-                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"
-                              className="flex-shrink-0 transition-transform duration-150"
-                              style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", color: "var(--text-muted)" }}>
-                              <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
+                  {groups[groupKey].map((inv) => {
+                    const isExpanded = expandedInvoices.has(inv.id);
+                    const isSelected = selectedInvoiceIds.has(inv.id);
+                    return (
+                      <div key={inv.id} className="rounded-[var(--radius)] border overflow-hidden"
+                        style={{ borderColor: isSelected ? "var(--blue)" : "var(--border)", background: "var(--surface)" }}>
+                        <div className="flex items-center">
+                          <div className="pl-4 flex-shrink-0"
+                            onClick={() => {
+                              if (invoiceSelectMode) {
+                                setSelectedInvoiceIds((prev) => {
+                                  const next = new Set(prev);
+                                  isSelected ? next.delete(inv.id) : next.add(inv.id);
+                                  return next;
+                                });
+                              }
+                            }}
+                          >
+                            {invoiceSelectMode && (
+                              <div className="w-4 h-4 rounded border-2 flex items-center justify-center cursor-pointer"
+                                style={{ borderColor: isSelected ? "var(--blue)" : "var(--border)", background: isSelected ? "var(--blue)" : "transparent" }}>
+                                {isSelected && <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2 3-3" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="flex-1 flex items-center gap-3 px-3 py-3 text-left"
+                            onClick={() => {
+                              if (invoiceSelectMode) {
+                                setSelectedInvoiceIds((prev) => {
+                                  const next = new Set(prev);
+                                  isSelected ? next.delete(inv.id) : next.add(inv.id);
+                                  return next;
+                                });
+                              } else {
+                                setExpandedInvoices((prev) => {
+                                  const next = new Set(prev);
+                                  isExpanded ? next.delete(inv.id) : next.add(inv.id);
+                                  return next;
+                                });
+                              }
+                            }}
+                          >
+                            {!invoiceSelectMode && (
+                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+                                className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`}
+                                style={{ color: "var(--text-muted)" }}>
+                                <path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            )}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-semibold text-sm uppercase" style={{ color: "var(--text)" }}>{inv.supplier}</span>
+                                <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{inv.supplier}</span>
                                 {inv.invoice_number && (
-                                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>#{inv.invoice_number}</span>
+                                  <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>#{inv.invoice_number}</span>
                                 )}
                                 <span className="text-xs px-1.5 py-0.5 rounded"
                                   style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
@@ -263,41 +359,99 @@ export default function GastosPage() {
                             </div>
                             <span className="font-bold text-sm flex-shrink-0" style={{ color: "var(--blue)" }}>{fmt(inv.total)}</span>
                           </button>
-                          {open && inv.lineItems.length > 0 && (
-                            <div className="border-t" style={{ borderColor: "var(--border)" }}>
-                              {inv.lineItems.map((item, idx) => (
-                                <div key={idx} className="flex items-center px-10 py-2 text-sm gap-4 border-b last:border-b-0"
-                                  style={{ borderColor: "var(--border-subtle, var(--border))", background: "var(--surface-raised)" }}>
+                        </div>
+                        {isExpanded && !invoiceSelectMode && (
+                          <div className="border-t px-4 py-3 space-y-1.5" style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
+                            {/* Reclassify cuentaPnl */}
+                            <div className="flex items-center gap-2 pb-2 mb-1 border-b" style={{ borderColor: "var(--border-subtle)" }}>
+                              <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Cuenta P&L</span>
+                              {reclassifyingId === inv.id ? (
+                                <span className="flex items-center gap-1">
+                                  <select
+                                    autoFocus
+                                    value={reclassifyValue}
+                                    className="px-1.5 py-0.5 rounded border text-[10px] appearance-none focus:outline-none focus:ring-1"
+                                    style={{ background: "var(--surface)", borderColor: "var(--blue)", color: "var(--text)" }}
+                                    onChange={(e) => setReclassifyValue(e.target.value)}
+                                  >
+                                    {(dropdownOptions.cuentaPnl as string[]).map((opt) => (
+                                      <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                  </select>
+                                  <button type="button"
+                                    disabled={reclassifyingSaving}
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                    style={{ background: "var(--blue)", color: "#fff" }}
+                                    onClick={async () => {
+                                      setReclassifyingSaving(true);
+                                      try {
+                                        const res = await fetch(`/api/compras/invoices/${inv.id}`, {
+                                          method: "PUT",
+                                          headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ cuentaPnl: reclassifyValue }),
+                                        });
+                                        if (res.ok) {
+                                          setInvoices((prev) => prev.map((i) =>
+                                            i.id === inv.id ? { ...i, cuenta_pnl: reclassifyValue } : i
+                                          ));
+                                          setReclassifyingId(null);
+                                        }
+                                      } finally { setReclassifyingSaving(false); }
+                                    }}
+                                  >
+                                    {reclassifyingSaving ? "..." : "✓"}
+                                  </button>
+                                  <button type="button"
+                                    className="text-[10px]"
+                                    style={{ color: "var(--text-muted)" }}
+                                    onClick={() => setReclassifyingId(null)}
+                                  >✕</button>
+                                </span>
+                              ) : (
+                                <button type="button"
+                                  className="text-[10px] px-1.5 py-0.5 rounded-full transition-colors"
+                                  style={{ background: "var(--surface)", color: "var(--text-dim)", border: "1px solid var(--border-subtle)" }}
+                                  onClick={() => { setReclassifyingId(inv.id); setReclassifyValue(inv.cuenta_pnl ?? ""); }}
+                                >
+                                  {inv.cuenta_pnl ?? "Sin categoría"} ✎
+                                </button>
+                              )}
+                            </div>
+                            {inv.lineItems.length === 0 ? (
+                              <p className="text-xs py-2" style={{ color: "var(--text-dim)" }}>Sin artículos individuales</p>
+                            ) : (
+                              inv.lineItems.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between gap-2 py-1.5 text-xs">
                                   <span className="flex-1 truncate" style={{ color: "var(--text)" }}>{item.description}</span>
                                   <span className="text-xs w-16 text-right" style={{ color: "var(--text-muted)" }}>
                                     {item.quantity != null ? `${item.quantity}${item.unit ? ` ${item.unit}` : ""}` : "—"}
                                   </span>
                                   <span className="font-medium w-24 text-right" style={{ color: "var(--blue)" }}>{fmt(item.total)}</span>
                                 </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
             </div>
           );
         })()}
         {!loading && view === "invoices" && invTotalPages > 1 && (
-              <div className="flex items-center justify-between pt-4 text-sm" style={{ color: "var(--text-muted)" }}>
-                <span>Página {invPage} de {invTotalPages} ({invTotal} resultados)</span>
-                <div className="flex gap-2">
-                  <button onClick={() => setInvPage((p) => Math.max(1, p - 1))} disabled={invPage === 1}
-                    className="px-3 py-1.5 rounded border text-xs disabled:opacity-40"
-                    style={{ borderColor: "var(--border)", background: "var(--surface)" }}>Anterior</button>
-                  <button onClick={() => setInvPage((p) => Math.min(invTotalPages, p + 1))} disabled={invPage === invTotalPages}
-                    className="px-3 py-1.5 rounded border text-xs disabled:opacity-40"
-                    style={{ borderColor: "var(--border)", background: "var(--surface)" }}>Siguiente</button>
-                </div>
-              </div>
+          <div className="flex items-center justify-between pt-4 text-sm" style={{ color: "var(--text-muted)" }}>
+            <span>Página {invPage} de {invTotalPages} ({invTotal} resultados)</span>
+            <div className="flex gap-2">
+              <button onClick={() => setInvPage((p) => Math.max(1, p - 1))} disabled={invPage === 1}
+                className="px-3 py-1.5 rounded border text-xs disabled:opacity-40"
+                style={{ borderColor: "var(--border)", background: "var(--surface)" }}>Anterior</button>
+              <button onClick={() => setInvPage((p) => Math.min(invTotalPages, p + 1))} disabled={invPage === invTotalPages}
+                className="px-3 py-1.5 rounded border text-xs disabled:opacity-40"
+                style={{ borderColor: "var(--border)", background: "var(--surface)" }}>Siguiente</button>
+            </div>
+          </div>
         )}
 
         {/* ── Proveedores tab ── */}
@@ -496,6 +650,28 @@ export default function GastosPage() {
           </div>
         )}
       </div>
+
+      {/* Bulk delete invoices confirmation modal */}
+      <Modal
+        open={confirmDeleteInvoices}
+        onClose={() => setConfirmDeleteInvoices(false)}
+        title="Eliminar facturas"
+        maxWidth="max-w-sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            ¿Eliminar <span className="font-medium" style={{ color: "var(--text)" }}>{selectedInvoiceIds.size} factura{selectedInvoiceIds.size !== 1 ? "s" : ""}</span> y todos sus artículos? Esta acción no se puede deshacer.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteInvoices(false)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" size="sm" loading={deletingInvoice} onClick={deleteSelectedInvoices}>
+              Eliminar
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Shell>
   );
 }
