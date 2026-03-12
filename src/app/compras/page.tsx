@@ -1004,13 +1004,9 @@ export default function ComprasPage() {
                           }}
                         >
                           <option value="">Sin clasificar</option>
-                          <option value="Alimentos">Alimentos</option>
-                          <option value="Bebidas">Bebidas</option>
-                          <option value="Servicios">Servicios</option>
-                          <option value="Renta">Renta</option>
-                          <option value="Servicios básicos">Servicios básicos</option>
-                          <option value="Administración">Administración</option>
-                          <option value="Otros">Otros</option>
+                          {(dropdownOptions.cuentaPnl as string[]).map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
                         </select>
                       ) : (
                         <button
