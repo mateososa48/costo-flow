@@ -265,7 +265,7 @@ export default function ComprasPage() {
     finally { setLoading(false); }
   }, [view, page, sortBy, sortDir, search, restaurant, supplier, dateFrom, dateTo]);
 
-  useEffect(() => { document.title = "Compras — Aventura Gourmet"; }, []);
+  useEffect(() => { document.title = "Gastos de Alimentos — Aventura Gourmet"; }, []);
   useEffect(() => { if (view !== "analytics" && view !== "normalize") fetchData(); }, [fetchData, view]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, dateFrom, dateTo]);
@@ -472,7 +472,7 @@ export default function ComprasPage() {
         {/* Header row: title + action */}
         <div className="flex items-center justify-between gap-4 pb-4">
           <h1 className="font-display text-2xl font-bold" style={{ color: "var(--text)" }}>
-            Compras
+            Gastos de Alimentos
           </h1>
           <Button size="sm" onClick={() => setAddModalOpen(true)}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

@@ -49,11 +49,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { view, search, restaurant, supplier, dateFrom, dateTo, sortBy, sortDir, page, pageSize } = parsed.data;
 
-  if (view === "items") {
-    let query = supabase.from("line_items").select("id, invoice_id, restaurant, supplier, invoice_date, description, quantity, unit, unit_normalized, unit_price, total, category, ingredient_id, created_at, updated_at", { count: "exact" });
+  const FOOD_BEV_CUENTAPNL = ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"];
 
-    // Compras tab shows only food/beverage items (COGS), not operational expenses
-    query = query.in("cost_type", ["food", "beverage"]);
+  // Get food/bev invoice IDs — primary filter anchored to invoice cuenta_pnl.
+  // Avoids relying on cost_type which defaults to 'food' for all rows until backfill runs.
+  const { data: foodInvoices } = await supabase
+    .from("invoices")
+    .select("id")
+    .in("cuenta_pnl", FOOD_BEV_CUENTAPNL);
+  const foodInvoiceIds = (foodInvoices ?? []).map((i) => i.id as string);
+  // Filter string: items linked to food/bev invoices, OR manually-added (no invoice) with food cost_type
+  const foodFilter = foodInvoiceIds.length > 0
+    ? `invoice_id.in.(${foodInvoiceIds.join(",")}),and(invoice_id.is.null,cost_type.in.(food,beverage))`
+    : `cost_type.in.(food,beverage)`;
+
+  if (view === "items") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = supabase.from("line_items").select("id, invoice_id, restaurant, supplier, invoice_date, description, quantity, unit, unit_normalized, unit_price, total, category, ingredient_id, created_at, updated_at", { count: "exact" });
+
+    query = query.or(foodFilter);
 
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
@@ -121,8 +135,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (view === "suppliers") {
     // Get unique suppliers with aggregated data (food/beverage only)
-    let query = supabase.from("line_items").select("supplier, total, invoice_date, description, id, restaurant, quantity, unit, unit_normalized, unit_price, category, ingredient_id, invoice_id, created_at, updated_at");
-    query = query.in("cost_type", ["food", "beverage"]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = supabase.from("line_items").select("supplier, total, invoice_date, description, id, restaurant, quantity, unit, unit_normalized, unit_price, category, ingredient_id, invoice_id, created_at, updated_at");
+    query = query.or(foodFilter);
 
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
@@ -160,7 +175,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (view === "normalize") {
     // Only unmatched food/beverage items need ingredient assignment
-    let query = supabase.from("line_items").select("description").is("ingredient_id", null).in("cost_type", ["food", "beverage"]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = supabase.from("line_items").select("description").is("ingredient_id", null);
+    query = query.or(foodFilter);
     if (restaurant) query = query.eq("restaurant", restaurant);
 
     const { data, error } = await query;

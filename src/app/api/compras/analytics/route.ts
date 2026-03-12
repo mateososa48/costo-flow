@@ -14,10 +14,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const dateFrom = searchParams.get("dateFrom");
   const dateTo = searchParams.get("dateTo");
 
-  let query = supabase
+  // Get food/bev invoice IDs — primary filter, avoids relying on cost_type default
+  const { data: foodInvoices } = await supabase
+    .from("invoices")
+    .select("id")
+    .in("cuenta_pnl", ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"]);
+  const foodInvoiceIds = (foodInvoices ?? []).map((i) => i.id as string);
+  const foodFilter = foodInvoiceIds.length > 0
+    ? `invoice_id.in.(${foodInvoiceIds.join(",")}),and(invoice_id.is.null,cost_type.in.(food,beverage))`
+    : `cost_type.in.(food,beverage)`;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabase
     .from("line_items")
-    .select("invoice_date, category, total, description, ingredient_id, restaurant, supplier, invoice_id")
-    .in("cost_type", ["food", "beverage"]); // Analytics only shows COGS, not operational expenses
+    .select("invoice_date, category, total, description, ingredient_id, restaurant, supplier, invoice_id");
+  query = query.or(foodFilter);
 
   if (restaurant) query = query.eq("restaurant", restaurant);
   if (dateFrom) query = query.gte("invoice_date", dateFrom);
@@ -26,12 +37,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const items = data ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const items: any[] = data ?? [];
 
   // ── KPIs ─────────────────────────────────────────────────────────────
-  const totalSpend = items.reduce((s, i) => s + Number(i.total ?? 0), 0);
-  const uniqueInvoices = new Set(items.map((i) => i.invoice_id).filter(Boolean)).size;
-  const uniqueSuppliers = new Set(items.map((i) => i.supplier)).size;
+  const totalSpend = items.reduce((s: number, i: { total?: unknown }) => s + Number(i.total ?? 0), 0);
+  const uniqueInvoices = new Set(items.map((i: { invoice_id?: unknown }) => i.invoice_id).filter(Boolean)).size;
+  const uniqueSuppliers = new Set(items.map((i: { supplier?: unknown }) => i.supplier)).size;
   const avgPerInvoice = uniqueInvoices > 0 ? totalSpend / uniqueInvoices : 0;
   const kpis = { totalSpend, uniqueInvoices, uniqueSuppliers, avgPerInvoice };
 

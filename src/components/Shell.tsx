@@ -62,8 +62,8 @@ function SettingsIcon({ active }: { active?: boolean }) {
 const NAV = [
   { href: "/upload",   label: "Subir",      Icon: UploadIcon },
   { href: "/history",  label: "Historial",  Icon: HistoryIcon },
-  { href: "/compras",  label: "Compras",    Icon: ComprasIcon },
-  { href: "/gastos",   label: "Gastos",     Icon: GastosIcon },
+  { href: "/compras",  label: "Alimentos",  Icon: ComprasIcon },
+  { href: "/gastos",   label: "Operativos", Icon: GastosIcon },
   { href: "/settings", label: "Config",     Icon: SettingsIcon },
 ];
 

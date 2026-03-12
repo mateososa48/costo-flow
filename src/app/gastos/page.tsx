@@ -94,7 +94,7 @@ export default function GastosPage() {
   }
 
   useEffect(() => {
-    document.title = "Gastos — Aventura Gourmet";
+    document.title = "Gastos Operativos — Aventura Gourmet";
     fetchStats();
   }, [restaurant, dateFrom, dateTo]);
 
@@ -127,7 +127,7 @@ export default function GastosPage() {
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text)" }}>Gastos</h1>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text)" }}>Gastos Operativos</h1>
         </div>
 
         {/* ── Stats strip ── */}
