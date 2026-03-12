@@ -180,6 +180,15 @@ export default function ComprasPage() {
   const [mergeHighlight, setMergeHighlight] = useState(-1);
   const [normalizeSaving, setNormalizeSaving] = useState(false);
   const [expandedIngredientId, setExpandedIngredientId] = useState<string | null>(null);
+  // Invoice reclassification state
+  const [reclassifyingId, setReclassifyingId] = useState<string | null>(null);
+  const [reclassifyValue, setReclassifyValue] = useState("");
+  const [reclassifyingSaving, setReclassifyingSaving] = useState(false);
+
+  // Supplier tags state
+  const [supplierTags, setSupplierTags] = useState<Record<string, string>>({});
+  const [editingSupplierTag, setEditingSupplierTag] = useState<string | null>(null);
+
   // AI suggestion state
   type AISuggestion = { canonicalName: string; aliases: string[]; category: string | null; matchCount: number };
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[] | null>(null);
@@ -262,6 +271,14 @@ export default function ComprasPage() {
   useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, dateFrom, dateTo]);
   useEffect(() => { if (view === "analytics") fetchAnalytics(); }, [view, fetchAnalytics]);
   useEffect(() => { if (view === "normalize") fetchNormalize(); }, [view, fetchNormalize]);
+  useEffect(() => {
+    if (view === "suppliers") {
+      fetch("/api/compras/suppliers/tags")
+        .then((r) => (r.ok ? r.json() : {}))
+        .then(setSupplierTags)
+        .catch(() => {});
+    }
+  }, [view]);
   // Keep unmatchedCount up to date whenever unmatched list changes
   useEffect(() => { setUnmatchedCount(unmatched.length); }, [unmatched]);
   // Also fetch count on mount so the dot shows even before visiting the Ingredientes tab
@@ -828,10 +845,69 @@ export default function ComprasPage() {
                             {restaurantLabel(inv.restaurant)}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                        <div className="flex items-center gap-3 mt-0.5 text-xs flex-wrap" style={{ color: "var(--text-muted)" }}>
                           <span>{formatDate(inv.invoice_date)}</span>
                           <span className="font-semibold" style={{ color: "var(--blue)" }}>{formatCurrency(inv.total)}</span>
                           <span>{inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}</span>
+                          {/* Editable cuentaPnl badge */}
+                          {reclassifyingId === inv.id ? (
+                            <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <select
+                                autoFocus
+                                value={reclassifyValue}
+                                className="px-1.5 py-0.5 rounded border text-[10px] appearance-none focus:outline-none focus:ring-1"
+                                style={{ background: "var(--surface)", borderColor: "var(--blue)", color: "var(--text)" }}
+                                onChange={(e) => setReclassifyValue(e.target.value)}
+                              >
+                                {(dropdownOptions.cuentaPnl as string[]).map((opt) => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                              <button type="button"
+                                disabled={reclassifyingSaving}
+                                className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                style={{ background: "var(--blue)", color: "#fff" }}
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  setReclassifyingSaving(true);
+                                  try {
+                                    const res = await fetch(`/api/compras/invoices/${inv.id}`, {
+                                      method: "PUT",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ cuentaPnl: reclassifyValue }),
+                                    });
+                                    if (res.ok) {
+                                      setInvoices((prev) => prev.map((i) =>
+                                        i.id === inv.id ? { ...i, cuenta_pnl: reclassifyValue } : i
+                                      ));
+                                      setReclassifyingId(null);
+                                    }
+                                  } finally { setReclassifyingSaving(false); }
+                                }}
+                              >
+                                {reclassifyingSaving ? "..." : "✓"}
+                              </button>
+                              <button type="button"
+                                className="text-[10px]"
+                                style={{ color: "var(--text-muted)" }}
+                                onClick={(e) => { e.stopPropagation(); setReclassifyingId(null); }}
+                              >✕</button>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              title="Reclasificar"
+                              className="text-[10px] px-1.5 py-0.5 rounded-full transition-colors"
+                              style={{ background: "var(--surface-raised)", color: "var(--text-dim)", border: "1px solid var(--border-subtle)" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReclassifyingId(inv.id);
+                                setReclassifyValue(inv.cuenta_pnl ?? "");
+                              }}
+                            >
+                              {inv.cuenta_pnl ?? "Sin categoría"} ✎
+                            </button>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -877,33 +953,82 @@ export default function ComprasPage() {
           <div className="space-y-2">
             {suppliers.map((group) => {
               const isExpanded = expandedSuppliers.has(group.supplier);
+              const currentTag = supplierTags[group.supplier] ?? "";
+              const isEditingTag = editingSupplierTag === group.supplier;
               return (
                 <div key={group.supplier} className="rounded-[var(--radius)] border overflow-hidden"
                   style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left"
-                    onClick={() => {
-                      setExpandedSuppliers((prev) => {
-                        const next = new Set(prev);
-                        isExpanded ? next.delete(group.supplier) : next.add(group.supplier);
-                        return next;
-                      });
-                    }}
-                  >
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
-                      className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`}
-                      style={{ color: "var(--text-muted)" }}>
-                      <path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{group.supplier}</span>
-                      <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
-                        <span>{group.itemCount} artículo{group.itemCount !== 1 ? "s" : ""}</span>
-                        <span className="font-semibold" style={{ color: "var(--blue)" }}>{formatCurrency(group.totalSpend)}</span>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      className="flex-1 flex items-center gap-3 px-4 py-3 text-left"
+                      onClick={() => {
+                        setExpandedSuppliers((prev) => {
+                          const next = new Set(prev);
+                          isExpanded ? next.delete(group.supplier) : next.add(group.supplier);
+                          return next;
+                        });
+                      }}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+                        className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`}
+                        style={{ color: "var(--text-muted)" }}>
+                        <path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{group.supplier}</span>
+                        <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                          <span>{group.itemCount} artículo{group.itemCount !== 1 ? "s" : ""}</span>
+                          <span className="font-semibold" style={{ color: "var(--blue)" }}>{formatCurrency(group.totalSpend)}</span>
+                        </div>
                       </div>
+                    </button>
+                    {/* Supply type tag */}
+                    <div className="px-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      {isEditingTag ? (
+                        <select
+                          autoFocus
+                          value={currentTag}
+                          className="px-2 py-1 rounded-[var(--radius-sm)] border text-xs appearance-none focus:outline-none focus:ring-1"
+                          style={{ background: "var(--surface)", borderColor: "var(--blue)", color: "var(--text)" }}
+                          onBlur={() => setEditingSupplierTag(null)}
+                          onChange={async (e) => {
+                            const supplyType = e.target.value;
+                            setSupplierTags((prev) => ({ ...prev, [group.supplier]: supplyType }));
+                            setEditingSupplierTag(null);
+                            await fetch("/api/compras/suppliers/tags", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ supplier: group.supplier, supplyType }),
+                            });
+                          }}
+                        >
+                          <option value="">Sin clasificar</option>
+                          <option value="Alimentos">Alimentos</option>
+                          <option value="Bebidas">Bebidas</option>
+                          <option value="Servicios">Servicios</option>
+                          <option value="Renta">Renta</option>
+                          <option value="Servicios básicos">Servicios básicos</option>
+                          <option value="Administración">Administración</option>
+                          <option value="Otros">Otros</option>
+                        </select>
+                      ) : (
+                        <button
+                          type="button"
+                          title="Clasificar proveedor"
+                          className="text-[10px] px-2 py-1 rounded-full transition-colors"
+                          style={{
+                            background: currentTag ? "var(--blue-glow)" : "var(--surface-raised)",
+                            color: currentTag ? "var(--blue)" : "var(--text-dim)",
+                            border: `1px solid ${currentTag ? "color-mix(in srgb, var(--blue) 25%, transparent)" : "var(--border-subtle)"}`,
+                          }}
+                          onClick={() => setEditingSupplierTag(group.supplier)}
+                        >
+                          {currentTag || "Clasificar ✎"}
+                        </button>
+                      )}
                     </div>
-                  </button>
+                  </div>
                   {isExpanded && (
                     <div className="border-t px-4 py-3 space-y-1.5" style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
                       {group.items.map((item: DbLineItem) => (
