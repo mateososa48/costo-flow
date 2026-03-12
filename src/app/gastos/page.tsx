@@ -211,64 +211,82 @@ export default function GastosPage() {
         )}
 
         {/* ── Facturas tab ── */}
-        {!loading && view === "invoices" && (
-          <div className="space-y-2">
-            {invoices.length === 0 && (
-              <p className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>No hay gastos operativos para este período.</p>
-            )}
-            {invoices.map((inv) => {
-              const open = expandedInvoice === inv.id;
-              return (
-                <div key={inv.id} className="rounded-[var(--radius)] border overflow-hidden"
-                  style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <button className="w-full flex items-center gap-3 px-4 py-3 text-left"
-                    onClick={() => setExpandedInvoice(open ? null : inv.id)}>
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"
-                      className="flex-shrink-0 transition-transform duration-150"
-                      style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", color: "var(--text-muted)" }}>
-                      <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm uppercase" style={{ color: "var(--text)" }}>{inv.supplier}</span>
-                        {inv.invoice_number && (
-                          <span className="text-xs" style={{ color: "var(--text-muted)" }}>#{inv.invoice_number}</span>
-                        )}
-                        <span className="text-xs px-1.5 py-0.5 rounded"
-                          style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
-                          {RESTAURANT_LABELS[inv.restaurant as Restaurant] ?? inv.restaurant}
-                        </span>
-                        {inv.cuenta_pnl && (
-                          <span className="text-xs px-1.5 py-0.5 rounded"
-                            style={{ background: "color-mix(in srgb, var(--pink-dark) 15%, transparent)", color: "var(--pink-dark)" }}>
-                            {inv.cuenta_pnl}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                        {fmtDate(inv.invoice_date)} · {inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}
-                      </div>
-                    </div>
-                    <span className="font-bold text-sm flex-shrink-0" style={{ color: "var(--blue)" }}>{fmt(inv.total)}</span>
-                  </button>
-                  {open && inv.lineItems.length > 0 && (
-                    <div className="border-t" style={{ borderColor: "var(--border)" }}>
-                      {inv.lineItems.map((item, idx) => (
-                        <div key={idx} className="flex items-center px-10 py-2 text-sm gap-4 border-b last:border-b-0"
-                          style={{ borderColor: "var(--border-subtle, var(--border))", background: "var(--surface-raised)" }}>
-                          <span className="flex-1 truncate" style={{ color: "var(--text)" }}>{item.description}</span>
-                          <span className="text-xs w-16 text-right" style={{ color: "var(--text-muted)" }}>
-                            {item.quantity != null ? `${item.quantity}${item.unit ? ` ${item.unit}` : ""}` : "—"}
-                          </span>
-                          <span className="font-medium w-24 text-right" style={{ color: "var(--blue)" }}>{fmt(item.total)}</span>
+        {!loading && view === "invoices" && (() => {
+          if (invoices.length === 0) return (
+            <p className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>No hay gastos operativos para este período.</p>
+          );
+          // Group invoices by cuenta_pnl
+          const groups: Record<string, DbInvoice[]> = {};
+          for (const inv of invoices) {
+            const key = inv.cuenta_pnl ?? "Sin categoría";
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(inv);
+          }
+          const groupKeys = Object.keys(groups).sort();
+          return (
+            <div className="space-y-6">
+              {groupKeys.map((groupKey) => (
+                <div key={groupKey}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>{groupKey}</h3>
+                    <span className="text-xs" style={{ color: "var(--text-dim)" }}>
+                      {fmt(groups[groupKey].reduce((s, i) => s + i.total, 0))}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {groups[groupKey].map((inv) => {
+                      const open = expandedInvoice === inv.id;
+                      return (
+                        <div key={inv.id} className="rounded-[var(--radius)] border overflow-hidden"
+                          style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                          <button className="w-full flex items-center gap-3 px-4 py-3 text-left"
+                            onClick={() => setExpandedInvoice(open ? null : inv.id)}>
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"
+                              className="flex-shrink-0 transition-transform duration-150"
+                              style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", color: "var(--text-muted)" }}>
+                              <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-sm uppercase" style={{ color: "var(--text)" }}>{inv.supplier}</span>
+                                {inv.invoice_number && (
+                                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>#{inv.invoice_number}</span>
+                                )}
+                                <span className="text-xs px-1.5 py-0.5 rounded"
+                                  style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
+                                  {RESTAURANT_LABELS[inv.restaurant as Restaurant] ?? inv.restaurant}
+                                </span>
+                              </div>
+                              <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                                {fmtDate(inv.invoice_date)} · {inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}
+                              </div>
+                            </div>
+                            <span className="font-bold text-sm flex-shrink-0" style={{ color: "var(--blue)" }}>{fmt(inv.total)}</span>
+                          </button>
+                          {open && inv.lineItems.length > 0 && (
+                            <div className="border-t" style={{ borderColor: "var(--border)" }}>
+                              {inv.lineItems.map((item, idx) => (
+                                <div key={idx} className="flex items-center px-10 py-2 text-sm gap-4 border-b last:border-b-0"
+                                  style={{ borderColor: "var(--border-subtle, var(--border))", background: "var(--surface-raised)" }}>
+                                  <span className="flex-1 truncate" style={{ color: "var(--text)" }}>{item.description}</span>
+                                  <span className="text-xs w-16 text-right" style={{ color: "var(--text-muted)" }}>
+                                    {item.quantity != null ? `${item.quantity}${item.unit ? ` ${item.unit}` : ""}` : "—"}
+                                  </span>
+                                  <span className="font-medium w-24 text-right" style={{ color: "var(--blue)" }}>{fmt(item.total)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
-              );
-            })}
-            {invTotalPages > 1 && (
+              ))}
+            </div>
+          );
+        })()}
+        {!loading && view === "invoices" && invTotalPages > 1 && (
               <div className="flex items-center justify-between pt-4 text-sm" style={{ color: "var(--text-muted)" }}>
                 <span>Página {invPage} de {invTotalPages} ({invTotal} resultados)</span>
                 <div className="flex gap-2">
@@ -280,8 +298,6 @@ export default function GastosPage() {
                     style={{ borderColor: "var(--border)", background: "var(--surface)" }}>Siguiente</button>
                 </div>
               </div>
-            )}
-          </div>
         )}
 
         {/* ── Proveedores tab ── */}
@@ -367,7 +383,7 @@ export default function GastosPage() {
                       {group.invoices.map((inv) => (
                         <div key={inv.id} className="flex items-center justify-between gap-2 py-1.5 text-xs">
                           <span className="flex-1 truncate" style={{ color: "var(--text)" }}>
-                            {inv.concepto ?? inv.cuenta_pnl ?? "—"}
+                            {inv.invoice_number ? `Factura #${inv.invoice_number}` : "Factura sin número"}
                           </span>
                           <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
                             {fmtDate(inv.invoice_date)}

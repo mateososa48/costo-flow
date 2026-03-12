@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
+import { belongsInCompras, readSupplierTags } from "@/lib/supplier-classification";
 
 const filtersSchema = z.object({
   view: z.enum(["items", "invoices", "suppliers", "normalize"]).default("items"),
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const { view, search, restaurant, supplier, dateFrom, dateTo, sortBy, sortDir, page, pageSize } = parsed.data;
 
   const FOOD_BEV_CUENTAPNL = ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"];
+  const supplierTags = await readSupplierTags(supabase);
 
   // Get food/bev invoice IDs — primary filter anchored to invoice cuenta_pnl.
   // Avoids relying on cost_type which defaults to 'food' for all rows until backfill runs.
@@ -149,10 +151,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Group by supplier
+    // Group by supplier — exclude any supplier whose tag marks them as operational
     const grouped: Record<string, { supplier: string; totalSpend: number; itemCount: number; items: unknown[] }> = {};
     for (const item of data ?? []) {
       const s = item.supplier as string;
+      // Items already passed foodFilter (food invoices), but supplier tag can override
+      if (!belongsInCompras(supplierTags[s], true)) continue;
       if (!grouped[s]) grouped[s] = { supplier: s, totalSpend: 0, itemCount: 0, items: [] };
       grouped[s].totalSpend += Number(item.total) || 0;
       grouped[s].itemCount++;

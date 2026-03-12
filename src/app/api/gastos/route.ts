@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
+import { belongsInGastos, readSupplierTags } from "@/lib/supplier-classification";
 
 const filtersSchema = z.object({
   view: z.enum(["invoices", "suppliers", "analytics"]).default("invoices"),
@@ -14,10 +15,10 @@ const filtersSchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
 });
 
-// Non-food cuentaPnl values (operational expenses)
-const OPERATIONAL_CUENTAPNL = [
-  "Mantenimiento", "Mobiliario", "Renta", "Gas", "Varios de Administración",
-];
+const FOOD_BEV_CUENTAPNL = ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"];
+function isFoodCuentaPnl(c: string | null | undefined) {
+  return !!c && FOOD_BEV_CUENTAPNL.includes(c);
+}
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const session = await getSession();
@@ -31,23 +32,29 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!parsed.success) return NextResponse.json({ error: "Invalid parameters" }, { status: 422 });
 
   const { view, restaurant, supplier, dateFrom, dateTo, sortDir, page, pageSize } = parsed.data;
+  const supplierTags = await readSupplierTags(supabase);
 
   if (view === "invoices") {
-    let query = supabase.from("invoices").select("*", { count: "exact" })
-      .not("cuenta_pnl", "in", `(Costo de Alimentos,Costo de Bebidas sin Alcohol)`);
+    // Fetch all invoices (no cuenta_pnl filter — supplier tag overrides it)
+    let query = supabase.from("invoices").select("*");
 
     if (restaurant) query = query.eq("restaurant", restaurant);
     if (supplier) query = query.ilike("supplier", `%${supplier}%`);
     if (dateFrom) query = query.gte("invoice_date", dateFrom);
     if (dateTo) query = query.lte("invoice_date", dateTo);
     query = query.order("invoice_date", { ascending: sortDir === "asc" });
-    query = query.range((page - 1) * pageSize, page * pageSize - 1);
 
-    const { data: invoices, count, error } = await query;
+    const { data: invoices, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Fetch line items for each invoice
-    const invoiceIds = (invoices ?? []).map((inv) => inv.id);
+    type InvoiceRow = { id: string; supplier: string; cuenta_pnl: string | null; [k: string]: unknown };
+    const filtered = ((invoices ?? []) as InvoiceRow[]).filter((inv) =>
+      belongsInGastos(supplierTags[inv.supplier], isFoodCuentaPnl(inv.cuenta_pnl))
+    );
+    const pagedInvoices = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+    // Fetch line items for paged invoices
+    const invoiceIds = pagedInvoices.map((inv) => inv.id);
     const itemsByInvoice: Record<string, unknown[]> = {};
     if (invoiceIds.length > 0) {
       const { data: lineItems } = await supabase
@@ -62,20 +69,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    const invoicesWithItems = (invoices ?? []).map((inv) => ({
+    const invoicesWithItems = pagedInvoices.map((inv) => ({
       ...inv,
       lineItems: itemsByInvoice[inv.id] ?? [],
     }));
 
     return NextResponse.json({
       invoices: invoicesWithItems,
-      pagination: { page, pageSize, total: count ?? 0, totalPages: Math.ceil((count ?? 0) / pageSize) },
+      pagination: { page, pageSize, total: filtered.length, totalPages: Math.ceil(filtered.length / pageSize) },
     });
   }
 
   if (view === "suppliers") {
-    let query = supabase.from("invoices").select("id, supplier, total, invoice_date, restaurant, cuenta_pnl, concepto, invoice_number")
-      .not("cuenta_pnl", "in", `(Costo de Alimentos,Costo de Bebidas sin Alcohol)`);
+    let query = supabase.from("invoices").select("id, supplier, total, invoice_date, restaurant, cuenta_pnl, concepto, invoice_number");
 
     if (restaurant) query = query.eq("restaurant", restaurant);
     if (dateFrom) query = query.gte("invoice_date", dateFrom);
@@ -88,6 +94,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     type InvRow = { id: string; supplier: string; total: number; invoice_date: string; restaurant: string; cuenta_pnl: string | null; concepto: string | null; invoice_number: string | null };
     const grouped: Record<string, { supplier: string; totalSpend: number; invoiceCount: number; invoices: InvRow[] }> = {};
     for (const inv of (data ?? []) as InvRow[]) {
+      if (!belongsInGastos(supplierTags[inv.supplier], isFoodCuentaPnl(inv.cuenta_pnl))) continue;
       const s = inv.supplier;
       if (!grouped[s]) grouped[s] = { supplier: s, totalSpend: 0, invoiceCount: 0, invoices: [] };
       grouped[s].totalSpend += Number(inv.total) || 0;
@@ -105,8 +112,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   if (view === "analytics") {
-    let query = supabase.from("invoices").select("invoice_date, total, cuenta_pnl, concepto, supplier, restaurant")
-      .not("cuenta_pnl", "in", `(Costo de Alimentos,Costo de Bebidas sin Alcohol)`);
+    let query = supabase.from("invoices").select("invoice_date, total, cuenta_pnl, concepto, supplier, restaurant");
 
     if (restaurant) query = query.eq("restaurant", restaurant);
     if (dateFrom) query = query.gte("invoice_date", dateFrom);
@@ -115,7 +121,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    const items = data ?? [];
+    type AnalyticsRow = { invoice_date: string | null; total: unknown; cuenta_pnl: string | null; concepto: string | null; supplier: string; restaurant: string };
+    const items = ((data ?? []) as AnalyticsRow[]).filter((item) =>
+      belongsInGastos(supplierTags[item.supplier], isFoodCuentaPnl(item.cuenta_pnl))
+    );
     const totalSpend = items.reduce((s, i) => s + Number(i.total ?? 0), 0);
     const uniqueSuppliers = new Set(items.map((i) => i.supplier)).size;
     const kpis = { totalSpend, invoiceCount: items.length, uniqueSuppliers };
@@ -125,8 +134,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const cuentaSet = new Set<string>();
     for (const item of items) {
       if (!item.invoice_date) continue;
-      const month = (item.invoice_date as string).slice(0, 7);
-      const cuenta = (item.cuenta_pnl as string) ?? "Otros";
+      const month = item.invoice_date.slice(0, 7);
+      const cuenta = item.cuenta_pnl ?? "Otros";
       cuentaSet.add(cuenta);
       if (!monthlyMap[month]) monthlyMap[month] = {};
       monthlyMap[month][cuenta] = (monthlyMap[month][cuenta] ?? 0) + Number(item.total ?? 0);
@@ -142,7 +151,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Breakdown by cuentaPnl
     const cuentaTotals: Record<string, number> = {};
     for (const item of items) {
-      const c = (item.cuenta_pnl as string) ?? "Otros";
+      const c = item.cuenta_pnl ?? "Otros";
       cuentaTotals[c] = (cuentaTotals[c] ?? 0) + Number(item.total ?? 0);
     }
     const breakdown = Object.entries(cuentaTotals)
@@ -152,8 +161,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Top suppliers
     const supplierMap: Record<string, number> = {};
     for (const item of items) {
-      const s = item.supplier as string;
-      supplierMap[s] = (supplierMap[s] ?? 0) + Number(item.total ?? 0);
+      supplierMap[item.supplier] = (supplierMap[item.supplier] ?? 0) + Number(item.total ?? 0);
     }
     const topSuppliers = Object.entries(supplierMap)
       .map(([supplier, total]) => ({ supplier, total }))
