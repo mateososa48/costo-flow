@@ -30,8 +30,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const client = new OpenAI({ apiKey: config.openai.apiKey });
 
-  const response = await client.chat.completions.create({
-    model: "gpt-5",
+  let response: Awaited<ReturnType<typeof client.chat.completions.create>>;
+  try {
+    response = await client.chat.completions.create({
+      model: "gpt-4.1",
     response_format: { type: "json_object" },
     messages: [
       {
@@ -53,8 +55,12 @@ Responde ÚNICAMENTE con JSON: { "suggestions": [ { "canonicalName": "...", "ali
         content: `Agrupa estos artículos:\n${itemList}`,
       },
     ],
-    max_tokens: 4000,
-  });
+      max_tokens: 4000,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "OpenAI error";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   const raw = response.choices[0]?.message?.content ?? "{}";
   let parsed: { suggestions?: SuggestedIngredient[] };
