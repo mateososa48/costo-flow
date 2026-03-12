@@ -1419,11 +1419,13 @@ export default function ComprasPage() {
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ items: unmatched }),
                               });
+                              const data = await res.json();
                               if (res.ok) {
-                                const data = await res.json();
                                 const suggestions = data.suggestions ?? [];
                                 setAiSuggestions(suggestions);
                                 setAiChecked(new Set(suggestions.map((_: AISuggestion, i: number) => i)));
+                              } else {
+                                alert(`Error: ${data.error ?? "Error desconocido"}`);
                               }
                             } finally { setAiLoading(false); }
                           }}
