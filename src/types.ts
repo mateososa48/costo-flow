@@ -33,6 +33,7 @@ export type ExtractedInvoice = {
   lineItems?: LineItem[];        // individual products/services from invoice
 
   extractionConfidence?: number; // 0-1 from LLM
+  mathWarning?: boolean;         // true when importe + iva ≠ total
   extractionMethod: "llm_vision" | "llm_text";
 };
 

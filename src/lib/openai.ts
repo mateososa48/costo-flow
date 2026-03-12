@@ -50,9 +50,9 @@ Fields:
 - invoiceDate: date on the invoice, converted to YYYY-MM-DD
 - supplier: full legal name of the supplier/vendor
 - invoiceNumber: invoice/folio number — digits ONLY, strip any letters, dashes, slashes, or prefix characters (e.g. "FC-143439" → "143439", "A7381" → "7381", "FV-2-1180" → "21180"). Return null if no number is present.
-- importe: net subtotal amount (before IVA/tax)
-- iva: IVA / tax amount
-- total: total amount including IVA
+- importe: net subtotal amount (before IVA/tax). This is the base amount BEFORE tax.
+- iva: IVA / tax amount ONLY. This is the tax portion, NOT the base amount.
+- total: total amount including IVA. CRITICAL: importe + iva MUST equal total (within $1). If your three values don't satisfy this, re-read the invoice and correct them before returning.
 - concepto: pick the single best match from this list (null if none fit): ${conceptoList}
 - cuentaPnl: pick the single best match from this list (null if none fit): ${cuentaPnlList}
 - lineItems: extract every individual line item on the invoice. Each item should have:
@@ -70,6 +70,7 @@ Do NOT invent values. Read only what is explicitly printed on the invoice.
 - If IVA/tax is not shown on the invoice, set iva=0 and importe=total.
 - If importe is not shown but IVA is, calculate importe as total - iva.
 - Never assume or calculate IVA from a percentage if it is not explicitly printed.
+- ALWAYS verify: importe + iva = total. If this does not hold, your values are wrong — re-examine.
 Return only the JSON object, no extra text.`;
 
 const RESPONSE_SCHEMA = {

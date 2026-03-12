@@ -203,6 +203,18 @@ export default function InvoiceCard({
             />
           </div>
 
+          {invoice.mathWarning && (
+            <div className="flex items-start gap-2 px-3 py-2.5 rounded-[var(--radius-sm)] text-xs"
+              style={{ background: "var(--warning-dim, rgba(234,179,8,0.12))", border: "1px solid var(--warning, #ca8a04)", color: "var(--warning, #ca8a04)" }}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="flex-shrink-0 mt-0.5">
+                <path d="M8 2L1.5 13.5h13L8 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                <line x1="8" y1="6.5" x2="8" y2="9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
+              </svg>
+              <span>Los números no cuadran: Importe + IVA ≠ Total. Verifica los valores antes de enviar.</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input
               label="Total"

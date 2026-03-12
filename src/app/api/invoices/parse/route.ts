@@ -84,6 +84,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       throw new Error("No se pudieron extraer los datos. Verifica que la imagen muestre una factura legible.");
     }
 
+    // Sanity-check: importe + iva should equal total within $1
+    const mathOk = Math.abs((extraction.importe + extraction.iva) - extraction.total) <= 1;
+    const confidence = mathOk
+      ? extraction.extractionConfidence
+      : Math.min(extraction.extractionConfidence ?? 0.5, 0.4);
+
     // Look up supplier mapping
     const mapping = lookupSupplier(extraction.supplier);
 
@@ -100,7 +106,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       cuentaPnl: mapping?.cuentaPnl ?? extraction.cuentaPnl ?? "",
       comments: "",
       lineItems: extraction.lineItems ?? [],
-      extractionConfidence: extraction.extractionConfidence,
+      extractionConfidence: confidence,
+      mathWarning: !mathOk,
       extractionMethod: "llm_vision",
     };
   }
