@@ -26,16 +26,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "items array required" }, { status: 400 });
   }
 
+  // Limit to top 80 by count to stay well within Vercel's timeout
+  const topItems = [...items].sort((a, b) => b.count - a.count).slice(0, 80);
+
   const categories = (dropdownOptions.concepto as string[]).join(", ");
-  const itemList = items.map((i) => `"${i.description}" (${i.count} vez${i.count !== 1 ? "ces" : ""})`).join("\n");
+  const itemList = topItems.map((i) => `"${i.description}" (${i.count} vez${i.count !== 1 ? "ces" : ""})`).join("\n");
 
   const client = new OpenAI({ apiKey: config.openai.apiKey });
 
   let response: Awaited<ReturnType<typeof client.chat.completions.create>>;
   try {
     response = await client.chat.completions.create({
-      model: "gpt-4.1",
-    response_format: { type: "json_object" },
+      model: "gpt-4.1-mini",
+      response_format: { type: "json_object" },
     messages: [
       {
         role: "system",
@@ -56,7 +59,7 @@ Responde ÚNICAMENTE con JSON: { "suggestions": [ { "canonicalName": "...", "ali
         content: `Agrupa estos artículos:\n${itemList}`,
       },
     ],
-      max_tokens: 16000,
+      max_tokens: 8000,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "OpenAI error";
