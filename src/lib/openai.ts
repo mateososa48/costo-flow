@@ -49,7 +49,7 @@ Mexican invoices use DD/MM/YYYY date format. Always return invoiceDate as YYYY-M
 Fields:
 - invoiceDate: date on the invoice, converted to YYYY-MM-DD
 - supplier: full legal name of the supplier/vendor
-- invoiceNumber: invoice/folio number (null if not present)
+- invoiceNumber: invoice/folio number — digits ONLY, strip any letters, dashes, slashes, or prefix characters (e.g. "FC-143439" → "143439", "A7381" → "7381", "FV-2-1180" → "21180"). Return null if no number is present.
 - importe: net subtotal amount (before IVA/tax)
 - iva: IVA / tax amount
 - total: total amount including IVA
@@ -77,7 +77,7 @@ const RESPONSE_SCHEMA = {
   properties: {
     invoiceDate: { type: "string", description: "Invoice date in YYYY-MM-DD format" },
     supplier: { type: "string", description: "Supplier/vendor full name" },
-    invoiceNumber: { anyOf: [{ type: "string" }, { type: "null" }], description: "Invoice or folio number" },
+    invoiceNumber: { anyOf: [{ type: "string" }, { type: "null" }], description: "Invoice or folio number — digits only, no letters or special characters" },
     importe: { type: "number", description: "Net subtotal before IVA" },
     iva: { type: "number", description: "IVA / tax amount" },
     total: { type: "number", description: "Total including IVA" },

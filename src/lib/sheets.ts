@@ -40,17 +40,28 @@ export function formatDateForSheet(isoDate: string): string {
 }
 
 /**
+ * Format a number for Spanish-locale Google Sheets (USER_ENTERED mode).
+ * Uses comma as the decimal separator so Sheets doesn't misread the dot
+ * as a thousands separator (which can mangle values or trigger date parsing).
+ */
+function formatNumber(n: number): string {
+  return String(n).replace(".", ",");
+}
+
+/**
  * Convert an ExtractedInvoice to the 9-column sheet row array.
  * Columns A:I = Fecha, Proveedor, Nº Factura, Importe, IVA, Total, Concepto, Cuenta P&L, Comentarios
  */
 export function invoiceToSheetRow(invoice: ExtractedInvoice): string[] {
+  // Strip any non-digit characters from invoice number (letters, dashes, prefixes).
+  const invoiceNumber = (invoice.invoiceNumber ?? "").replace(/\D/g, "");
   return [
     formatDateForSheet(invoice.invoiceDate),
     invoice.supplier,
-    invoice.invoiceNumber ?? "",
-    String(invoice.importe),
-    String(invoice.iva),
-    String(invoice.total),
+    invoiceNumber,
+    formatNumber(invoice.importe),
+    formatNumber(invoice.iva),
+    formatNumber(invoice.total),
     invoice.concepto,
     invoice.cuentaPnl,
     invoice.comments ?? "",
