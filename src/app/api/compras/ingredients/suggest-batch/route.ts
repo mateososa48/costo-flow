@@ -56,7 +56,7 @@ Responde ÚNICAMENTE con JSON: { "suggestions": [ { "canonicalName": "...", "ali
         content: `Agrupa estos artículos:\n${itemList}`,
       },
     ],
-      max_tokens: 4000,
+      max_tokens: 16000,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "OpenAI error";

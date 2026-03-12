@@ -196,6 +196,7 @@ export default function ComprasPage() {
   type AISuggestion = { canonicalName: string; aliases: string[]; category: string | null; matchCount: number };
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[] | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiProgress, setAiProgress] = useState(0);
   const [aiChecked, setAiChecked] = useState<Set<number>>(new Set());
   const [aiConfirming, setAiConfirming] = useState(false);
 
@@ -1413,6 +1414,15 @@ export default function ComprasPage() {
                           style={{ background: "var(--blue-glow)", color: "var(--blue)", border: "1px solid color-mix(in srgb, var(--blue) 25%, transparent)" }}
                           onClick={async () => {
                             setAiLoading(true);
+                            setAiProgress(0);
+                            // Animate progress: crawl to 85% over ~40s, then wait for real response
+                            const startTime = Date.now();
+                            const progressInterval = setInterval(() => {
+                              const elapsed = (Date.now() - startTime) / 1000;
+                              // Asymptotic curve: fast at first, slows near 85%
+                              const p = Math.min(85, Math.round(85 * (1 - Math.exp(-elapsed / 20))));
+                              setAiProgress(p);
+                            }, 300);
                             try {
                               const res = await fetch("/api/compras/ingredients/suggest-batch", {
                                 method: "POST",
@@ -1421,13 +1431,18 @@ export default function ComprasPage() {
                               });
                               const data = await res.json();
                               if (res.ok) {
+                                setAiProgress(100);
                                 const suggestions = data.suggestions ?? [];
                                 setAiSuggestions(suggestions);
                                 setAiChecked(new Set(suggestions.map((_: AISuggestion, i: number) => i)));
                               } else {
                                 alert(`Error: ${data.error ?? "Error desconocido"}`);
                               }
-                            } finally { setAiLoading(false); }
+                            } finally {
+                              clearInterval(progressInterval);
+                              setAiLoading(false);
+                              setAiProgress(0);
+                            }
                           }}
                         >
                           {aiLoading ? (
@@ -1456,6 +1471,24 @@ export default function ComprasPage() {
                       )}
                     </div>
                   </div>
+                  {aiLoading && (
+                    <div className="px-4 pt-2 pb-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs" style={{ color: "var(--text-muted)" }}>Analizando ingredientes con IA…</span>
+                        <span className="text-xs font-medium" style={{ color: "var(--blue)" }}>{aiProgress}%</span>
+                      </div>
+                      <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${aiProgress}%`,
+                            background: "var(--blue)",
+                            transition: "width 0.4s ease-out",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                   {unmatched.length === 0 ? (
                     <div className="px-4 py-8 text-center">
                       <p className="text-sm" style={{ color: "var(--text-dim)" }}>Todo identificado ✓</p>
