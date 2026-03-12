@@ -31,7 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const client = new OpenAI({ apiKey: config.openai.apiKey });
 
   const response = await client.chat.completions.create({
-    model: config.openai.model,
+    model: "gpt-5",
     response_format: { type: "json_object" },
     messages: [
       {
