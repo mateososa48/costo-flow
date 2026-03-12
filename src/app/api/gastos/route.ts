@@ -74,22 +74,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   if (view === "suppliers") {
-    let query = supabase.from("invoices").select("supplier, total, invoice_date, restaurant, cuenta_pnl, concepto")
+    let query = supabase.from("invoices").select("id, supplier, total, invoice_date, restaurant, cuenta_pnl, concepto, invoice_number")
       .not("cuenta_pnl", "in", `(Costo de Alimentos,Costo de Bebidas sin Alcohol)`);
 
     if (restaurant) query = query.eq("restaurant", restaurant);
     if (dateFrom) query = query.gte("invoice_date", dateFrom);
     if (dateTo) query = query.lte("invoice_date", dateTo);
+    query = query.order("invoice_date", { ascending: false });
 
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    const grouped: Record<string, { supplier: string; totalSpend: number; invoiceCount: number }> = {};
-    for (const inv of data ?? []) {
-      const s = inv.supplier as string;
-      if (!grouped[s]) grouped[s] = { supplier: s, totalSpend: 0, invoiceCount: 0 };
+    type InvRow = { id: string; supplier: string; total: number; invoice_date: string; restaurant: string; cuenta_pnl: string | null; concepto: string | null; invoice_number: string | null };
+    const grouped: Record<string, { supplier: string; totalSpend: number; invoiceCount: number; invoices: InvRow[] }> = {};
+    for (const inv of (data ?? []) as InvRow[]) {
+      const s = inv.supplier;
+      if (!grouped[s]) grouped[s] = { supplier: s, totalSpend: 0, invoiceCount: 0, invoices: [] };
       grouped[s].totalSpend += Number(inv.total) || 0;
       grouped[s].invoiceCount++;
+      grouped[s].invoices.push(inv);
     }
     const suppliers = Object.values(grouped).sort((a, b) =>
       sortDir === "desc" ? b.totalSpend - a.totalSpend : a.totalSpend - b.totalSpend

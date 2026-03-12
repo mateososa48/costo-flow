@@ -8,6 +8,7 @@ import {
 import Shell from "@/components/Shell";
 import { RESTAURANT_LABELS } from "@/types";
 import type { Restaurant } from "@/types";
+import dropdownOptions from "../../../data/dropdown_options.json";
 
 type ViewMode = "invoices" | "suppliers" | "analytics";
 
@@ -68,9 +69,12 @@ export default function GastosPage() {
   const [invTotal, setInvTotal] = useState(0);
   const invPageSize = 50;
 
+  type SupplierInvoice = { id: string; invoice_date: string; invoice_number: string | null; cuenta_pnl: string | null; concepto: string | null; total: number; restaurant: string };
   // Suppliers state
-  const [suppliers, setSuppliers] = useState<Array<{ supplier: string; totalSpend: number; invoiceCount: number }>>([]);
-  const [expandedSupplier, setExpandedSupplier] = useState<string | null>(null);
+  const [suppliers, setSuppliers] = useState<Array<{ supplier: string; totalSpend: number; invoiceCount: number; invoices: SupplierInvoice[] }>>([]);
+  const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
+  const [supplierTags, setSupplierTags] = useState<Record<string, string>>({});
+  const [editingSupplierTag, setEditingSupplierTag] = useState<string | null>(null);
 
   // Analytics state
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -97,6 +101,15 @@ export default function GastosPage() {
     document.title = "Gastos Operativos — Aventura Gourmet";
     fetchStats();
   }, [restaurant, dateFrom, dateTo]);
+
+  useEffect(() => {
+    if (view === "suppliers") {
+      fetch("/api/compras/suppliers/tags")
+        .then((r) => (r.ok ? r.json() : {}))
+        .then((d) => setSupplierTags(d ?? {}))
+        .catch(() => {});
+    }
+  }, [view]);
 
   useEffect(() => {
     setLoading(true);
@@ -277,16 +290,104 @@ export default function GastosPage() {
             {suppliers.length === 0 && (
               <p className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>No hay proveedores para este período.</p>
             )}
-            {suppliers.map((s) => (
-              <div key={s.supplier} className="flex items-center justify-between px-4 py-3 rounded-[var(--radius)] border"
-                style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                <div>
-                  <p className="font-semibold text-sm uppercase" style={{ color: "var(--text)" }}>{s.supplier}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{s.invoiceCount} factura{s.invoiceCount !== 1 ? "s" : ""}</p>
+            {suppliers.map((group) => {
+              const isExpanded = expandedSuppliers.has(group.supplier);
+              const currentTag = supplierTags[group.supplier] ?? "";
+              const isEditingTag = editingSupplierTag === group.supplier;
+              return (
+                <div key={group.supplier} className="rounded-[var(--radius)] border overflow-hidden"
+                  style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      className="flex-1 flex items-center gap-3 px-4 py-3 text-left"
+                      onClick={() => setExpandedSuppliers((prev) => {
+                        const next = new Set(prev);
+                        isExpanded ? next.delete(group.supplier) : next.add(group.supplier);
+                        return next;
+                      })}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+                        className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`}
+                        style={{ color: "var(--text-muted)" }}>
+                        <path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{group.supplier}</span>
+                        <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                          <span>{group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}</span>
+                          <span className="font-semibold" style={{ color: "var(--blue)" }}>{fmt(group.totalSpend)}</span>
+                        </div>
+                      </div>
+                    </button>
+                    {/* Supply type tag */}
+                    <div className="px-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      {isEditingTag ? (
+                        <select
+                          autoFocus
+                          value={currentTag}
+                          className="px-2 py-1 rounded-[var(--radius-sm)] border text-xs appearance-none focus:outline-none focus:ring-1"
+                          style={{ background: "var(--surface)", borderColor: "var(--blue)", color: "var(--text)" }}
+                          onBlur={() => setEditingSupplierTag(null)}
+                          onChange={async (e) => {
+                            const supplyType = e.target.value;
+                            setSupplierTags((prev) => ({ ...prev, [group.supplier]: supplyType }));
+                            setEditingSupplierTag(null);
+                            await fetch("/api/compras/suppliers/tags", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ supplier: group.supplier, supplyType }),
+                            });
+                          }}
+                        >
+                          <option value="">Sin clasificar</option>
+                          {(dropdownOptions.cuentaPnl as string[]).map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <button
+                          type="button"
+                          title="Clasificar proveedor"
+                          className="text-[10px] px-2 py-1 rounded-full transition-colors"
+                          style={{
+                            background: currentTag ? "var(--blue-glow)" : "var(--surface-raised)",
+                            color: currentTag ? "var(--blue)" : "var(--text-dim)",
+                            border: `1px solid ${currentTag ? "color-mix(in srgb, var(--blue) 25%, transparent)" : "var(--border-subtle)"}`,
+                          }}
+                          onClick={() => setEditingSupplierTag(group.supplier)}
+                        >
+                          {currentTag || "Clasificar ✎"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {isExpanded && group.invoices.length > 0 && (
+                    <div className="border-t px-4 py-3 space-y-1.5" style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
+                      {group.invoices.map((inv) => (
+                        <div key={inv.id} className="flex items-center justify-between gap-2 py-1.5 text-xs">
+                          <span className="flex-1 truncate" style={{ color: "var(--text)" }}>
+                            {inv.concepto ?? inv.cuenta_pnl ?? "—"}
+                          </span>
+                          <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
+                            {fmtDate(inv.invoice_date)}
+                          </span>
+                          {inv.cuenta_pnl && (
+                            <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded"
+                              style={{ background: "color-mix(in srgb, var(--pink-dark) 15%, transparent)", color: "var(--pink-dark)" }}>
+                              {inv.cuenta_pnl}
+                            </span>
+                          )}
+                          <span className="flex-shrink-0 font-medium" style={{ color: "var(--blue)" }}>
+                            {fmt(inv.total)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span className="font-bold text-sm" style={{ color: "var(--blue)" }}>{fmt(s.totalSpend)}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
