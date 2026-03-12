@@ -1429,15 +1429,27 @@ export default function ComprasPage() {
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ items: unmatched }),
                               });
-                              const data = await res.json();
+                              let data: { suggestions?: AISuggestion[]; error?: string };
+                              try {
+                                data = await res.json();
+                              } catch {
+                                alert("Error: la respuesta del servidor no es JSON válido");
+                                return;
+                              }
                               if (res.ok) {
                                 setAiProgress(100);
                                 const suggestions = data.suggestions ?? [];
-                                setAiSuggestions(suggestions);
-                                setAiChecked(new Set(suggestions.map((_: AISuggestion, i: number) => i)));
+                                if (suggestions.length === 0) {
+                                  alert("La IA no devolvió sugerencias. Intenta de nuevo.");
+                                } else {
+                                  setAiSuggestions(suggestions);
+                                  setAiChecked(new Set(suggestions.map((_: AISuggestion, i: number) => i)));
+                                }
                               } else {
-                                alert(`Error: ${data.error ?? "Error desconocido"}`);
+                                alert(`Error ${res.status}: ${data.error ?? "Error desconocido"}`);
                               }
+                            } catch (err: unknown) {
+                              alert(`Error de red: ${err instanceof Error ? err.message : String(err)}`);
                             } finally {
                               clearInterval(progressInterval);
                               setAiLoading(false);
