@@ -166,7 +166,7 @@ export default function ComprasPage() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   // Per-chart filters
-  const [trendPeriod, setTrendPeriod] = useState<"3" | "6" | "all">("all");
+  const [trendPeriod, setTrendPeriod] = useState<"4" | "12" | "all">("all");
   const [analyticsMonth, setAnalyticsMonth] = useState("");          // "YYYY-MM" or "" for all
   const [analyticsWeek, setAnalyticsWeek] = useState("");            // "YYYY-MM-DD" (Monday) or ""
   const [analyticsFilterOpen, setAnalyticsFilterOpen] = useState<"month" | "week" | null>(null);
@@ -1187,9 +1187,13 @@ export default function ComprasPage() {
                 total: Object.entries(m).filter(([k]) => k !== "month").reduce((s, [, v]) => s + Number(v), 0),
               }));
 
-              // Trend chart: filter by period buttons (client-side)
-              const trendData = trendPeriod === "all" ? allMonthlyTotals
-                : allMonthlyTotals.slice(-Number(trendPeriod));
+              // Weekly trend chart
+              const allWeeklyTotals = analyticsData.weeklyTrend.map((w: { week: string; total: number }) => ({
+                week: w.week as string,
+                total: Number(w.total),
+              }));
+              const trendData = trendPeriod === "all" ? allWeeklyTotals
+                : allWeeklyTotals.slice(-Number(trendPeriod));
 
               // Category / Supplier / Items: use monthly re-fetch if a month is selected
               const d = monthlyAnalyticsData ?? analyticsData;
@@ -1355,19 +1359,19 @@ export default function ComprasPage() {
                   </div>
 
                   {/* ── Trend Chart ── */}
-                  {allMonthlyTotals.length > 0 && (
+                  {allWeeklyTotals.length > 0 && (
                     <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                       <div className="flex items-center justify-between mb-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Tendencia mensual</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Tendencia semanal</p>
                         <div className="flex items-center gap-1">
-                          {(["3", "6", "all"] as const).map(p => (
+                          {(["4", "12", "all"] as const).map(p => (
                             <button key={p} type="button"
                               onClick={() => setTrendPeriod(p)}
                               className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors"
                               style={trendPeriod === p
                                 ? { background: "var(--blue)", color: "#fff" }
                                 : { background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
-                              {p === "all" ? "Todo" : `${p}M`}
+                              {p === "all" ? "Todo" : `${p}S`}
                             </button>
                           ))}
                         </div>
@@ -1381,15 +1385,16 @@ export default function ComprasPage() {
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
-                            tickFormatter={(v: string) => fmtMonth(v)} />
+                          <XAxis dataKey="week" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                            tickFormatter={(v: string) => fmtWeek(v)} />
                           <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }}
                             tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
                           <Tooltip
                             formatter={(value: unknown) => [formatCurrency(Number(value)), "Gasto"]}
                             labelFormatter={(label: unknown) => {
-                              const [y, m] = String(label).split("-");
-                              return new Date(Number(y), Number(m) - 1).toLocaleDateString("es-MX", { month: "long", year: "numeric" });
+                              const d = new Date(String(label) + "T00:00:00");
+                              const end = new Date(d); end.setDate(d.getDate() + 6);
+                              return `Sem ${d.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} – ${end.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`;
                             }}
                             contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
                             labelStyle={{ color: "var(--text)", fontWeight: 600 }}
