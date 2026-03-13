@@ -505,22 +505,7 @@ export default function ComprasPage() {
           </Button>
         </div>
 
-        {/* Stats strip below title */}
-        <div className="flex items-center gap-0 divide-x rounded-[var(--radius-sm)] border overflow-hidden mb-6 w-fit"
-          style={{ borderColor: "var(--border)" }}>
-          {[
-            { label: "gasto total", value: formatCurrency(stats.totalSpend), highlight: true },
-            { label: "proveedores", value: stats.uniqueSuppliers.toLocaleString("es-MX"), highlight: false },
-            { label: "artículos", value: stats.totalItems.toLocaleString("es-MX"), highlight: false },
-          ].map((stat) => (
-            <div key={stat.label} className="px-3 py-1.5" style={{ background: stat.highlight ? "var(--blue-glow)" : "var(--surface)" }}>
-              <span className="text-xs font-semibold" style={{ color: stat.highlight ? "var(--blue)" : "var(--text)" }}>
-                {stat.value}
-              </span>
-              <span className="text-xs ml-1" style={{ color: "var(--text-dim)" }}>{stat.label}</span>
-            </div>
-          ))}
-        </div>
+
 
         {/* Tabs + filter toggle */}
         <div className="flex items-center justify-between gap-2 border-b" style={{ borderColor: "var(--border)" }}>
