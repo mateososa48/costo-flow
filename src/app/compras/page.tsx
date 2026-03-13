@@ -2774,26 +2774,28 @@ function IngredientEditRow({
   }
 
   return (
-    <div className="border-t px-4 py-3 space-y-3" style={{ borderColor: "var(--border-subtle)", background: "var(--surface)" }}>
+    <div className="space-y-4">
       {/* Name */}
       <div>
-        <label className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Nombre canónico</label>
+        <label className="block text-[11px] font-semibold uppercase tracking-wider mb-1.5"
+          style={{ color: "var(--text-muted)" }}>Nombre canónico</label>
         <input type="text" value={name}
-          className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+          className="w-full px-3 py-2.5 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
           style={{ background: "var(--surface-raised)", borderColor: "var(--border)", color: "var(--text)" }}
           onChange={(e) => setName(e.target.value)} />
       </div>
 
+      {/* Category + Unit */}
       <div className="grid grid-cols-2 gap-3">
-        {/* Category */}
         <div>
-          <label className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Categoría</label>
-          <div className="relative mt-1">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider mb-1.5"
+            style={{ color: "var(--text-muted)" }}>Categoría</label>
+          <div className="relative">
             <input
               type="text"
               value={catOpen ? catQuery : (category || "")}
               placeholder="Sin categoría"
-              className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+              className="w-full px-3 py-2.5 pr-8 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
               style={{ background: "var(--surface-raised)", borderColor: "var(--border)", color: category && !catOpen ? "var(--text)" : "var(--text-dim)" }}
               onFocus={() => { setCatOpen(true); setCatQuery(""); }}
               onChange={(e) => { setCatQuery(e.target.value); setCatHighlight(-1); }}
@@ -2817,27 +2819,23 @@ function IngredientEditRow({
                     style={{ background: i === catHighlight ? "var(--blue-glow)" : "transparent", color: i === catHighlight ? "var(--blue)" : "var(--text)" }}
                     onMouseDown={() => selectCat(c)}
                     onMouseEnter={() => setCatHighlight(i)}
-                  >
-                    {c}
-                  </button>
+                  >{c}</button>
                 ))}
               </div>
             )}
           </div>
         </div>
 
-        {/* Default unit */}
         <div>
-          <label className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Unidad predeterminada</label>
-          <div className="relative mt-1">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider mb-1.5"
+            style={{ color: "var(--text-muted)" }}>Unidad</label>
+          <div className="relative">
             <select value={defaultUnit}
-              className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+              className="w-full px-3 py-2.5 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-0"
               style={{ background: "var(--surface-raised)", borderColor: "var(--border)", color: defaultUnit ? "var(--text)" : "var(--text-dim)" }}
               onChange={(e) => setDefaultUnit(e.target.value)}>
               <option value="">—</option>
-              {NORMALIZED_UNITS_LIST.map((u) => (
-                <option key={u} value={u}>{u}</option>
-              ))}
+              {NORMALIZED_UNITS_LIST.map((u) => <option key={u} value={u}>{u}</option>)}
             </select>
             <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
               <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -2846,59 +2844,72 @@ function IngredientEditRow({
         </div>
       </div>
 
-      {/* Aliases */}
+      {/* Aliases — tag input */}
       <div>
-        <label className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Alias</label>
-        <div className="flex flex-wrap gap-1 mt-1">
+        <label className="block text-[11px] font-semibold uppercase tracking-wider mb-1.5"
+          style={{ color: "var(--text-muted)" }}>Alias</label>
+        <div
+          className="flex flex-wrap gap-1.5 p-2 rounded-[var(--radius-sm)] border min-h-[44px] cursor-text"
+          style={{ background: "var(--surface-raised)", borderColor: "var(--border)" }}
+          onClick={() => (document.getElementById("ing-alias-input") as HTMLInputElement)?.focus()}
+        >
           {aliases.map((a) => (
-            <span key={a} className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full"
-              style={{ background: "var(--surface-raised)", color: "var(--text-dim)", border: "1px solid var(--border-subtle)" }}>
-              {a}
-              <button type="button" onClick={() => removeAlias(a)}
-                className="leading-none hover:opacity-60" style={{ color: "var(--text-muted)" }}>×</button>
+            <span key={a} className="flex items-center gap-1 text-xs px-2 py-1 rounded-md flex-shrink-0"
+              style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }}>
+              <span className="max-w-[160px] truncate">{a}</span>
+              <button type="button" onClick={(e) => { e.stopPropagation(); removeAlias(a); }}
+                className="flex-shrink-0 opacity-40 hover:opacity-80 transition-opacity ml-0.5"
+                style={{ color: "var(--text-muted)", lineHeight: 1 }}>
+                <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+                  <path d="M1 1l7 7M8 1L1 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
             </span>
           ))}
-        </div>
-        <div className="flex gap-1.5 mt-1.5">
-          <input type="text" value={newAlias} placeholder="Agregar alias..."
-            className="flex-1 px-2.5 py-1.5 rounded-[var(--radius-sm)] border text-xs focus:outline-none focus:ring-1"
-            style={{ background: "var(--surface-raised)", borderColor: "var(--border)", color: "var(--text)" }}
+          <input
+            id="ing-alias-input"
+            type="text"
+            value={newAlias}
+            placeholder={aliases.length === 0 ? "Escribe y presiona Enter…" : "Agregar…"}
+            className="flex-1 min-w-[120px] text-xs bg-transparent outline-none py-1 px-1"
+            style={{ color: "var(--text)" }}
             onChange={(e) => setNewAlias(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAlias(); } }} />
-          <button type="button"
-            className="px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium"
-            style={{ background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}
-            onClick={addAlias}>
-            +
-          </button>
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); addAlias(); }
+              if (e.key === "Backspace" && !newAlias && aliases.length > 0) removeAlias(aliases[aliases.length - 1]);
+            }}
+          />
         </div>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-1">
-        {confirmDelete ? (
-          <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>¿Confirmar eliminación?</span>
-            <button type="button"
-              className="text-xs font-medium px-2 py-1 rounded"
-              style={{ background: "#fee2e2", color: "#b91c1c" }}
-              onClick={handleDelete}>
-              {deleting ? "..." : "Sí, eliminar"}
-            </button>
-            <button type="button" className="text-xs" style={{ color: "var(--text-muted)" }}
-              onClick={() => setConfirmDelete(false)}>Cancelar</button>
-          </div>
-        ) : (
-          <button type="button"
-            className="text-xs font-medium"
-            style={{ color: "var(--danger)" }}
-            onClick={() => setConfirmDelete(true)}>
-            Eliminar ingrediente
-          </button>
-        )}
+      <div className="space-y-2.5 pt-1">
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" loading={saving} disabled={!name.trim()} onClick={handleSave}>Guardar</Button>
+          <Button variant="secondary" size="md" className="flex-1" onClick={onClose}>Cancelar</Button>
+          <Button size="md" className="flex-1" loading={saving} disabled={!name.trim()} onClick={handleSave}>Guardar</Button>
+        </div>
+        <div className="flex justify-center pt-0.5">
+          {confirmDelete ? (
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>¿Eliminar este ingrediente?</span>
+              <button type="button"
+                className="text-xs font-semibold px-2.5 py-1 rounded-md transition-colors"
+                style={{ background: "var(--danger-dim)", color: "var(--danger)" }}
+                onClick={handleDelete}>
+                {deleting ? "Eliminando…" : "Sí, eliminar"}
+              </button>
+              <button type="button" className="text-xs transition-opacity hover:opacity-60"
+                style={{ color: "var(--text-muted)" }}
+                onClick={() => setConfirmDelete(false)}>No</button>
+            </div>
+          ) : (
+            <button type="button"
+              className="text-xs transition-opacity hover:opacity-60"
+              style={{ color: "var(--danger)" }}
+              onClick={() => setConfirmDelete(true)}>
+              Eliminar ingrediente
+            </button>
+          )}
         </div>
       </div>
     </div>
