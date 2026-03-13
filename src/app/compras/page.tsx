@@ -165,8 +165,11 @@ export default function ComprasPage() {
   // Analytics state
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsDateFrom, setAnalyticsDateFrom] = useState("");
-  const [analyticsDateTo, setAnalyticsDateTo] = useState("");
+  // Per-chart filters
+  const [trendPeriod, setTrendPeriod] = useState<"3" | "6" | "all">("all");
+  const [analyticsMonth, setAnalyticsMonth] = useState("");          // "YYYY-MM" or "" for all
+  const [monthlyAnalyticsData, setMonthlyAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [monthlyAnalyticsLoading, setMonthlyAnalyticsLoading] = useState(false);
 
   // Normalize state
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -202,24 +205,35 @@ export default function ComprasPage() {
   const [aiChecked, setAiChecked] = useState<Set<number>>(new Set());
   const [aiConfirming, setAiConfirming] = useState(false);
 
-  // ── Fetch analytics ─────────────────────────────────────────────
+  // ── Fetch analytics (all-time) ──────────────────────────────────
   const fetchAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
     try {
       const params = new URLSearchParams();
       if (restaurant) params.set("restaurant", restaurant);
-      if (analyticsDateFrom) params.set("dateFrom", `${analyticsDateFrom}-01`);
-      if (analyticsDateTo) {
-        // Last day of the selected month
-        const [y, m] = analyticsDateTo.split("-").map(Number);
-        const lastDay = new Date(y, m, 0).getDate();
-        params.set("dateTo", `${analyticsDateTo}-${String(lastDay).padStart(2, "0")}`);
-      }
       const res = await fetch(`/api/compras/analytics?${params}`);
       if (res.ok) setAnalyticsData(await res.json());
     } catch { /* ignore */ }
     finally { setAnalyticsLoading(false); }
-  }, [restaurant, analyticsDateFrom, analyticsDateTo]);
+  }, [restaurant]);
+
+  // ── Fetch analytics for a specific month ────────────────────────
+  const fetchMonthlyAnalytics = useCallback(async (month: string) => {
+    if (!month) { setMonthlyAnalyticsData(null); return; }
+    setMonthlyAnalyticsLoading(true);
+    try {
+      const [y, m] = month.split("-").map(Number);
+      const lastDay = new Date(y, m, 0).getDate();
+      const params = new URLSearchParams({
+        dateFrom: `${month}-01`,
+        dateTo: `${month}-${String(lastDay).padStart(2, "0")}`,
+      });
+      if (restaurant) params.set("restaurant", restaurant);
+      const res = await fetch(`/api/compras/analytics?${params}`);
+      if (res.ok) setMonthlyAnalyticsData(await res.json());
+    } catch { /* ignore */ }
+    finally { setMonthlyAnalyticsLoading(false); }
+  }, [restaurant]);
 
   // ── Fetch normalize data ─────────────────────────────────────────
   const fetchNormalize = useCallback(async () => {
@@ -281,6 +295,7 @@ export default function ComprasPage() {
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, dateFrom, dateTo]);
   useEffect(() => { if (view === "analytics") fetchAnalytics(); }, [view, fetchAnalytics]);
+  useEffect(() => { if (view === "analytics") fetchMonthlyAnalytics(analyticsMonth); }, [view, analyticsMonth, fetchMonthlyAnalytics]);
   useEffect(() => { if (view === "normalize") fetchNormalize(); }, [view, fetchNormalize]);
   useEffect(() => {
     if (view === "suppliers") {
@@ -1148,41 +1163,6 @@ export default function ComprasPage() {
         {/* ─── ANALYTICS VIEW ──────────────────────────────────────── */}
         {view === "analytics" && (
           <div className="space-y-4">
-
-            {/* ── Date Range Filter ── */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Desde</span>
-                <input
-                  type="month"
-                  value={analyticsDateFrom}
-                  onChange={e => { setAnalyticsDateFrom(e.target.value); }}
-                  className="text-xs px-2 py-1.5 rounded-[var(--radius-sm)] border"
-                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Hasta</span>
-                <input
-                  type="month"
-                  value={analyticsDateTo}
-                  onChange={e => { setAnalyticsDateTo(e.target.value); }}
-                  className="text-xs px-2 py-1.5 rounded-[var(--radius-sm)] border"
-                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
-                />
-              </div>
-              {(analyticsDateFrom || analyticsDateTo) && (
-                <button
-                  type="button"
-                  onClick={() => { setAnalyticsDateFrom(""); setAnalyticsDateTo(""); }}
-                  className="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)]"
-                  style={{ color: "var(--text-dim)", background: "var(--surface-raised)", border: "1px solid var(--border)" }}
-                >
-                  Limpiar
-                </button>
-              )}
-            </div>
-
             {analyticsLoading && (
               <div className="flex justify-center py-12">
                 <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
@@ -1191,30 +1171,81 @@ export default function ComprasPage() {
             )}
 
             {!analyticsLoading && analyticsData && (() => {
-              // Derived data
-              const monthlyTotals = analyticsData.monthlySpend.map(m => ({
+              // ── Derived / helper data ─────────────────────────────────
+              const allMonthlyTotals = analyticsData.monthlySpend.map(m => ({
                 month: m.month as string,
                 total: Object.entries(m).filter(([k]) => k !== "month").reduce((s, [, v]) => s + Number(v), 0),
               }));
-              const lastTwo = monthlyTotals.slice(-2);
-              const momDelta = lastTwo.length === 2 && lastTwo[0].total > 0
+
+              // Trend chart: filter by period buttons (client-side)
+              const trendData = trendPeriod === "all" ? allMonthlyTotals
+                : allMonthlyTotals.slice(-Number(trendPeriod));
+
+              // Category / Supplier / Items: use monthly re-fetch if a month is selected
+              const d = monthlyAnalyticsData ?? analyticsData;
+              const maxCat = d.categoryBreakdown[0]?.value ?? 1;
+              const maxSup = d.spendBySupplier[0]?.total ?? 1;
+              const maxItem = d.topItems[0]?.totalSpend ?? 1;
+
+              // Available months for the month-picker buttons (last 12, newest first)
+              const availableMonths = [...new Set(
+                analyticsData.monthlySpend.map(m => m.month as string)
+              )].sort().reverse().slice(0, 12);
+
+              // MoM delta (only shown when viewing all time)
+              const lastTwo = allMonthlyTotals.slice(-2);
+              const momDelta = !analyticsMonth && lastTwo.length === 2 && lastTwo[0].total > 0
                 ? ((lastTwo[1].total - lastTwo[0].total) / lastTwo[0].total) * 100
                 : null;
-              const maxCat = analyticsData.categoryBreakdown[0]?.value ?? 1;
-              const maxSup = analyticsData.spendBySupplier[0]?.total ?? 1;
-              const maxItem = analyticsData.topItems[0]?.totalSpend ?? 1;
+
+              // Helper: month label "Ene 25"
+              function fmtMonth(ym: string) {
+                const [y, m] = ym.split("-");
+                return new Date(Number(y), Number(m) - 1).toLocaleDateString("es-MX", { month: "short", year: "2-digit" });
+              }
+
+              // Reusable month-pill row component (inline)
+              function MonthPills() {
+                return (
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <button type="button"
+                      onClick={() => setAnalyticsMonth("")}
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors"
+                      style={analyticsMonth === ""
+                        ? { background: "var(--blue)", color: "#fff" }
+                        : { background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
+                      Todo
+                    </button>
+                    {availableMonths.map(m => (
+                      <button key={m} type="button"
+                        onClick={() => setAnalyticsMonth(m)}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors"
+                        style={analyticsMonth === m
+                          ? { background: "var(--blue)", color: "#fff" }
+                          : { background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
+                        {fmtMonth(m)}
+                      </button>
+                    ))}
+                    {monthlyAnalyticsLoading && (
+                      <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin ml-1"
+                        style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
+                    )}
+                  </div>
+                );
+              }
 
               return (
                 <>
                   {/* ── KPI Band ── */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {/* Total spend card with MoM delta */}
                     <div className="rounded-[var(--radius)] border p-4"
                       style={{ borderColor: "color-mix(in srgb, var(--blue) 30%, transparent)", background: "var(--blue-glow)" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--blue)" }}>Gasto Total</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--blue)" }}>
+                        {analyticsMonth ? fmtMonth(analyticsMonth) : "Gasto Total"}
+                      </p>
                       <p className="text-2xl font-bold leading-none mb-2"
                         style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.03em" }}>
-                        {formatCurrency(analyticsData.kpis.totalSpend)}
+                        {formatCurrency(d.kpis.totalSpend)}
                       </p>
                       {momDelta !== null && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
@@ -1227,9 +1258,9 @@ export default function ComprasPage() {
                       )}
                     </div>
                     {[
-                      { label: "Facturas", value: analyticsData.kpis.uniqueInvoices.toLocaleString("es-MX") },
-                      { label: "Proveedores", value: analyticsData.kpis.uniqueSuppliers.toLocaleString("es-MX") },
-                      { label: "Prom / Factura", value: formatCurrency(analyticsData.kpis.avgPerInvoice) },
+                      { label: "Facturas", value: d.kpis.uniqueInvoices.toLocaleString("es-MX") },
+                      { label: "Proveedores", value: d.kpis.uniqueSuppliers.toLocaleString("es-MX") },
+                      { label: "Prom / Factura", value: formatCurrency(d.kpis.avgPerInvoice) },
                     ].map(kpi => (
                       <div key={kpi.label} className="rounded-[var(--radius)] border p-4"
                         style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
@@ -1242,14 +1273,26 @@ export default function ComprasPage() {
                     ))}
                   </div>
 
-                  {/* ── Monthly Trend Area Chart ── */}
-                  {monthlyTotals.length > 0 && (
+                  {/* ── Trend Chart ── */}
+                  {allMonthlyTotals.length > 0 && (
                     <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-4" style={{ color: "var(--text-dim)" }}>
-                        Tendencia mensual
-                      </p>
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Tendencia mensual</p>
+                        <div className="flex items-center gap-1">
+                          {(["3", "6", "all"] as const).map(p => (
+                            <button key={p} type="button"
+                              onClick={() => setTrendPeriod(p)}
+                              className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors"
+                              style={trendPeriod === p
+                                ? { background: "var(--blue)", color: "#fff" }
+                                : { background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
+                              {p === "all" ? "Todo" : `${p}M`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <ResponsiveContainer width="100%" height={200}>
-                        <AreaChart data={monthlyTotals} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                        <AreaChart data={trendData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                           <defs>
                             <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="var(--blue)" stopOpacity={0.15} />
@@ -1258,10 +1301,7 @@ export default function ComprasPage() {
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                           <XAxis dataKey="month" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
-                            tickFormatter={(v: string) => {
-                              const [y, m] = v.split("-");
-                              return new Date(Number(y), Number(m) - 1).toLocaleDateString("es-MX", { month: "short", year: "2-digit" });
-                            }} />
+                            tickFormatter={(v: string) => fmtMonth(v)} />
                           <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }}
                             tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
                           <Tooltip
@@ -1286,13 +1326,16 @@ export default function ComprasPage() {
                   <div className="grid md:grid-cols-5 gap-4">
                     {/* Category breakdown — 3 cols */}
                     <div className="md:col-span-3 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Por categoría</p>
-                      {analyticsData.categoryBreakdown.length === 0 ? (
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Por categoría</p>
+                        <MonthPills />
+                      </div>
+                      {d.categoryBreakdown.length === 0 ? (
                         <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
                       ) : (
                         <div>
-                          {analyticsData.categoryBreakdown.slice(0, 10).map((c) => {
-                            const pct = analyticsData.kpis.totalSpend > 0 ? (c.value / analyticsData.kpis.totalSpend) * 100 : 0;
+                          {d.categoryBreakdown.slice(0, 10).map((c) => {
+                            const pct = d.kpis.totalSpend > 0 ? (c.value / d.kpis.totalSpend) * 100 : 0;
                             const barWidth = (c.value / maxCat) * 100;
                             return (
                               <div key={c.name} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
@@ -1315,14 +1358,17 @@ export default function ComprasPage() {
 
                     {/* Top Suppliers — 2 cols */}
                     <div className="md:col-span-2 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Top proveedores</p>
-                      {analyticsData.spendBySupplier.length === 0 ? (
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Top proveedores</p>
+                        <MonthPills />
+                      </div>
+                      {d.spendBySupplier.length === 0 ? (
                         <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
                       ) : (
                         <div>
-                          {analyticsData.spendBySupplier.slice(0, 8).map((s) => {
+                          {d.spendBySupplier.slice(0, 8).map((s) => {
                             const barWidth = (s.total / maxSup) * 100;
-                            const pct = analyticsData.kpis.totalSpend > 0 ? (s.total / analyticsData.kpis.totalSpend) * 100 : 0;
+                            const pct = d.kpis.totalSpend > 0 ? (s.total / d.kpis.totalSpend) * 100 : 0;
                             return (
                               <div key={s.supplier} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
                                 <div className="flex items-center justify-between mb-1.5">
@@ -1344,15 +1390,17 @@ export default function ComprasPage() {
                   </div>
 
                   {/* ── Top Ingredients ── */}
-                  {analyticsData.topItems.length > 0 && (
+                  {d.topItems.length > 0 && (
                     <div className="rounded-[var(--radius)] border overflow-hidden" style={{ borderColor: "var(--border)" }}>
-                      <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                      <div className="px-4 py-3 border-b flex items-center justify-between gap-2"
+                        style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                         <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
                           Top artículos por gasto
                         </p>
+                        <MonthPills />
                       </div>
                       <div style={{ background: "var(--surface)" }}>
-                        {analyticsData.topItems.map((item, i) => {
+                        {d.topItems.map((item, i) => {
                           const barWidth = (item.totalSpend / maxItem) * 100;
                           return (
                             <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-b last:border-b-0"
@@ -1386,9 +1434,9 @@ export default function ComprasPage() {
                   )}
 
                   {/* ── Restaurant split (if multiple) ── */}
-                  {analyticsData.spendByRestaurant.length > 1 && (
+                  {d.spendByRestaurant.length > 1 && (
                     <div className="grid grid-cols-3 gap-3">
-                      {analyticsData.spendByRestaurant.map((r) => (
+                      {d.spendByRestaurant.map((r) => (
                         <div key={r.restaurant} className="rounded-[var(--radius)] border p-3"
                           style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                           <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--text-dim)" }}>
