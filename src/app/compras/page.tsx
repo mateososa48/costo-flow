@@ -168,6 +168,8 @@ export default function ComprasPage() {
   // Per-chart filters
   const [trendPeriod, setTrendPeriod] = useState<"3" | "6" | "all">("all");
   const [analyticsMonth, setAnalyticsMonth] = useState("");          // "YYYY-MM" or "" for all
+  const [analyticsWeek, setAnalyticsWeek] = useState("");            // "YYYY-MM-DD" (Monday) or ""
+  const [analyticsFilterOpen, setAnalyticsFilterOpen] = useState<"month" | "week" | null>(null);
   const [monthlyAnalyticsData, setMonthlyAnalyticsData] = useState<AnalyticsData | null>(null);
   const [monthlyAnalyticsLoading, setMonthlyAnalyticsLoading] = useState(false);
 
@@ -218,16 +220,11 @@ export default function ComprasPage() {
   }, [restaurant]);
 
   // ── Fetch analytics for a specific month ────────────────────────
-  const fetchMonthlyAnalytics = useCallback(async (month: string) => {
-    if (!month) { setMonthlyAnalyticsData(null); return; }
+  const fetchFilteredAnalytics = useCallback(async (dateFrom: string, dateTo: string) => {
+    if (!dateFrom) { setMonthlyAnalyticsData(null); return; }
     setMonthlyAnalyticsLoading(true);
     try {
-      const [y, m] = month.split("-").map(Number);
-      const lastDay = new Date(y, m, 0).getDate();
-      const params = new URLSearchParams({
-        dateFrom: `${month}-01`,
-        dateTo: `${month}-${String(lastDay).padStart(2, "0")}`,
-      });
+      const params = new URLSearchParams({ dateFrom, dateTo });
       if (restaurant) params.set("restaurant", restaurant);
       const res = await fetch(`/api/compras/analytics?${params}`);
       if (res.ok) setMonthlyAnalyticsData(await res.json());
@@ -295,7 +292,20 @@ export default function ComprasPage() {
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, dateFrom, dateTo]);
   useEffect(() => { if (view === "analytics") fetchAnalytics(); }, [view, fetchAnalytics]);
-  useEffect(() => { if (view === "analytics") fetchMonthlyAnalytics(analyticsMonth); }, [view, analyticsMonth, fetchMonthlyAnalytics]);
+  useEffect(() => {
+    if (view !== "analytics") return;
+    if (analyticsMonth) {
+      const [y, m] = analyticsMonth.split("-").map(Number);
+      const lastDay = new Date(y, m, 0).getDate();
+      fetchFilteredAnalytics(`${analyticsMonth}-01`, `${analyticsMonth}-${String(lastDay).padStart(2, "0")}`);
+    } else if (analyticsWeek) {
+      const end = new Date(analyticsWeek + "T00:00:00");
+      end.setDate(end.getDate() + 6);
+      fetchFilteredAnalytics(analyticsWeek, end.toISOString().slice(0, 10));
+    } else {
+      fetchFilteredAnalytics("", "");
+    }
+  }, [view, analyticsMonth, analyticsWeek, fetchFilteredAnalytics]);
   useEffect(() => { if (view === "normalize") fetchNormalize(); }, [view, fetchNormalize]);
   useEffect(() => {
     if (view === "suppliers") {
@@ -1194,7 +1204,7 @@ export default function ComprasPage() {
 
               // MoM delta (only shown when viewing all time)
               const lastTwo = allMonthlyTotals.slice(-2);
-              const momDelta = !analyticsMonth && lastTwo.length === 2 && lastTwo[0].total > 0
+              const momDelta = !analyticsMonth && !analyticsWeek && lastTwo.length === 2 && lastTwo[0].total > 0
                 ? ((lastTwo[1].total - lastTwo[0].total) / lastTwo[0].total) * 100
                 : null;
 
@@ -1204,30 +1214,101 @@ export default function ComprasPage() {
                 return new Date(Number(y), Number(m) - 1).toLocaleDateString("es-MX", { month: "short", year: "2-digit" });
               }
 
-              // Reusable month-pill row component (inline)
-              function MonthPills() {
+              // Available weeks for the week dropdown (last 12, newest first)
+              const availableWeeks = [...new Set(
+                analyticsData.weeklyTrend.map((w: { week: string }) => w.week as string)
+              )].sort().reverse().slice(0, 12);
+
+              function fmtWeek(yw: string) {
+                const d = new Date(yw + "T00:00:00");
+                return d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+              }
+
+              const noFilter = !analyticsMonth && !analyticsWeek;
+
+              const dropBtnBase: React.CSSProperties = {
+                display: "flex", alignItems: "center", gap: 3,
+                fontSize: 10, fontWeight: 600, padding: "3px 8px 3px 10px",
+                borderRadius: 6, cursor: "pointer", border: "1px solid var(--border)",
+                background: "var(--surface-raised)", color: "var(--text-muted)",
+              };
+              const dropBtnActive: React.CSSProperties = {
+                ...dropBtnBase, background: "var(--blue)", color: "#fff", borderColor: "var(--blue)",
+              };
+              const dropMenuStyle: React.CSSProperties = {
+                position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 50,
+                background: "var(--surface)", border: "1px solid var(--border)",
+                borderRadius: 8, padding: 4, minWidth: 110,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+              };
+              const dropItemStyle = (active: boolean): React.CSSProperties => ({
+                display: "block", width: "100%", textAlign: "left",
+                padding: "5px 10px", borderRadius: 5, fontSize: 11, border: "none",
+                color: active ? "var(--blue)" : "var(--text)",
+                fontWeight: active ? 700 : 400,
+                background: active ? "var(--blue-glow)" : "transparent",
+                cursor: "pointer",
+              });
+
+              // Reusable filter dropdowns (inline)
+              function FilterDropdowns() {
                 return (
-                  <div className="flex items-center gap-1 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    {/* Todo */}
                     <button type="button"
-                      onClick={() => setAnalyticsMonth("")}
-                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors"
-                      style={analyticsMonth === ""
-                        ? { background: "var(--blue)", color: "#fff" }
-                        : { background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
+                      onClick={() => { setAnalyticsMonth(""); setAnalyticsWeek(""); setAnalyticsFilterOpen(null); }}
+                      style={noFilter ? dropBtnActive : dropBtnBase}>
                       Todo
                     </button>
-                    {availableMonths.map(m => (
-                      <button key={m} type="button"
-                        onClick={() => setAnalyticsMonth(m)}
-                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors"
-                        style={analyticsMonth === m
-                          ? { background: "var(--blue)", color: "#fff" }
-                          : { background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
-                        {fmtMonth(m)}
+
+                    {/* Month dropdown */}
+                    <div style={{ position: "relative" }}
+                      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setAnalyticsFilterOpen(null); }}
+                      tabIndex={-1}>
+                      <button type="button"
+                        onClick={() => setAnalyticsFilterOpen(analyticsFilterOpen === "month" ? null : "month")}
+                        style={analyticsMonth ? dropBtnActive : dropBtnBase}>
+                        {analyticsMonth ? fmtMonth(analyticsMonth) : "Mes"}
+                        <span style={{ fontSize: 7, marginLeft: 1 }}>▾</span>
                       </button>
-                    ))}
+                      {analyticsFilterOpen === "month" && (
+                        <div style={dropMenuStyle}>
+                          {availableMonths.map(m => (
+                            <button key={m} type="button"
+                              onMouseDown={() => { setAnalyticsMonth(m); setAnalyticsWeek(""); setAnalyticsFilterOpen(null); }}
+                              style={dropItemStyle(analyticsMonth === m)}>
+                              {fmtMonth(m)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Week dropdown */}
+                    <div style={{ position: "relative" }}
+                      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setAnalyticsFilterOpen(null); }}
+                      tabIndex={-1}>
+                      <button type="button"
+                        onClick={() => setAnalyticsFilterOpen(analyticsFilterOpen === "week" ? null : "week")}
+                        style={analyticsWeek ? dropBtnActive : dropBtnBase}>
+                        {analyticsWeek ? `Sem ${fmtWeek(analyticsWeek)}` : "Semana"}
+                        <span style={{ fontSize: 7, marginLeft: 1 }}>▾</span>
+                      </button>
+                      {analyticsFilterOpen === "week" && (
+                        <div style={dropMenuStyle}>
+                          {availableWeeks.map(w => (
+                            <button key={w} type="button"
+                              onMouseDown={() => { setAnalyticsWeek(w); setAnalyticsMonth(""); setAnalyticsFilterOpen(null); }}
+                              style={dropItemStyle(analyticsWeek === w)}>
+                              Sem {fmtWeek(w)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     {monthlyAnalyticsLoading && (
-                      <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin ml-1"
+                      <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin"
                         style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
                     )}
                   </div>
@@ -1241,7 +1322,7 @@ export default function ComprasPage() {
                     <div className="rounded-[var(--radius)] border p-4"
                       style={{ borderColor: "color-mix(in srgb, var(--blue) 30%, transparent)", background: "var(--blue-glow)" }}>
                       <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--blue)" }}>
-                        {analyticsMonth ? fmtMonth(analyticsMonth) : "Gasto Total"}
+                        {analyticsMonth ? fmtMonth(analyticsMonth) : analyticsWeek ? `Sem ${fmtWeek(analyticsWeek)}` : "Gasto Total"}
                       </p>
                       <p className="text-2xl font-bold leading-none mb-2"
                         style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.03em" }}>
@@ -1328,7 +1409,7 @@ export default function ComprasPage() {
                     <div className="md:col-span-3 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                       <div className="flex items-start justify-between gap-2 mb-3">
                         <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Por categoría</p>
-                        <MonthPills />
+                        <FilterDropdowns />
                       </div>
                       {d.categoryBreakdown.length === 0 ? (
                         <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
@@ -1360,7 +1441,7 @@ export default function ComprasPage() {
                     <div className="md:col-span-2 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                       <div className="flex items-start justify-between gap-2 mb-3">
                         <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Top proveedores</p>
-                        <MonthPills />
+                        <FilterDropdowns />
                       </div>
                       {d.spendBySupplier.length === 0 ? (
                         <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
@@ -1397,7 +1478,7 @@ export default function ComprasPage() {
                         <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
                           Top artículos por gasto
                         </p>
-                        <MonthPills />
+                        <FilterDropdowns />
                       </div>
                       <div style={{ background: "var(--surface)" }}>
                         {d.topItems.map((item, i) => {
