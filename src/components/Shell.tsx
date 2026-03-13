@@ -59,12 +59,16 @@ function SettingsIcon({ active }: { active?: boolean }) {
 }
 
 // ─── Nav items config ─────────────────────────────────────────────────
-const NAV = [
-  { href: "/upload",   label: "Subir",      Icon: UploadIcon },
-  { href: "/history",  label: "Historial",  Icon: HistoryIcon },
-  { href: "/compras",  label: "Alimentos",  Icon: ComprasIcon },
-  { href: "/gastos",   label: "Operativos", Icon: GastosIcon },
-  { href: "/settings", label: "Config",     Icon: SettingsIcon },
+const NAV_TOP = [
+  { href: "/upload",   label: "Subir",     Icon: UploadIcon },
+  { href: "/history",  label: "Historial", Icon: HistoryIcon },
+];
+const GASTOS_CHILDREN = [
+  { href: "/compras", label: "Alimentos",  Icon: ComprasIcon },
+  { href: "/gastos",  label: "Operativos", Icon: GastosIcon },
+];
+const NAV_BOTTOM = [
+  { href: "/settings", label: "Config", Icon: SettingsIcon },
 ];
 
 // ─── Shell ────────────────────────────────────────────────────────────
@@ -73,6 +77,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<string>("");
   const [hasUnmatched, setHasUnmatched] = useState(false);
+  const gastosActive = pathname.startsWith("/compras") || pathname.startsWith("/gastos");
+  const [gastosOpen, setGastosOpen] = useState(gastosActive);
 
   useEffect(() => {
     fetch("/api/compras?view=normalize")
@@ -128,23 +134,75 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {NAV.map(({ href, label, Icon }) => {
+          {NAV_TOP.map(({ href, label, Icon }) => {
             const active = pathname === href || (href !== "/upload" && pathname.startsWith(href));
             return (
               <Link key={href} href={href}
                 className={[
                   "relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-sm font-medium transition-all duration-150",
-                  active
-                    ? "bg-[var(--blue)] text-white"
-                    : "text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]",
+                  active ? "bg-[var(--blue)] text-white" : "text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]",
                 ].join(" ")}
               >
                 <Icon active={active} />
                 {label}
-                {href === "/compras" && hasUnmatched && (
-                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full"
-                    style={{ background: "var(--pink-dark)" }} />
-                )}
+              </Link>
+            );
+          })}
+
+          {/* Gastos group */}
+          <button
+            type="button"
+            onClick={() => setGastosOpen(o => !o)}
+            className={[
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-sm font-medium transition-all duration-150",
+              gastosActive ? "text-[var(--blue)]" : "text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]",
+            ].join(" ")}
+          >
+            <GastosIcon active={gastosActive} />
+            <span className="flex-1 text-left">Gastos</span>
+            <svg
+              width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: gastosOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+
+          {gastosOpen && (
+            <div className="ml-3 pl-3 space-y-0.5" style={{ borderLeft: "1px solid var(--border)" }}>
+              {GASTOS_CHILDREN.map(({ href, label, Icon }) => {
+                const active = pathname.startsWith(href);
+                return (
+                  <Link key={href} href={href}
+                    className={[
+                      "relative flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] text-sm font-medium transition-all duration-150",
+                      active ? "bg-[var(--blue)] text-white" : "text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]",
+                    ].join(" ")}
+                  >
+                    <Icon active={active} />
+                    {label}
+                    {href === "/compras" && hasUnmatched && (
+                      <span className="absolute top-1 right-1 w-2 h-2 rounded-full"
+                        style={{ background: "var(--pink-dark)" }} />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {NAV_BOTTOM.map(({ href, label, Icon }) => {
+            const active = pathname.startsWith(href);
+            return (
+              <Link key={href} href={href}
+                className={[
+                  "relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-sm font-medium transition-all duration-150",
+                  active ? "bg-[var(--blue)] text-white" : "text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]",
+                ].join(" ")}
+              >
+                <Icon active={active} />
+                {label}
               </Link>
             );
           })}
@@ -224,7 +282,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       {/* ── Mobile Bottom Nav ────────────────────────────────────────── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex"
         style={{ background: "var(--surface)", borderTop: "1px solid var(--border)" }}>
-        {NAV.map(({ href, label, Icon }) => {
+        {NAV_TOP.map(({ href, label, Icon }) => {
           const active = pathname === href || (href !== "/upload" && pathname.startsWith(href));
           return (
             <Link key={href} href={href}
@@ -233,10 +291,31 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             >
               <Icon active={active} />
               <span className="text-[10px] font-medium">{label}</span>
-              {href === "/compras" && hasUnmatched && (
-                <span className="absolute top-1.5 right-1/4 w-2 h-2 rounded-full translate-x-3"
-                  style={{ background: "var(--pink-dark)" }} />
-              )}
+            </Link>
+          );
+        })}
+        {/* Gastos: links to whichever sub-page is active, or /compras by default */}
+        <Link
+          href={pathname.startsWith("/gastos") ? "/gastos" : "/compras"}
+          className="relative flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors duration-150"
+          style={{ color: gastosActive ? "var(--blue)" : "var(--text-muted)" }}
+        >
+          <GastosIcon active={gastosActive} />
+          <span className="text-[10px] font-medium">Gastos</span>
+          {hasUnmatched && (
+            <span className="absolute top-1.5 right-1/4 w-2 h-2 rounded-full translate-x-3"
+              style={{ background: "var(--pink-dark)" }} />
+          )}
+        </Link>
+        {NAV_BOTTOM.map(({ href, label, Icon }) => {
+          const active = pathname.startsWith(href);
+          return (
+            <Link key={href} href={href}
+              className="relative flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors duration-150"
+              style={{ color: active ? "var(--blue)" : "var(--text-muted)" }}
+            >
+              <Icon active={active} />
+              <span className="text-[10px] font-medium">{label}</span>
             </Link>
           );
         })}
