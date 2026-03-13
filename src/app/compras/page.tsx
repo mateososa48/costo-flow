@@ -1594,9 +1594,7 @@ export default function ComprasPage() {
                 {/* ── Unidentified Tray ─────────────────────────────── */}
                 <div className="rounded-[var(--radius)] border overflow-hidden"
                   style={{
-                    borderColor: unmatched.length > 0
-                      ? "color-mix(in srgb, #f59e0b 40%, var(--border))"
-                      : "var(--border)",
+                    borderColor: "color-mix(in srgb, var(--blue) 35%, var(--border))",
                     transition: "border-color 0.3s ease",
                   }}>
 
@@ -1604,28 +1602,19 @@ export default function ComprasPage() {
                   <div
                     className="px-4 py-3 flex items-center justify-between gap-3 select-none"
                     style={{
-                      background: unmatched.length > 0
-                        ? "color-mix(in srgb, #f59e0b 7%, var(--surface))"
-                        : "var(--surface-raised)",
-                      cursor: unmatched.length > 0 || !unmatchedCollapsed ? "pointer" : "default",
-                      transition: "background 0.3s ease",
+                      background: "var(--surface)",
+                      cursor: "pointer",
                     }}
                     onClick={() => setUnmatchedCollapsed(c => !c)}
                   >
                     <div className="flex items-center gap-2.5">
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${unmatched.length > 0 ? "animate-pulse" : ""}`}
-                        style={{
-                          background: unmatched.length > 0 ? "#f59e0b" : "var(--success, #22c55e)",
-                          transition: "background 0.3s ease",
-                        }} />
+                        style={{ background: "var(--blue)" }} />
                       <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>Sin identificar</span>
                       <span className="text-[10px] font-medium px-2 py-0.5 rounded-full"
                         style={{
-                          background: unmatched.length > 0
-                            ? "color-mix(in srgb, #f59e0b 18%, transparent)"
-                            : "var(--surface-raised)",
-                          color: unmatched.length > 0 ? "#b45309" : "var(--text-muted)",
-                          transition: "background 0.3s ease, color 0.3s ease",
+                          background: "var(--blue-glow)",
+                          color: "var(--blue)",
                         }}>
                         {unmatched.length === 0 ? "Todo identificado ✓" : `${unmatched.length} artículo${unmatched.length !== 1 ? "s" : ""}`}
                       </span>
