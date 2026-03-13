@@ -2,8 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import Shell from "@/components/Shell";
 import Modal from "@/components/ui/Modal";
@@ -165,6 +165,8 @@ export default function ComprasPage() {
   // Analytics state
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsDateFrom, setAnalyticsDateFrom] = useState("");
+  const [analyticsDateTo, setAnalyticsDateTo] = useState("");
 
   // Normalize state
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -206,13 +208,18 @@ export default function ComprasPage() {
     try {
       const params = new URLSearchParams();
       if (restaurant) params.set("restaurant", restaurant);
-      if (dateFrom) params.set("dateFrom", dateFrom);
-      if (dateTo) params.set("dateTo", dateTo);
+      if (analyticsDateFrom) params.set("dateFrom", `${analyticsDateFrom}-01`);
+      if (analyticsDateTo) {
+        // Last day of the selected month
+        const [y, m] = analyticsDateTo.split("-").map(Number);
+        const lastDay = new Date(y, m, 0).getDate();
+        params.set("dateTo", `${analyticsDateTo}-${String(lastDay).padStart(2, "0")}`);
+      }
       const res = await fetch(`/api/compras/analytics?${params}`);
       if (res.ok) setAnalyticsData(await res.json());
     } catch { /* ignore */ }
     finally { setAnalyticsLoading(false); }
-  }, [restaurant, dateFrom, dateTo]);
+  }, [restaurant, analyticsDateFrom, analyticsDateTo]);
 
   // ── Fetch normalize data ─────────────────────────────────────────
   const fetchNormalize = useCallback(async () => {
@@ -1140,226 +1147,265 @@ export default function ComprasPage() {
 
         {/* ─── ANALYTICS VIEW ──────────────────────────────────────── */}
         {view === "analytics" && (
-          <div className="space-y-5">
+          <div className="space-y-4">
+
+            {/* ── Date Range Filter ── */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Desde</span>
+                <input
+                  type="month"
+                  value={analyticsDateFrom}
+                  onChange={e => { setAnalyticsDateFrom(e.target.value); }}
+                  className="text-xs px-2 py-1.5 rounded-[var(--radius-sm)] border"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Hasta</span>
+                <input
+                  type="month"
+                  value={analyticsDateTo}
+                  onChange={e => { setAnalyticsDateTo(e.target.value); }}
+                  className="text-xs px-2 py-1.5 rounded-[var(--radius-sm)] border"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                />
+              </div>
+              {(analyticsDateFrom || analyticsDateTo) && (
+                <button
+                  type="button"
+                  onClick={() => { setAnalyticsDateFrom(""); setAnalyticsDateTo(""); }}
+                  className="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)]"
+                  style={{ color: "var(--text-dim)", background: "var(--surface-raised)", border: "1px solid var(--border)" }}
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
+
             {analyticsLoading && (
               <div className="flex justify-center py-12">
                 <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
                   style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
               </div>
             )}
-            {!analyticsLoading && analyticsData && (
-              <>
-                {/* ── KPI Cards ── */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { label: "Gasto total", value: formatCurrency(analyticsData.kpis.totalSpend), accent: true },
-                    { label: "Facturas", value: analyticsData.kpis.uniqueInvoices.toLocaleString("es-MX"), accent: false },
-                    { label: "Proveedores", value: analyticsData.kpis.uniqueSuppliers.toLocaleString("es-MX"), accent: false },
-                    { label: "Promedio / factura", value: formatCurrency(analyticsData.kpis.avgPerInvoice), accent: false },
-                  ].map((kpi) => (
-                    <div key={kpi.label} className="rounded-[var(--radius)] border p-4"
-                      style={{
-                        borderColor: kpi.accent ? "color-mix(in srgb, var(--blue) 30%, transparent)" : "var(--border)",
-                        background: kpi.accent ? "var(--blue-glow)" : "var(--surface)",
-                      }}>
-                      <p className="text-[10px] font-medium uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>{kpi.label}</p>
-                      <p className="text-xl font-bold" style={{ color: kpi.accent ? "var(--blue)" : "var(--text)" }}>{kpi.value}</p>
+
+            {!analyticsLoading && analyticsData && (() => {
+              // Derived data
+              const monthlyTotals = analyticsData.monthlySpend.map(m => ({
+                month: m.month as string,
+                total: Object.entries(m).filter(([k]) => k !== "month").reduce((s, [, v]) => s + Number(v), 0),
+              }));
+              const lastTwo = monthlyTotals.slice(-2);
+              const momDelta = lastTwo.length === 2 && lastTwo[0].total > 0
+                ? ((lastTwo[1].total - lastTwo[0].total) / lastTwo[0].total) * 100
+                : null;
+              const maxCat = analyticsData.categoryBreakdown[0]?.value ?? 1;
+              const maxSup = analyticsData.spendBySupplier[0]?.total ?? 1;
+              const maxItem = analyticsData.topItems[0]?.totalSpend ?? 1;
+
+              return (
+                <>
+                  {/* ── KPI Band ── */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {/* Total spend card with MoM delta */}
+                    <div className="rounded-[var(--radius)] border p-4"
+                      style={{ borderColor: "color-mix(in srgb, var(--blue) 30%, transparent)", background: "var(--blue-glow)" }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--blue)" }}>Gasto Total</p>
+                      <p className="text-2xl font-bold leading-none mb-2"
+                        style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.03em" }}>
+                        {formatCurrency(analyticsData.kpis.totalSpend)}
+                      </p>
+                      {momDelta !== null && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                          style={{
+                            background: momDelta >= 0 ? "var(--danger-dim)" : "var(--success-dim)",
+                            color: momDelta >= 0 ? "var(--danger)" : "var(--success)",
+                          }}>
+                          {momDelta >= 0 ? "↑" : "↓"} {Math.abs(momDelta).toFixed(1)}% vs mes anterior
+                        </span>
+                      )}
                     </div>
-                  ))}
-                </div>
+                    {[
+                      { label: "Facturas", value: analyticsData.kpis.uniqueInvoices.toLocaleString("es-MX") },
+                      { label: "Proveedores", value: analyticsData.kpis.uniqueSuppliers.toLocaleString("es-MX") },
+                      { label: "Prom / Factura", value: formatCurrency(analyticsData.kpis.avgPerInvoice) },
+                    ].map(kpi => (
+                      <div key={kpi.label} className="rounded-[var(--radius)] border p-4"
+                        style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)" }}>{kpi.label}</p>
+                        <p className="text-2xl font-bold leading-none"
+                          style={{ fontFamily: "var(--font-display)", color: "var(--text)", letterSpacing: "-0.03em" }}>
+                          {kpi.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
 
-                {/* ── Weekly trend ── */}
-                <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Tendencia semanal</h3>
-                  {analyticsData.weeklyTrend.length === 0 ? (
-                    <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={220}>
-                      <LineChart data={analyticsData.weeklyTrend} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                        <XAxis dataKey="week" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
-                          tickFormatter={(v: string) => {
-                            const d = new Date(v + "T00:00:00");
-                            return d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-                          }} />
-                        <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }}
-                          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                        <Tooltip
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          formatter={(value: any) => [formatCurrency(Number(value)), "Gasto"]}
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          labelFormatter={(label: any) => {
-                            const d = new Date(String(label) + "T00:00:00");
-                            return `Semana del ${d.toLocaleDateString("es-MX", { day: "numeric", month: "long" })}`;
-                          }}
-                          contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
-                          labelStyle={{ color: "var(--text)", fontWeight: 600 }}
-                        />
-                        <Line type="monotone" dataKey="total" stroke="#0450A9" strokeWidth={2}
-                          dot={{ fill: "#0450A9", r: 3, strokeWidth: 0 }}
-                          activeDot={{ r: 5, strokeWidth: 0 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  {/* ── Monthly Trend Area Chart ── */}
+                  {monthlyTotals.length > 0 && (
+                    <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-4" style={{ color: "var(--text-dim)" }}>
+                        Tendencia mensual
+                      </p>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <AreaChart data={monthlyTotals} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="var(--blue)" stopOpacity={0.15} />
+                              <stop offset="95%" stopColor="var(--blue)" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                            tickFormatter={(v: string) => {
+                              const [y, m] = v.split("-");
+                              return new Date(Number(y), Number(m) - 1).toLocaleDateString("es-MX", { month: "short", year: "2-digit" });
+                            }} />
+                          <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                            tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                          <Tooltip
+                            formatter={(value: unknown) => [formatCurrency(Number(value)), "Gasto"]}
+                            labelFormatter={(label: unknown) => {
+                              const [y, m] = String(label).split("-");
+                              return new Date(Number(y), Number(m) - 1).toLocaleDateString("es-MX", { month: "long", year: "numeric" });
+                            }}
+                            contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
+                            labelStyle={{ color: "var(--text)", fontWeight: 600 }}
+                          />
+                          <Area type="monotone" dataKey="total" stroke="var(--blue)" strokeWidth={2} fill="url(#areaGrad)"
+                            dot={{ fill: "var(--blue)", r: 3, strokeWidth: 0 }}
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            activeDot={{ r: 5, strokeWidth: 0 } as any} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
                   )}
-                </div>
 
-                {/* ── Monthly stacked bar ── */}
-                <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Gasto mensual por categoría</h3>
-                  {analyticsData.monthlySpend.length === 0 ? (
-                    <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={analyticsData.monthlySpend} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
-                        <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }}
-                          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                        <Tooltip
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          formatter={(value: any, name: any) => [formatCurrency(Number(value)), String(name ?? "")]}
-                          contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
-                          labelStyle={{ color: "var(--text)", fontWeight: 600 }}
-                        />
-                        <Legend wrapperStyle={{ fontSize: 11 }} />
-                        {analyticsData.categories.slice(0, 10).map((cat, i) => (
-                          <Bar key={cat} dataKey={cat} stackId="a" fill={BLUE_SHADES[i % BLUE_SHADES.length]} />
-                        ))}
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-
-                {/* ── Category donut + Top suppliers ── */}
-                <div className="grid md:grid-cols-2 gap-5">
-                  {/* Category donut */}
-                  <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                    <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Distribución por categoría</h3>
-                    {analyticsData.categoryBreakdown.length === 0 ? (
-                      <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
-                    ) : (
-                      <div className="flex flex-col gap-4">
-                        <ResponsiveContainer width="100%" height={200}>
-                          <PieChart>
-                            <Pie
-                              data={analyticsData.categoryBreakdown}
-                              dataKey="value"
-                              nameKey="name"
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={55}
-                              outerRadius={90}
-                              paddingAngle={2}
-                            >
-                              {analyticsData.categoryBreakdown.map((_, i) => (
-                                <Cell key={i} fill={PINK_SHADES[i % PINK_SHADES.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                              formatter={(value: any, name: any) => [formatCurrency(Number(value)), String(name ?? "")]}
-                              contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div className="flex flex-col gap-1.5">
-                          {analyticsData.categoryBreakdown.slice(0, 6).map((c, i) => {
-                            const pct = analyticsData.kpis.totalSpend > 0
-                              ? ((c.value / analyticsData.kpis.totalSpend) * 100).toFixed(1)
-                              : "0";
+                  {/* ── Category + Supplier Row ── */}
+                  <div className="grid md:grid-cols-5 gap-4">
+                    {/* Category breakdown — 3 cols */}
+                    <div className="md:col-span-3 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Por categoría</p>
+                      {analyticsData.categoryBreakdown.length === 0 ? (
+                        <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
+                      ) : (
+                        <div>
+                          {analyticsData.categoryBreakdown.slice(0, 10).map((c) => {
+                            const pct = analyticsData.kpis.totalSpend > 0 ? (c.value / analyticsData.kpis.totalSpend) * 100 : 0;
+                            const barWidth = (c.value / maxCat) * 100;
                             return (
-                              <div key={c.name} className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: PINK_SHADES[i % PINK_SHADES.length] }} />
-                                  <span className="text-xs truncate" style={{ color: "var(--text)" }}>{c.name}</span>
+                              <div key={c.name} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-xs truncate pr-2" style={{ color: "var(--text)", maxWidth: "55%" }}>{c.name}</span>
+                                  <div className="flex items-center gap-2.5 flex-shrink-0">
+                                    <span className="text-[10px] tabular-nums" style={{ color: "var(--text-dim)" }}>{pct.toFixed(1)}%</span>
+                                    <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--text)" }}>{formatCurrency(c.value)}</span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <span className="text-xs" style={{ color: "var(--text-dim)" }}>{pct}%</span>
-                                  <span className="text-xs font-medium" style={{ color: "var(--text)" }}>{formatCurrency(c.value)}</span>
+                                <div className="h-1 rounded-full" style={{ background: "var(--border)" }}>
+                                  <div className="h-full rounded-full" style={{ width: `${barWidth}%`, background: "var(--blue)", opacity: 0.65 }} />
                                 </div>
                               </div>
                             );
                           })}
                         </div>
+                      )}
+                    </div>
+
+                    {/* Top Suppliers — 2 cols */}
+                    <div className="md:col-span-2 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Top proveedores</p>
+                      {analyticsData.spendBySupplier.length === 0 ? (
+                        <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
+                      ) : (
+                        <div>
+                          {analyticsData.spendBySupplier.slice(0, 8).map((s) => {
+                            const barWidth = (s.total / maxSup) * 100;
+                            const pct = analyticsData.kpis.totalSpend > 0 ? (s.total / analyticsData.kpis.totalSpend) * 100 : 0;
+                            return (
+                              <div key={s.supplier} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-xs truncate pr-2" title={s.supplier} style={{ color: "var(--text)", maxWidth: "55%" }}>{s.supplier}</span>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className="text-[10px] tabular-nums" style={{ color: "var(--text-dim)" }}>{pct.toFixed(1)}%</span>
+                                    <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--text)" }}>{formatCurrency(s.total)}</span>
+                                  </div>
+                                </div>
+                                <div className="h-1 rounded-full" style={{ background: "var(--border)" }}>
+                                  <div className="h-full rounded-full" style={{ width: `${barWidth}%`, background: "var(--pink-dark)", opacity: 0.75 }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── Top Ingredients ── */}
+                  {analyticsData.topItems.length > 0 && (
+                    <div className="rounded-[var(--radius)] border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+                      <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
+                          Top artículos por gasto
+                        </p>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Top suppliers */}
-                  <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                    <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Top proveedores por gasto</h3>
-                    {analyticsData.spendBySupplier.length === 0 ? (
-                      <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
-                    ) : (
-                      <ResponsiveContainer width="100%" height={320}>
-                        <BarChart
-                          layout="vertical"
-                          data={analyticsData.spendBySupplier}
-                          margin={{ top: 0, right: 48, left: 8, bottom: 0 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                          <XAxis type="number" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
-                            tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                          <YAxis type="category" dataKey="supplier" width={120}
-                            tick={{ fontSize: 10, fill: "var(--text)" }} />
-                          <Tooltip
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            formatter={(value: any) => [formatCurrency(Number(value)), "Gasto"]}
-                            contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
-                          />
-                          <Bar dataKey="total" fill="#0450A9" radius={[0, 3, 3, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── Top 10 items ── */}
-                <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Top 10 artículos por gasto</h3>
-                  {analyticsData.topItems.length === 0 ? (
-                    <p className="text-sm py-8 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart
-                        layout="vertical"
-                        data={analyticsData.topItems}
-                        margin={{ top: 0, right: 48, left: 8, bottom: 0 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                        <XAxis type="number" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
-                          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                        <YAxis type="category" dataKey="description" width={140}
-                          tick={{ fontSize: 10, fill: "var(--text)" }} />
-                        <Tooltip
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          formatter={(value: any) => [formatCurrency(Number(value)), "Gasto total"]}
-                          contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
-                        />
-                        <Bar dataKey="totalSpend" fill="#C97F7E" radius={[0, 3, 3, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                      <div style={{ background: "var(--surface)" }}>
+                        {analyticsData.topItems.map((item, i) => {
+                          const barWidth = (item.totalSpend / maxItem) * 100;
+                          return (
+                            <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-b last:border-b-0"
+                              style={{ borderColor: "var(--border-subtle)" }}>
+                              <span className="text-[10px] font-bold tabular-nums flex-shrink-0 w-4 text-right"
+                                style={{ color: "var(--text-dim)" }}>
+                                {i + 1}
+                              </span>
+                              <span className="text-xs flex-1 truncate min-w-0" style={{ color: "var(--text)" }} title={item.description}>
+                                {item.description}
+                              </span>
+                              <span className="text-[10px] flex-shrink-0 hidden sm:block tabular-nums"
+                                style={{ color: "var(--text-dim)", minWidth: "40px", textAlign: "center" }}>
+                                ×{item.count}
+                              </span>
+                              <div className="flex items-center gap-2 flex-shrink-0" style={{ minWidth: "140px" }}>
+                                <div className="flex-1 h-1 rounded-full" style={{ background: "var(--border)" }}>
+                                  <div className="h-full rounded-full"
+                                    style={{ width: `${barWidth}%`, background: "var(--pink-dark)", opacity: 0.75 }} />
+                                </div>
+                                <span className="text-xs font-semibold tabular-nums"
+                                  style={{ color: "var(--text)", minWidth: "72px", textAlign: "right" }}>
+                                  {formatCurrency(item.totalSpend)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
-                </div>
 
-                {/* ── Spend by restaurant (if multiple) ── */}
-                {analyticsData.spendByRestaurant.length > 1 && (
-                  <div className="grid grid-cols-3 gap-3">
-                    {analyticsData.spendByRestaurant.map((r) => (
-                      <div key={r.restaurant} className="rounded-[var(--radius)] border p-3"
-                        style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                        <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-                          {restaurantLabel(r.restaurant)}
-                        </p>
-                        <p className="text-lg font-bold mt-1" style={{ color: "var(--blue)" }}>
-                          {formatCurrency(r.total)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
+                  {/* ── Restaurant split (if multiple) ── */}
+                  {analyticsData.spendByRestaurant.length > 1 && (
+                    <div className="grid grid-cols-3 gap-3">
+                      {analyticsData.spendByRestaurant.map((r) => (
+                        <div key={r.restaurant} className="rounded-[var(--radius)] border p-3"
+                          style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                          <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--text-dim)" }}>
+                            {restaurantLabel(r.restaurant)}
+                          </p>
+                          <p className="text-lg font-bold"
+                            style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.02em" }}>
+                            {formatCurrency(r.total)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
             {!analyticsLoading && !analyticsData && (
               <p className="text-sm text-center py-12" style={{ color: "var(--text-dim)" }}>Sin datos de análisis</p>
             )}
