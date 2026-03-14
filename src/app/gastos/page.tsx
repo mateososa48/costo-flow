@@ -116,7 +116,7 @@ export default function GastosPage() {
   // Period presets + supplier search + supplier sort
   const [activePreset, setActivePreset] = useState("");
   const [supplierSearch, setSupplierSearch] = useState("");
-  const [supplierSortMode, setSupplierSortMode] = useState<"spend" | "count" | "alpha">("spend");
+  const [supplierSortMode, setSupplierSortMode] = useState<"spend" | "count" | "alpha">("alpha");
 
   function applyPreset(preset: string) {
     const { from, to } = getPresetRange(preset);
@@ -510,7 +510,6 @@ export default function GastosPage() {
         {/* ── Proveedores tab ── */}
         {!loading && view === "suppliers" && (() => {
           const q = supplierSearch.trim().toLowerCase();
-          const maxSpend = suppliers.reduce((m, g) => Math.max(m, g.totalSpend), 0);
           const grandTotal = suppliers.reduce((s, g) => s + g.totalSpend, 0);
           const filtered = suppliers
             .filter((g) => !q || g.supplier.toLowerCase().includes(q))
@@ -589,41 +588,25 @@ export default function GastosPage() {
 
               {/* Card grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {filtered.map((group, idx) => {
+                {filtered.map((group) => {
                   const isExpanded = expandedSuppliers.has(group.supplier);
                   const currentTag = supplierTags[group.supplier] ?? "";
                   const isEditingTag = editingSupplierTag === group.supplier;
-                  const pct = grandTotal > 0 ? (group.totalSpend / grandTotal) * 100 : 0;
-                  const barWidth = maxSpend > 0 ? (group.totalSpend / maxSpend) * 100 : 0;
                   const sortedDates = group.invoices.map((i: { invoice_date: string }) => i.invoice_date).sort();
                   const firstDate = sortedDates[0];
                   const lastDate = sortedDates[sortedDates.length - 1];
-                  const isTop = idx === 0 && supplierSortMode === "spend";
 
                   return (
                     <div key={group.supplier}
                       className="rounded-[var(--radius)] border overflow-hidden flex flex-col"
-                      style={{
-                        borderColor: isTop ? "color-mix(in srgb, var(--blue) 35%, transparent)" : "var(--border)",
-                        background: "var(--surface)",
-                      }}>
+                      style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                       {/* Card body */}
                       <div className="p-4 flex-1">
-                        {/* Row 1: rank + name + tag */}
+                        {/* Row 1: name + tag */}
                         <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-[10px] font-bold tabular-nums w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                              style={{
-                                background: isTop ? "var(--blue)" : "var(--surface-raised)",
-                                color: isTop ? "#fff" : "var(--text-dim)",
-                                border: isTop ? "none" : "1px solid var(--border-subtle)",
-                              }}>
-                              {idx + 1}
-                            </span>
-                            <span className="text-sm font-semibold leading-tight truncate" style={{ color: "var(--text)" }} title={group.supplier}>
-                              {group.supplier}
-                            </span>
-                          </div>
+                          <span className="text-sm font-semibold leading-tight truncate" style={{ color: "var(--text)" }} title={group.supplier}>
+                            {group.supplier}
+                          </span>
                           {/* Classification tag */}
                           <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             {isEditingTag ? (
@@ -668,33 +651,21 @@ export default function GastosPage() {
                         </div>
 
                         {/* Big spend number */}
-                        <p className="text-2xl font-bold mb-1"
+                        <p className="text-2xl font-bold mb-2"
                           style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.03em" }}>
                           {fmt(group.totalSpend)}
                         </p>
 
-                        {/* Meta: invoice count + date range */}
-                        <div className="flex items-center gap-2.5 text-[11px] mb-3" style={{ color: "var(--text-muted)" }}>
-                          <span>{group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}</span>
+                        {/* Invoice count (prominent) + date range */}
+                        <div className="flex items-center gap-2.5 mb-3">
+                          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+                            {group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}
+                          </span>
                           {firstDate && (
-                            <>
-                              <span style={{ color: "var(--border)" }}>·</span>
-                              <span>
-                                {firstDate === lastDate ? fmtDate(firstDate) : `${fmtDate(firstDate)} – ${fmtDate(lastDate)}`}
-                              </span>
-                            </>
+                            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                              {firstDate === lastDate ? fmtDate(firstDate) : `${fmtDate(firstDate)} – ${fmtDate(lastDate)}`}
+                            </span>
                           )}
-                        </div>
-
-                        {/* Spend bar */}
-                        <div className="mb-3">
-                          <div className="flex items-center justify-between text-[10px] mb-1" style={{ color: "var(--text-muted)" }}>
-                            <span>{pct.toFixed(1)}% del período</span>
-                          </div>
-                          <div className="h-1.5 rounded-full" style={{ background: "var(--border)" }}>
-                            <div className="h-full rounded-full"
-                              style={{ width: `${barWidth}%`, background: "var(--blue)", opacity: 0.65, transition: "width 0.4s ease" }} />
-                          </div>
                         </div>
 
                         {/* Expand toggle */}
@@ -712,7 +683,7 @@ export default function GastosPage() {
                             className={`transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}>
                             <path d="M2 1l3 3-3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
-                          Ver {group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}
+                          Ver facturas
                         </button>
                       </div>
 
