@@ -167,7 +167,6 @@ export default function ComprasPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [priceStats, setPriceStats] = useState<Record<string, { median: number; count: number }>>({});
   const [saveError, setSaveError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editField, setEditField] = useState("");
@@ -187,13 +186,6 @@ export default function ComprasPage() {
   // Analytics state
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  // Per-chart filters
-  const [trendPeriod, setTrendPeriod] = useState<"4" | "12" | "all">("all");
-  const [analyticsMonth, setAnalyticsMonth] = useState("");          // "YYYY-MM" or "" for all
-  const [analyticsWeek, setAnalyticsWeek] = useState("");            // "YYYY-MM-DD" (Monday) or ""
-  const [analyticsFilterOpen, setAnalyticsFilterOpen] = useState<"month" | "week" | null>(null);
-  const [monthlyAnalyticsData, setMonthlyAnalyticsData] = useState<AnalyticsData | null>(null);
-  const [monthlyAnalyticsLoading, setMonthlyAnalyticsLoading] = useState(false);
 
   // Normalize state
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -234,30 +226,19 @@ export default function ComprasPage() {
   const [aiChecked, setAiChecked] = useState<Set<number>>(new Set());
   const [aiConfirming, setAiConfirming] = useState(false);
 
-  // ── Fetch analytics (all-time) ──────────────────────────────────
+  // ── Fetch analytics (respects global date filter) ───────────────
   const fetchAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
     try {
       const params = new URLSearchParams();
       if (restaurant) params.set("restaurant", restaurant);
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo) params.set("dateTo", dateTo);
       const res = await fetch(`/api/compras/analytics?${params}`);
       if (res.ok) setAnalyticsData(await res.json());
     } catch { /* ignore */ }
     finally { setAnalyticsLoading(false); }
-  }, [restaurant]);
-
-  // ── Fetch analytics for a specific month ────────────────────────
-  const fetchFilteredAnalytics = useCallback(async (dateFrom: string, dateTo: string) => {
-    if (!dateFrom) { setMonthlyAnalyticsData(null); return; }
-    setMonthlyAnalyticsLoading(true);
-    try {
-      const params = new URLSearchParams({ dateFrom, dateTo });
-      if (restaurant) params.set("restaurant", restaurant);
-      const res = await fetch(`/api/compras/analytics?${params}`);
-      if (res.ok) setMonthlyAnalyticsData(await res.json());
-    } catch { /* ignore */ }
-    finally { setMonthlyAnalyticsLoading(false); }
-  }, [restaurant]);
+  }, [restaurant, dateFrom, dateTo]);
 
   // ── Fetch normalize data ─────────────────────────────────────────
   const fetchNormalize = useCallback(async () => {
@@ -317,29 +298,8 @@ export default function ComprasPage() {
   useEffect(() => { document.title = "Gastos de Alimentos — Aventura Gourmet"; }, []);
   useEffect(() => { if (view !== "analytics" && view !== "normalize") fetchData(); }, [fetchData, view]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
-  useEffect(() => {
-    if (view !== "items") return;
-    fetch("/api/compras/price-stats")
-      .then((r) => (r.ok ? r.json() : {}))
-      .then((d) => setPriceStats(d ?? {}))
-      .catch(() => {});
-  }, [view]);
   useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, dateFrom, dateTo]);
   useEffect(() => { if (view === "analytics") fetchAnalytics(); }, [view, fetchAnalytics]);
-  useEffect(() => {
-    if (view !== "analytics") return;
-    if (analyticsMonth) {
-      const [y, m] = analyticsMonth.split("-").map(Number);
-      const lastDay = new Date(y, m, 0).getDate();
-      fetchFilteredAnalytics(`${analyticsMonth}-01`, `${analyticsMonth}-${String(lastDay).padStart(2, "0")}`);
-    } else if (analyticsWeek) {
-      const end = new Date(analyticsWeek + "T00:00:00");
-      end.setDate(end.getDate() + 6);
-      fetchFilteredAnalytics(analyticsWeek, end.toISOString().slice(0, 10));
-    } else {
-      fetchFilteredAnalytics("", "");
-    }
-  }, [view, analyticsMonth, analyticsWeek, fetchFilteredAnalytics]);
   useEffect(() => { if (view === "normalize") fetchNormalize(); }, [view, fetchNormalize]);
   useEffect(() => {
     if (view === "suppliers") {
@@ -836,65 +796,43 @@ export default function ComprasPage() {
                         {item.supplier}
                       </td>
                       {/* Editable cells */}
-                      {(() => {
-                        // Compute price variance badge for this item
-                        const statsKey = item.description.trim().toLowerCase();
-                        const stat = priceStats[statsKey];
-                        const unitPrice = item.unit_price;
-                        let varianceBadge: React.ReactNode = null;
-                        if (stat && unitPrice != null && unitPrice > 0 && stat.count >= 2) {
-                          const pct = ((unitPrice - stat.median) / stat.median) * 100;
-                          if (pct >= 25) {
-                            varianceBadge = (
-                              <span className="ml-1 text-[9px] font-semibold px-1 py-0.5 rounded whitespace-nowrap"
-                                style={{ background: "rgba(245,158,11,0.12)", color: "#d97706" }}
-                                title={`Mediana: ${formatCurrency(stat.median)} (${stat.count} compras)`}>
-                                ↑ +{Math.round(pct)}%
-                              </span>
-                            );
-                          }
-                        }
-                        return [
-                          { field: "description", val: item.description, w: "max-w-[200px]" },
-                          { field: "quantity", val: item.quantity != null ? String(item.quantity) : "", w: "w-16" },
-                          { field: "unit", val: item.unit_normalized ?? item.unit ?? "", w: "w-16" },
-                          { field: "unitPrice", val: item.unit_price != null ? String(item.unit_price) : "", w: "w-20" },
-                          { field: "total", val: String(item.total), w: "w-24" },
-                        ].map(({ field, val, w }) => (
-                          <td key={field} className={`px-3 py-3 ${w}`}
-                            style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                            {editingId === item.id && editField === field ? (
-                              <input
-                                type={["quantity", "unitPrice", "total"].includes(field) ? "number" : "text"}
-                                value={editValue}
-                                step="any"
-                                autoFocus
-                                className="w-full px-1.5 py-0.5 rounded border text-sm focus:outline-none focus:ring-1"
-                                style={{ background: "var(--surface)", borderColor: "var(--blue)", color: "var(--text)" }}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                onBlur={() => saveEdit(item.id, field, editValue)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") saveEdit(item.id, field, editValue);
-                                  if (e.key === "Escape") setEditingId(null);
-                                }}
-                              />
-                            ) : (
-                              <span className="flex items-center gap-0.5">
-                                <span
-                                  className="cursor-pointer hover:underline truncate"
-                                  style={{ color: field === "total" ? "var(--blue)" : "var(--text)" }}
-                                  onClick={() => startEdit(item.id, field, val)}
-                                >
-                                  {field === "total" || field === "unitPrice"
-                                    ? (val ? formatCurrency(parseFloat(val)) : "—")
-                                    : (val || "—")}
-                                </span>
-                                {field === "unitPrice" && varianceBadge}
-                              </span>
-                            )}
-                          </td>
-                        ));
-                      })()}
+                      {[
+                        { field: "description", val: item.description, w: "max-w-[200px]" },
+                        { field: "quantity", val: item.quantity != null ? String(item.quantity) : "", w: "w-16" },
+                        { field: "unit", val: item.unit_normalized ?? item.unit ?? "", w: "w-16" },
+                        { field: "unitPrice", val: item.unit_price != null ? String(item.unit_price) : "", w: "w-20" },
+                        { field: "total", val: String(item.total), w: "w-24" },
+                      ].map(({ field, val, w }) => (
+                        <td key={field} className={`px-3 py-3 ${w}`}
+                          style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                          {editingId === item.id && editField === field ? (
+                            <input
+                              type={["quantity", "unitPrice", "total"].includes(field) ? "number" : "text"}
+                              value={editValue}
+                              step="any"
+                              autoFocus
+                              className="w-full px-1.5 py-0.5 rounded border text-sm focus:outline-none focus:ring-1"
+                              style={{ background: "var(--surface)", borderColor: "var(--blue)", color: "var(--text)" }}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onBlur={() => saveEdit(item.id, field, editValue)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEdit(item.id, field, editValue);
+                                if (e.key === "Escape") setEditingId(null);
+                              }}
+                            />
+                          ) : (
+                            <span
+                              className="cursor-pointer hover:underline truncate"
+                              style={{ color: field === "total" ? "var(--blue)" : "var(--text)" }}
+                              onClick={() => startEdit(item.id, field, val)}
+                            >
+                              {field === "total" || field === "unitPrice"
+                                ? (val ? formatCurrency(parseFloat(val)) : "—")
+                                : (val || "—")}
+                            </span>
+                          )}
+                        </td>
+                      ))}
                       <td className="px-2 py-3" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                         {savingId === item.id ? (
                           <div className="w-6 h-6 flex items-center justify-center">
@@ -1265,143 +1203,30 @@ export default function ComprasPage() {
             )}
 
             {!analyticsLoading && analyticsData && (() => {
-              // ── Derived / helper data ─────────────────────────────────
-              const allMonthlyTotals = analyticsData.monthlySpend.map(m => ({
-                month: m.month as string,
-                total: Object.entries(m).filter(([k]) => k !== "month").reduce((s, [, v]) => s + Number(v), 0),
-              }));
-
-              // Weekly trend chart
-              const allWeeklyTotals = analyticsData.weeklyTrend.map((w: { week: string; total: number }) => ({
-                week: w.week as string,
-                total: Number(w.total),
-              }));
-              const trendData = trendPeriod === "all" ? allWeeklyTotals
-                : allWeeklyTotals.slice(-Number(trendPeriod));
-
-              // Category / Supplier / Items: use monthly re-fetch if a month is selected
-              const d = monthlyAnalyticsData ?? analyticsData;
+              const d = analyticsData;
               const maxCat = d.categoryBreakdown[0]?.value ?? 1;
               const maxSup = d.spendBySupplier[0]?.total ?? 1;
               const maxItem = d.topItems[0]?.totalSpend ?? 1;
 
-              // Available months for the month-picker buttons (last 12, newest first)
-              const availableMonths = [...new Set(
-                analyticsData.monthlySpend.map(m => m.month as string)
-              )].sort().reverse().slice(0, 12);
-
-              // MoM delta (only shown when viewing all time)
-              const lastTwo = allMonthlyTotals.slice(-2);
-              const momDelta = !analyticsMonth && !analyticsWeek && lastTwo.length === 2 && lastTwo[0].total > 0
-                ? ((lastTwo[1].total - lastTwo[0].total) / lastTwo[0].total) * 100
-                : null;
-
-              // Helper: month label "Ene 25"
-              function fmtMonth(ym: string) {
-                const [y, m] = ym.split("-");
-                return new Date(Number(y), Number(m) - 1).toLocaleDateString("es-MX", { month: "short", year: "2-digit" });
-              }
-
-              // Available weeks for the week dropdown (last 12, newest first)
-              const availableWeeks = [...new Set(
-                analyticsData.weeklyTrend.map((w: { week: string }) => w.week as string)
-              )].sort().reverse().slice(0, 12);
+              const allMonthlyTotals = d.monthlySpend.map(m => ({
+                month: m.month as string,
+                total: Object.entries(m).filter(([k]) => k !== "month").reduce((s, [, v]) => s + Number(v), 0),
+              }));
+              const weeklyTotals = d.weeklyTrend.map((w: { week: string; total: number }) => ({
+                week: w.week as string,
+                total: Number(w.total),
+              }));
 
               function fmtWeek(yw: string) {
-                const d = new Date(yw + "T00:00:00");
-                return d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+                const dt = new Date(yw + "T00:00:00");
+                return dt.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
               }
 
-              const noFilter = !analyticsMonth && !analyticsWeek;
-
-              const dropBtnBase: React.CSSProperties = {
-                display: "flex", alignItems: "center", gap: 3,
-                fontSize: 10, fontWeight: 600, padding: "3px 8px 3px 10px",
-                borderRadius: 6, cursor: "pointer", border: "1px solid var(--border)",
-                background: "var(--surface-raised)", color: "var(--text-muted)",
-              };
-              const dropBtnActive: React.CSSProperties = {
-                ...dropBtnBase, background: "var(--blue)", color: "#fff", borderColor: "var(--blue)",
-              };
-              const dropMenuStyle: React.CSSProperties = {
-                position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 50,
-                background: "var(--surface)", border: "1px solid var(--border)",
-                borderRadius: 8, padding: 4, minWidth: 110,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-              };
-              const dropItemStyle = (active: boolean): React.CSSProperties => ({
-                display: "block", width: "100%", textAlign: "left",
-                padding: "5px 10px", borderRadius: 5, fontSize: 11, border: "none",
-                color: active ? "var(--blue)" : "var(--text)",
-                fontWeight: active ? 700 : 400,
-                background: active ? "var(--blue-glow)" : "transparent",
-                cursor: "pointer",
-              });
-
-              // Reusable filter dropdowns (inline)
-              function FilterDropdowns() {
-                return (
-                  <div className="flex items-center gap-1.5">
-                    {/* Todo */}
-                    <button type="button"
-                      onClick={() => { setAnalyticsMonth(""); setAnalyticsWeek(""); setAnalyticsFilterOpen(null); }}
-                      style={noFilter ? dropBtnActive : dropBtnBase}>
-                      Todo
-                    </button>
-
-                    {/* Month dropdown */}
-                    <div style={{ position: "relative" }}
-                      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setAnalyticsFilterOpen(null); }}
-                      tabIndex={-1}>
-                      <button type="button"
-                        onClick={() => setAnalyticsFilterOpen(analyticsFilterOpen === "month" ? null : "month")}
-                        style={analyticsMonth ? dropBtnActive : dropBtnBase}>
-                        {analyticsMonth ? fmtMonth(analyticsMonth) : "Mes"}
-                        <span style={{ fontSize: 7, marginLeft: 1 }}>▾</span>
-                      </button>
-                      {analyticsFilterOpen === "month" && (
-                        <div style={dropMenuStyle}>
-                          {availableMonths.map(m => (
-                            <button key={m} type="button"
-                              onMouseDown={() => { setAnalyticsMonth(m); setAnalyticsWeek(""); setAnalyticsFilterOpen(null); }}
-                              style={dropItemStyle(analyticsMonth === m)}>
-                              {fmtMonth(m)}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Week dropdown */}
-                    <div style={{ position: "relative" }}
-                      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setAnalyticsFilterOpen(null); }}
-                      tabIndex={-1}>
-                      <button type="button"
-                        onClick={() => setAnalyticsFilterOpen(analyticsFilterOpen === "week" ? null : "week")}
-                        style={analyticsWeek ? dropBtnActive : dropBtnBase}>
-                        {analyticsWeek ? `Sem ${fmtWeek(analyticsWeek)}` : "Semana"}
-                        <span style={{ fontSize: 7, marginLeft: 1 }}>▾</span>
-                      </button>
-                      {analyticsFilterOpen === "week" && (
-                        <div style={dropMenuStyle}>
-                          {availableWeeks.map(w => (
-                            <button key={w} type="button"
-                              onMouseDown={() => { setAnalyticsWeek(w); setAnalyticsMonth(""); setAnalyticsFilterOpen(null); }}
-                              style={dropItemStyle(analyticsWeek === w)}>
-                              Sem {fmtWeek(w)}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {monthlyAnalyticsLoading && (
-                      <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin"
-                        style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
-                    )}
-                  </div>
-                );
-              }
+              // MoM delta: last two months in returned data
+              const lastTwo = allMonthlyTotals.slice(-2);
+              const momDelta = lastTwo.length === 2 && lastTwo[0].total > 0
+                ? ((lastTwo[1].total - lastTwo[0].total) / lastTwo[0].total) * 100
+                : null;
 
               return (
                 <>
@@ -1410,7 +1235,7 @@ export default function ComprasPage() {
                     <div className="rounded-[var(--radius)] border p-4"
                       style={{ borderColor: "color-mix(in srgb, var(--blue) 30%, transparent)", background: "var(--blue-glow)" }}>
                       <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--blue)" }}>
-                        {analyticsMonth ? fmtMonth(analyticsMonth) : analyticsWeek ? `Sem ${fmtWeek(analyticsWeek)}` : "Gasto Total"}
+                        Gasto Total
                       </p>
                       <p className="text-2xl font-bold leading-none mb-2"
                         style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.03em" }}>
@@ -1443,25 +1268,11 @@ export default function ComprasPage() {
                   </div>
 
                   {/* ── Trend Chart ── */}
-                  {allWeeklyTotals.length > 0 && (
+                  {weeklyTotals.length > 0 && (
                     <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Tendencia semanal</p>
-                        <div className="flex items-center gap-1">
-                          {(["4", "12", "all"] as const).map(p => (
-                            <button key={p} type="button"
-                              onClick={() => setTrendPeriod(p)}
-                              className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors"
-                              style={trendPeriod === p
-                                ? { background: "var(--blue)", color: "#fff" }
-                                : { background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
-                              {p === "all" ? "Todo" : `${p}S`}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-4" style={{ color: "var(--text-dim)" }}>Tendencia semanal</p>
                       <ResponsiveContainer width="100%" height={200}>
-                        <AreaChart data={trendData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                        <AreaChart data={weeklyTotals} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                           <defs>
                             <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="var(--blue)" stopOpacity={0.15} />
@@ -1476,9 +1287,9 @@ export default function ComprasPage() {
                           <Tooltip
                             formatter={(value: unknown) => [formatCurrency(Number(value)), "Gasto"]}
                             labelFormatter={(label: unknown) => {
-                              const d = new Date(String(label) + "T00:00:00");
-                              const end = new Date(d); end.setDate(d.getDate() + 6);
-                              return `Sem ${d.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} – ${end.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`;
+                              const dt = new Date(String(label) + "T00:00:00");
+                              const end = new Date(dt); end.setDate(dt.getDate() + 6);
+                              return `Sem ${dt.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} – ${end.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`;
                             }}
                             contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
                             labelStyle={{ color: "var(--text)", fontWeight: 600 }}
@@ -1496,10 +1307,7 @@ export default function ComprasPage() {
                   <div className="grid md:grid-cols-5 gap-4">
                     {/* Category breakdown — 3 cols */}
                     <div className="md:col-span-3 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Por categoría</p>
-                        <FilterDropdowns />
-                      </div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Por categoría</p>
                       {d.categoryBreakdown.length === 0 ? (
                         <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
                       ) : (
@@ -1528,10 +1336,7 @@ export default function ComprasPage() {
 
                     {/* Top Suppliers — 2 cols */}
                     <div className="md:col-span-2 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Top proveedores</p>
-                        <FilterDropdowns />
-                      </div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Top proveedores</p>
                       {d.spendBySupplier.length === 0 ? (
                         <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
                       ) : (
@@ -1562,12 +1367,11 @@ export default function ComprasPage() {
                   {/* ── Top Ingredients ── */}
                   {d.topItems.length > 0 && (
                     <div className="rounded-[var(--radius)] border overflow-hidden" style={{ borderColor: "var(--border)" }}>
-                      <div className="px-4 py-3 border-b flex items-center justify-between gap-2"
+                      <div className="px-4 py-3 border-b"
                         style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                         <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
                           Top artículos por gasto
                         </p>
-                        <FilterDropdowns />
                       </div>
                       <div style={{ background: "var(--surface)" }}>
                         {d.topItems.map((item, i) => {
