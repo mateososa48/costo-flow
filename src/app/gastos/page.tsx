@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, PieChart, Pie, Cell,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer,
 } from "recharts";
 import Shell from "@/components/Shell";
 import Modal from "@/components/ui/Modal";
@@ -36,17 +36,6 @@ type AnalyticsData = {
   topSuppliers: Array<{ supplier: string; total: number }>;
 };
 
-const PINK_SHADES = [
-  "#C97F7E", "#D99998", "#B36564", "#E8B3B2",
-  "#9D4F4E", "#F2CDCC", "#874040", "#DEBDBC",
-  "#A06160", "#F7E4E4",
-];
-
-const BLUE_SHADES = [
-  "#0450A9", "#2E6EC4", "#5589D4", "#7AA5E0",
-  "#9DC0EC", "#C0D9F5", "#033D82", "#1A5DB8",
-  "#3A7FCC", "#042F6B",
-];
 
 function getPresetRange(preset: string): { from: string; to: string } {
   const now = new Date();
@@ -723,93 +712,149 @@ export default function GastosPage() {
         })()}
 
         {/* ── Análisis tab ── */}
-        {!loading && view === "analytics" && analytics && (
-          <div className="space-y-6">
-            {/* KPIs */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[
-                { label: "Gasto Operativo", value: fmt(analytics.kpis.totalSpend) },
-                { label: "Facturas", value: String(analytics.kpis.invoiceCount) },
-                { label: "Proveedores", value: String(analytics.kpis.uniqueSuppliers) },
-              ].map((k, i) => (
-                <div key={i} className="rounded-[var(--radius)] border px-5 py-4"
-                  style={{
-                    background: i === 0 ? "var(--blue-glow)" : "var(--surface)",
-                    borderColor: i === 0 ? "color-mix(in srgb, var(--blue) 25%, transparent)" : "var(--border)",
-                  }}>
-                  <p className="text-xs uppercase tracking-wider mb-1" style={{ color: "var(--text-dim)" }}>{k.label}</p>
-                  <p className={i === 0 ? "text-2xl font-bold" : "text-xl font-semibold"} style={{ color: i === 0 ? "var(--blue)" : "var(--text)" }}>{k.value}</p>
+        {!loading && view === "analytics" && analytics && (() => {
+          const totalSpend = analytics.kpis.totalSpend;
+          const avgPerInvoice = analytics.kpis.invoiceCount > 0 ? totalSpend / analytics.kpis.invoiceCount : 0;
+          const maxCat = analytics.breakdown[0]?.value ?? 1;
+          const maxSup = analytics.topSuppliers[0]?.total ?? 1;
+
+          // Aggregate monthlySpend rows into a single total per month for the area chart
+          const monthlyTotals = analytics.monthlySpend.map((row) => ({
+            month: row.month as string,
+            total: Object.entries(row).filter(([k]) => k !== "month").reduce((s, [, v]) => s + Number(v), 0),
+          }));
+
+          function fmtMonth(m: string) {
+            const [y, mo] = m.split("-");
+            const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+            return `${months[parseInt(mo) - 1]} ${y.slice(2)}`;
+          }
+
+          return (
+            <div className="space-y-4">
+              {/* ── KPI Band ── */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-[var(--radius)] border p-4"
+                  style={{ borderColor: "color-mix(in srgb, var(--blue) 30%, transparent)", background: "var(--blue-glow)" }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--blue)" }}>
+                    Gasto Total
+                  </p>
+                  <p className="text-2xl font-bold leading-none"
+                    style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.03em" }}>
+                    {fmt(totalSpend)}
+                  </p>
                 </div>
-              ))}
-            </div>
-
-            {/* Monthly by category */}
-            {analytics.monthlySpend.length > 0 && (
-              <div className="rounded-[var(--radius)] border p-5" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Gasto mensual por tipo</h3>
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={analytics.monthlySpend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: "var(--text-muted)" }} />
-                    <YAxis tick={{ fontSize: 11, fill: "var(--text-muted)" }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    <Tooltip formatter={(v: any) => fmt(Number(v))} contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", fontSize: 12 }} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    {analytics.cuentas.map((c, i) => (
-                      <Bar key={c} dataKey={c} stackId="a" fill={PINK_SHADES[i % PINK_SHADES.length]} />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {/* Breakdown donut + top suppliers */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {analytics.breakdown.length > 0 && (
-                <div className="rounded-[var(--radius)] border p-5" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Por cuenta P&L</h3>
-                  <div className="flex flex-col md:flex-row gap-4 items-center">
-                    <ResponsiveContainer width={180} height={180}>
-                      <PieChart>
-                        <Pie data={analytics.breakdown} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={2}>
-                          {analytics.breakdown.map((_, i) => <Cell key={i} fill={PINK_SHADES[i % PINK_SHADES.length]} />)}
-                        </Pie>
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        <Tooltip formatter={(v: any) => fmt(Number(v))} contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", fontSize: 12 }} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="flex-1 space-y-1.5">
-                      {analytics.breakdown.map((item, i) => (
-                        <div key={item.name} className="flex items-center justify-between text-xs gap-3">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: PINK_SHADES[i % PINK_SHADES.length] }} />
-                            <span className="truncate" style={{ color: "var(--text)" }}>{item.name}</span>
-                          </div>
-                          <span className="font-medium flex-shrink-0" style={{ color: "var(--text-muted)" }}>{fmt(item.value)}</span>
-                        </div>
-                      ))}
-                    </div>
+                {[
+                  { label: "Facturas", value: analytics.kpis.invoiceCount.toLocaleString("es-MX") },
+                  { label: "Proveedores", value: analytics.kpis.uniqueSuppliers.toLocaleString("es-MX") },
+                  { label: "Prom / Factura", value: fmt(avgPerInvoice) },
+                ].map(kpi => (
+                  <div key={kpi.label} className="rounded-[var(--radius)] border p-4"
+                    style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)" }}>{kpi.label}</p>
+                    <p className="text-2xl font-bold leading-none"
+                      style={{ fontFamily: "var(--font-display)", color: "var(--text)", letterSpacing: "-0.03em" }}>
+                      {kpi.value}
+                    </p>
                   </div>
-                </div>
-              )}
-              {analytics.topSuppliers.length > 0 && (
-                <div className="rounded-[var(--radius)] border p-5" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Top proveedores</h3>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={analytics.topSuppliers} layout="vertical" margin={{ left: 8 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 10, fill: "var(--text-muted)" }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                      <YAxis type="category" dataKey="supplier" tick={{ fontSize: 10, fill: "var(--text-muted)" }} width={120} />
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      <Tooltip formatter={(v: any) => fmt(Number(v))} contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", fontSize: 12 }} />
-                      <Bar dataKey="total" fill="#0450A9" radius={[0, 3, 3, 0]} />
-                    </BarChart>
+                ))}
+              </div>
+
+              {/* ── Monthly Trend (Area Chart) ── */}
+              {monthlyTotals.length > 0 && (
+                <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-4" style={{ color: "var(--text-dim)" }}>Tendencia mensual</p>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <AreaChart data={monthlyTotals} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="areaGradOp" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--blue)" stopOpacity={0.15} />
+                          <stop offset="95%" stopColor="var(--blue)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="month" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                        tickFormatter={(v: string) => fmtMonth(v)} />
+                      <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                        tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                      <Tooltip
+                        formatter={(value: unknown) => [fmt(Number(value)), "Gasto"]}
+                        labelFormatter={(label: unknown) => fmtMonth(String(label))}
+                        contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
+                        labelStyle={{ color: "var(--text)", fontWeight: 600 }}
+                      />
+                      <Area type="monotone" dataKey="total" stroke="var(--blue)" strokeWidth={2} fill="url(#areaGradOp)"
+                        dot={{ fill: "var(--blue)", r: 3, strokeWidth: 0 }}
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        activeDot={{ r: 5, strokeWidth: 0 } as any} />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               )}
+
+              {/* ── Category + Supplier Row ── */}
+              <div className="grid md:grid-cols-5 gap-4">
+                {/* Category breakdown — 3 cols */}
+                <div className="md:col-span-3 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Por categoría</p>
+                  {analytics.breakdown.length === 0 ? (
+                    <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
+                  ) : (
+                    <div>
+                      {analytics.breakdown.slice(0, 10).map((c) => {
+                        const pct = totalSpend > 0 ? (c.value / totalSpend) * 100 : 0;
+                        const barWidth = (c.value / maxCat) * 100;
+                        return (
+                          <div key={c.name} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs truncate pr-2" style={{ color: "var(--text)", maxWidth: "55%" }}>{c.name}</span>
+                              <div className="flex items-center gap-2.5 flex-shrink-0">
+                                <span className="text-[10px] tabular-nums" style={{ color: "var(--text-dim)" }}>{pct.toFixed(1)}%</span>
+                                <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--text)" }}>{fmt(c.value)}</span>
+                              </div>
+                            </div>
+                            <div className="h-1 rounded-full" style={{ background: "var(--border)" }}>
+                              <div className="h-full rounded-full" style={{ width: `${barWidth}%`, background: "var(--blue)", opacity: 0.65 }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Top Suppliers — 2 cols */}
+                <div className="md:col-span-2 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Top proveedores</p>
+                  {analytics.topSuppliers.length === 0 ? (
+                    <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
+                  ) : (
+                    <div>
+                      {analytics.topSuppliers.slice(0, 8).map((s) => {
+                        const barWidth = (s.total / maxSup) * 100;
+                        const pct = totalSpend > 0 ? (s.total / totalSpend) * 100 : 0;
+                        return (
+                          <div key={s.supplier} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs truncate pr-2" title={s.supplier} style={{ color: "var(--text)", maxWidth: "55%" }}>{s.supplier}</span>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className="text-[10px] tabular-nums" style={{ color: "var(--text-dim)" }}>{pct.toFixed(1)}%</span>
+                                <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--text)" }}>{fmt(s.total)}</span>
+                              </div>
+                            </div>
+                            <div className="h-1 rounded-full" style={{ background: "var(--border)" }}>
+                              <div className="h-full rounded-full" style={{ width: `${barWidth}%`, background: "var(--pink-dark)", opacity: 0.75 }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* Bulk delete invoices confirmation modal */}
