@@ -5,7 +5,8 @@ import { config } from "@/config";
 import { appendToSheet, checkDuplicates, appendAuditLog } from "@/lib/sheets";
 import dropdownOptions from "../../../../../data/dropdown_options.json";
 import type { ExtractedInvoice, SubmitApiResponse, SubmitResult } from "@/types";
-import { saveInvoiceWithItems } from "@/lib/supabase";
+import getSupabase, { saveInvoiceWithItems } from "@/lib/supabase";
+import { appendAuditEntries } from "@/lib/audit-log";
 
 const validConceptos = new Set<string>(dropdownOptions.concepto as string[]);
 const validCuentasPnl = new Set<string>(dropdownOptions.cuentaPnl as string[]);
@@ -145,6 +146,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       saveInvoiceWithItems(invoice, spreadsheetUrl, user).catch((err) =>
         console.error(`[supabase] background save failed for ${invoice.id}:`, err)
       );
+
+      // Fire-and-forget: durable audit log to Supabase
+      const supabase = getSupabase();
+      if (supabase) {
+        appendAuditEntries(supabase, [{
+          action: bypassDuplicates ? "duplicate_bypassed" : "submitted",
+          user,
+          restaurant: invoice.restaurant,
+          supplier: invoice.supplier,
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceDate: invoice.invoiceDate,
+          total: invoice.total,
+          spreadsheetUrl,
+        }]).catch((err) => console.error("[audit-log] submit write failed:", err));
+      }
     } catch (err) {
       console.error(`[submit] Error for invoice ${invoice.id}:`, err);
       results.push({

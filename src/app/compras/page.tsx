@@ -108,6 +108,26 @@ type Stats = {
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────
+function getPresetRange(preset: string): { from: string; to: string } {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  if (preset === "thisMonth") {
+    return { from: iso(new Date(now.getFullYear(), now.getMonth(), 1)), to: iso(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
+  }
+  if (preset === "lastMonth") {
+    return { from: iso(new Date(now.getFullYear(), now.getMonth() - 1, 1)), to: iso(new Date(now.getFullYear(), now.getMonth(), 0)) };
+  }
+  if (preset === "last30") {
+    const f = new Date(now); f.setDate(f.getDate() - 30);
+    return { from: iso(f), to: iso(now) };
+  }
+  if (preset === "ytd") {
+    return { from: iso(new Date(now.getFullYear(), 0, 1)), to: iso(now) };
+  }
+  return { from: "", to: "" };
+}
+
 function formatCurrency(val: number): string {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 }).format(val);
 }
@@ -137,6 +157,7 @@ export default function ComprasPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [activePreset, setActivePreset] = useState("");
 
   const [items, setItems] = useState<DbLineItem[]>([]);
   const [invoices, setInvoices] = useState<DbInvoice[]>([]);
@@ -146,6 +167,7 @@ export default function ComprasPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [priceStats, setPriceStats] = useState<Record<string, { median: number; count: number }>>({});
   const [saveError, setSaveError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editField, setEditField] = useState("");
@@ -295,6 +317,13 @@ export default function ComprasPage() {
   useEffect(() => { document.title = "Gastos de Alimentos — Aventura Gourmet"; }, []);
   useEffect(() => { if (view !== "analytics" && view !== "normalize") fetchData(); }, [fetchData, view]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
+  useEffect(() => {
+    if (view !== "items") return;
+    fetch("/api/compras/price-stats")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d) => setPriceStats(d ?? {}))
+      .catch(() => {});
+  }, [view]);
   useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, dateFrom, dateTo]);
   useEffect(() => { if (view === "analytics") fetchAnalytics(); }, [view, fetchAnalytics]);
   useEffect(() => {
@@ -481,6 +510,7 @@ export default function ComprasPage() {
   function handleMonthSelect(value: string) {
     setSelectedMonth(value);
     setSelectedWeek("");
+    setActivePreset("");
     if (value) {
       const [y, m] = value.split("-").map(Number);
       const first = new Date(y, m - 1, 1);
@@ -496,6 +526,7 @@ export default function ComprasPage() {
   function handleWeekSelect(value: string) {
     setSelectedWeek(value);
     setSelectedMonth("");
+    setActivePreset("");
     if (value) {
       const week = getWeekOptions().find((w) => w.value === value);
       if (week) { setDateFrom(week.dateFrom); setDateTo(week.dateTo); }
@@ -507,7 +538,15 @@ export default function ComprasPage() {
   // ── Reset filters ────────────────────────────────────────────────
   function resetFilters() {
     setSearch(""); setRestaurant(""); setSupplier(""); setDateFrom(""); setDateTo("");
+    setSelectedMonth(""); setSelectedWeek(""); setActivePreset("");
+  }
+
+  function applyPreset(preset: string) {
+    const { from, to } = getPresetRange(preset);
+    setDateFrom(from); setDateTo(to);
     setSelectedMonth(""); setSelectedWeek("");
+    setActivePreset(preset);
+    setPage(1);
   }
 
   // ── Sort toggle ─────────────────────────────────────────────────
@@ -630,8 +669,26 @@ export default function ComprasPage() {
             </select>
           </div>
 
-          {/* Row 2: month + week + desde/hasta (compact) + limpiar */}
+          {/* Row 2: period presets + month + week + desde/hasta + limpiar */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Presets */}
+            {[
+              { key: "thisMonth", label: "Este mes" },
+              { key: "lastMonth", label: "Mes pasado" },
+              { key: "last30", label: "Últ. 30d" },
+              { key: "ytd", label: "YTD" },
+            ].map(({ key, label }) => (
+              <button key={key} type="button" onClick={() => applyPreset(key)}
+                className="px-2.5 py-1.5 rounded-[var(--radius-sm)] border text-xs font-medium transition-colors duration-150"
+                style={{
+                  background: activePreset === key ? "var(--blue)" : "var(--surface)",
+                  color: activePreset === key ? "#fff" : "var(--text-muted)",
+                  borderColor: activePreset === key ? "var(--blue)" : "var(--border)",
+                }}>
+                {label}
+              </button>
+            ))}
+            <span className="w-px h-4" style={{ background: "var(--border)" }} />
             <select
               value={selectedMonth}
               className="px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
@@ -779,43 +836,65 @@ export default function ComprasPage() {
                         {item.supplier}
                       </td>
                       {/* Editable cells */}
-                      {[
-                        { field: "description", val: item.description, w: "max-w-[200px]" },
-                        { field: "quantity", val: item.quantity != null ? String(item.quantity) : "", w: "w-16" },
-                        { field: "unit", val: item.unit_normalized ?? item.unit ?? "", w: "w-16" },
-                        { field: "unitPrice", val: item.unit_price != null ? String(item.unit_price) : "", w: "w-20" },
-                        { field: "total", val: String(item.total), w: "w-24" },
-                      ].map(({ field, val, w }) => (
-                        <td key={field} className={`px-3 py-3 ${w}`}
-                          style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                          {editingId === item.id && editField === field ? (
-                            <input
-                              type={["quantity", "unitPrice", "total"].includes(field) ? "number" : "text"}
-                              value={editValue}
-                              step="any"
-                              autoFocus
-                              className="w-full px-1.5 py-0.5 rounded border text-sm focus:outline-none focus:ring-1"
-                              style={{ background: "var(--surface)", borderColor: "var(--blue)", color: "var(--text)" }}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={() => saveEdit(item.id, field, editValue)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") saveEdit(item.id, field, editValue);
-                                if (e.key === "Escape") setEditingId(null);
-                              }}
-                            />
-                          ) : (
-                            <span
-                              className="cursor-pointer hover:underline truncate block"
-                              style={{ color: field === "total" ? "var(--blue)" : "var(--text)" }}
-                              onClick={() => startEdit(item.id, field, val)}
-                            >
-                              {field === "total" || field === "unitPrice"
-                                ? (val ? formatCurrency(parseFloat(val)) : "—")
-                                : (val || "—")}
-                            </span>
-                          )}
-                        </td>
-                      ))}
+                      {(() => {
+                        // Compute price variance badge for this item
+                        const statsKey = item.description.trim().toLowerCase();
+                        const stat = priceStats[statsKey];
+                        const unitPrice = item.unit_price;
+                        let varianceBadge: React.ReactNode = null;
+                        if (stat && unitPrice != null && unitPrice > 0 && stat.count >= 2) {
+                          const pct = ((unitPrice - stat.median) / stat.median) * 100;
+                          if (pct >= 25) {
+                            varianceBadge = (
+                              <span className="ml-1 text-[9px] font-semibold px-1 py-0.5 rounded whitespace-nowrap"
+                                style={{ background: "rgba(245,158,11,0.12)", color: "#d97706" }}
+                                title={`Mediana: ${formatCurrency(stat.median)} (${stat.count} compras)`}>
+                                ↑ +{Math.round(pct)}%
+                              </span>
+                            );
+                          }
+                        }
+                        return [
+                          { field: "description", val: item.description, w: "max-w-[200px]" },
+                          { field: "quantity", val: item.quantity != null ? String(item.quantity) : "", w: "w-16" },
+                          { field: "unit", val: item.unit_normalized ?? item.unit ?? "", w: "w-16" },
+                          { field: "unitPrice", val: item.unit_price != null ? String(item.unit_price) : "", w: "w-20" },
+                          { field: "total", val: String(item.total), w: "w-24" },
+                        ].map(({ field, val, w }) => (
+                          <td key={field} className={`px-3 py-3 ${w}`}
+                            style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                            {editingId === item.id && editField === field ? (
+                              <input
+                                type={["quantity", "unitPrice", "total"].includes(field) ? "number" : "text"}
+                                value={editValue}
+                                step="any"
+                                autoFocus
+                                className="w-full px-1.5 py-0.5 rounded border text-sm focus:outline-none focus:ring-1"
+                                style={{ background: "var(--surface)", borderColor: "var(--blue)", color: "var(--text)" }}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={() => saveEdit(item.id, field, editValue)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") saveEdit(item.id, field, editValue);
+                                  if (e.key === "Escape") setEditingId(null);
+                                }}
+                              />
+                            ) : (
+                              <span className="flex items-center gap-0.5">
+                                <span
+                                  className="cursor-pointer hover:underline truncate"
+                                  style={{ color: field === "total" ? "var(--blue)" : "var(--text)" }}
+                                  onClick={() => startEdit(item.id, field, val)}
+                                >
+                                  {field === "total" || field === "unitPrice"
+                                    ? (val ? formatCurrency(parseFloat(val)) : "—")
+                                    : (val || "—")}
+                                </span>
+                                {field === "unitPrice" && varianceBadge}
+                              </span>
+                            )}
+                          </td>
+                        ));
+                      })()}
                       <td className="px-2 py-3" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                         {savingId === item.id ? (
                           <div className="w-6 h-6 flex items-center justify-center">

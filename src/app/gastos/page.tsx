@@ -48,6 +48,26 @@ const BLUE_SHADES = [
   "#3A7FCC", "#042F6B",
 ];
 
+function getPresetRange(preset: string): { from: string; to: string } {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  if (preset === "thisMonth") {
+    return { from: iso(new Date(now.getFullYear(), now.getMonth(), 1)), to: iso(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
+  }
+  if (preset === "lastMonth") {
+    return { from: iso(new Date(now.getFullYear(), now.getMonth() - 1, 1)), to: iso(new Date(now.getFullYear(), now.getMonth(), 0)) };
+  }
+  if (preset === "last30") {
+    const f = new Date(now); f.setDate(f.getDate() - 30);
+    return { from: iso(f), to: iso(now) };
+  }
+  if (preset === "ytd") {
+    return { from: iso(new Date(now.getFullYear(), 0, 1)), to: iso(now) };
+  }
+  return { from: "", to: "" };
+}
+
 function fmt(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
 }
@@ -92,6 +112,18 @@ export default function GastosPage() {
   const [stats, setStats] = useState({ total: 0, invoiceCount: 0, supplierCount: 0 });
 
   const [loading, setLoading] = useState(false);
+
+  // Period presets + supplier search
+  const [activePreset, setActivePreset] = useState("");
+  const [supplierSearch, setSupplierSearch] = useState("");
+
+  function applyPreset(preset: string) {
+    const { from, to } = getPresetRange(preset);
+    setDateFrom(from);
+    setDateTo(to);
+    setActivePreset(preset);
+    setInvPage(1);
+  }
 
   function buildParams(extra: Record<string, string> = {}) {
     const p = new URLSearchParams({ view, ...(restaurant && { restaurant }), ...(dateFrom && { dateFrom }), ...(dateTo && { dateTo }), ...extra });
@@ -208,21 +240,41 @@ export default function GastosPage() {
               );
             })}
           </div>
-          <div className="flex items-center gap-2 pb-2">
+          <div className="flex flex-wrap items-center gap-1.5 pb-2">
+            {/* Period presets */}
+            {[
+              { key: "thisMonth", label: "Este mes" },
+              { key: "lastMonth", label: "Mes pasado" },
+              { key: "last30", label: "Últ. 30d" },
+              { key: "ytd", label: "YTD" },
+            ].map(({ key, label }) => (
+              <button key={key} type="button" onClick={() => applyPreset(key)}
+                className="text-xs px-2 py-1.5 rounded border transition-colors duration-150"
+                style={{
+                  background: activePreset === key ? "var(--blue)" : "var(--surface)",
+                  color: activePreset === key ? "#fff" : "var(--text-muted)",
+                  borderColor: activePreset === key ? "var(--blue)" : "var(--border)",
+                }}>
+                {label}
+              </button>
+            ))}
+            <span className="w-px h-4 mx-0.5" style={{ background: "var(--border)" }} />
             <select value={restaurant} onChange={(e) => setRestaurant(e.target.value)}
               className="text-xs px-2 py-1.5 rounded border appearance-none"
               style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}>
               <option value="">Todos los restaurantes</option>
               {Object.entries(RESTAURANT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+            <input type="date" value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setActivePreset(""); }}
               className="text-xs px-2 py-1.5 rounded border"
               style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }} />
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+            <input type="date" value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setActivePreset(""); }}
               className="text-xs px-2 py-1.5 rounded border"
               style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }} />
             {hasFilters && (
-              <button onClick={() => { setRestaurant(""); setDateFrom(""); setDateTo(""); }}
+              <button onClick={() => { setRestaurant(""); setDateFrom(""); setDateTo(""); setActivePreset(""); }}
                 className="text-xs px-2 py-1.5 rounded border"
                 style={{ color: "var(--text-muted)", borderColor: "var(--border)" }}>
                 Limpiar
@@ -457,10 +509,38 @@ export default function GastosPage() {
         {/* ── Proveedores tab ── */}
         {!loading && view === "suppliers" && (
           <div className="space-y-2">
-            {suppliers.length === 0 && (
-              <p className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>No hay proveedores para este período.</p>
+            {/* Supplier search */}
+            {suppliers.length > 0 && (
+              <div className="relative mb-3">
+                <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: "var(--text-muted)" }}>
+                  <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
+                  <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+                <input
+                  type="text"
+                  value={supplierSearch}
+                  onChange={(e) => setSupplierSearch(e.target.value)}
+                  placeholder="Buscar proveedor..."
+                  className="w-full pl-8 pr-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+                  style={{ background: "var(--surface)", borderColor: supplierSearch ? "var(--blue)" : "var(--border)", color: "var(--text)" }}
+                />
+                {supplierSearch && (
+                  <button type="button" onClick={() => setSupplierSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
+                    style={{ color: "var(--text-muted)" }}>
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             )}
-            {suppliers.map((group) => {
+            {suppliers.filter((g) => !supplierSearch || g.supplier.toLowerCase().includes(supplierSearch.toLowerCase())).length === 0 && (
+              <p className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
+                {supplierSearch ? `Sin resultados para "${supplierSearch}"` : "No hay proveedores para este período."}
+              </p>
+            )}
+            {suppliers.filter((g) => !supplierSearch || g.supplier.toLowerCase().includes(supplierSearch.toLowerCase())).map((group) => {
               const isExpanded = expandedSuppliers.has(group.supplier);
               const currentTag = supplierTags[group.supplier] ?? "";
               const isEditingTag = editingSupplierTag === group.supplier;
