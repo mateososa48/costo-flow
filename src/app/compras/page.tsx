@@ -1141,19 +1141,17 @@ export default function ComprasPage() {
                 </p>
               )}
 
-              {/* Card grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3" style={{ alignItems: "start" }}>
-                {filtered.map((group) => {
+              {/* Two independent columns — expanding one never shifts the other */}
+              {(() => {
+                const renderCard = (group: typeof filtered[0]) => {
                   const isExpanded = expandedSuppliers.has(group.supplier);
                   const currentTag = supplierTags[group.supplier] ?? "";
                   const isEditingTag = editingSupplierTag === group.supplier;
-
                   return (
                     <div key={group.supplier}
-                      className="rounded-[var(--radius)] border overflow-hidden flex flex-col"
+                      className="rounded-[var(--radius)] border overflow-hidden"
                       style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                      <div className="p-4 flex-1">
-                        {/* Name + tag */}
+                      <div className="p-4">
                         <div className="flex items-start justify-between gap-2 mb-3">
                           <span className="text-base font-semibold leading-tight truncate" style={{ color: "var(--text)" }} title={group.supplier}>
                             {group.supplier}
@@ -1199,19 +1197,13 @@ export default function ComprasPage() {
                             )}
                           </div>
                         </div>
-
-                        {/* Spend */}
                         <p className="text-lg font-bold mb-1"
                           style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.02em" }}>
                           {formatCurrency(group.totalSpend)}
                         </p>
-
-                        {/* Article count */}
                         <p className="text-[11px] mb-3" style={{ color: "var(--text-muted)" }}>
                           {group.itemCount} artículo{group.itemCount !== 1 ? "s" : ""}
                         </p>
-
-                        {/* Expand toggle */}
                         <button
                           type="button"
                           className="flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer"
@@ -1229,29 +1221,18 @@ export default function ComprasPage() {
                           Ver artículos
                         </button>
                       </div>
-
-                      {/* Items list (animated expand) */}
-                      <div style={{
-                        display: "grid",
-                        gridTemplateRows: isExpanded ? "1fr" : "0fr",
-                        transition: "grid-template-rows 0.25s ease",
-                      }}>
+                      <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.25s ease" }}>
                         <div style={{ overflow: "hidden", minHeight: 0 }}>
-                          <div className="border-t px-4 py-3"
-                            style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
+                          <div className="border-t px-4 py-3" style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
                             {group.items.map((item: DbLineItem) => (
                               <div key={item.id} className="flex items-center justify-between gap-2 py-2 border-b last:border-b-0 text-xs"
                                 style={{ borderColor: "var(--border-subtle)" }}>
                                 <span className="flex-1 truncate" style={{ color: "var(--text)" }}>{item.description}</span>
-                                <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
-                                  {formatDate(item.invoice_date)}
-                                </span>
+                                <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>{formatDate(item.invoice_date)}</span>
                                 <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
                                   {item.quantity != null ? `${item.quantity} ${item.unit_normalized ?? item.unit ?? ""}` : ""}
                                 </span>
-                                <span className="flex-shrink-0 font-semibold" style={{ color: "var(--blue)" }}>
-                                  {formatCurrency(item.total)}
-                                </span>
+                                <span className="flex-shrink-0 font-semibold" style={{ color: "var(--blue)" }}>{formatCurrency(item.total)}</span>
                               </div>
                             ))}
                           </div>
@@ -1259,8 +1240,25 @@ export default function ComprasPage() {
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                };
+                return (
+                  <>
+                    {/* Desktop: two truly independent columns */}
+                    <div className="hidden md:flex gap-3 items-start">
+                      <div className="flex-1 flex flex-col gap-3">
+                        {filtered.filter((_, i) => i % 2 === 0).map(renderCard)}
+                      </div>
+                      <div className="flex-1 flex flex-col gap-3">
+                        {filtered.filter((_, i) => i % 2 !== 0).map(renderCard)}
+                      </div>
+                    </div>
+                    {/* Mobile: single column */}
+                    <div className="flex flex-col gap-3 md:hidden">
+                      {filtered.map(renderCard)}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           );
         })()}

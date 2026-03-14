@@ -586,28 +586,24 @@ export default function GastosPage() {
                 </p>
               )}
 
-              {/* Card grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3" style={{ alignItems: "start" }}>
-                {filtered.map((group) => {
+              {/* Two independent columns — expanding one never shifts the other */}
+              {(() => {
+                const renderCard = (group: typeof filtered[0]) => {
                   const isExpanded = expandedSuppliers.has(group.supplier);
                   const currentTag = supplierTags[group.supplier] ?? "";
                   const isEditingTag = editingSupplierTag === group.supplier;
                   const sortedDates = group.invoices.map((i: { invoice_date: string }) => i.invoice_date).sort();
                   const firstDate = sortedDates[0];
                   const lastDate = sortedDates[sortedDates.length - 1];
-
                   return (
                     <div key={group.supplier}
-                      className="rounded-[var(--radius)] border overflow-hidden flex flex-col"
+                      className="rounded-[var(--radius)] border overflow-hidden"
                       style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                      {/* Card body */}
-                      <div className="p-4 flex-1">
-                        {/* Row 1: name + tag */}
+                      <div className="p-4">
                         <div className="flex items-start justify-between gap-2 mb-3">
                           <span className="text-base font-semibold leading-tight truncate" style={{ color: "var(--text)" }} title={group.supplier}>
                             {group.supplier}
                           </span>
-                          {/* Classification tag */}
                           <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             {isEditingTag ? (
                               <select
@@ -649,14 +645,10 @@ export default function GastosPage() {
                             )}
                           </div>
                         </div>
-
-                        {/* Spend number */}
                         <p className="text-lg font-bold mb-1"
                           style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.02em" }}>
                           {fmt(group.totalSpend)}
                         </p>
-
-                        {/* Invoice count + date range */}
                         <div className="flex items-center gap-2.5 mb-3 text-[11px]" style={{ color: "var(--text-muted)" }}>
                           <span>{group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}</span>
                           {firstDate && (
@@ -666,8 +658,6 @@ export default function GastosPage() {
                             </>
                           )}
                         </div>
-
-                        {/* Expand toggle */}
                         <button
                           type="button"
                           className="flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer"
@@ -685,34 +675,23 @@ export default function GastosPage() {
                           Ver facturas
                         </button>
                       </div>
-
-                      {/* Invoice list (animated expand) */}
-                      <div style={{
-                        display: "grid",
-                        gridTemplateRows: isExpanded ? "1fr" : "0fr",
-                        transition: "grid-template-rows 0.25s ease",
-                      }}>
+                      <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.25s ease" }}>
                         <div style={{ overflow: "hidden", minHeight: 0 }}>
-                          <div className="border-t px-4 py-3"
-                            style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
+                          <div className="border-t px-4 py-3" style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
                             {group.invoices.map((inv: { id: string; invoice_number: string | null; invoice_date: string; cuenta_pnl: string | null; total: number }) => (
                               <div key={inv.id} className="flex items-center justify-between gap-2 py-2 border-b last:border-b-0 text-xs"
                                 style={{ borderColor: "var(--border-subtle)" }}>
                                 <span className="flex-1 truncate" style={{ color: "var(--text)" }}>
                                   {inv.invoice_number ? `#${inv.invoice_number}` : "Sin número"}
                                 </span>
-                                <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
-                                  {fmtDate(inv.invoice_date)}
-                                </span>
+                                <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>{fmtDate(inv.invoice_date)}</span>
                                 {inv.cuenta_pnl && (
                                   <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded"
                                     style={{ background: "color-mix(in srgb, var(--pink-dark) 15%, transparent)", color: "var(--pink-dark)" }}>
                                     {inv.cuenta_pnl}
                                   </span>
                                 )}
-                                <span className="flex-shrink-0 font-semibold" style={{ color: "var(--blue)" }}>
-                                  {fmt(inv.total)}
-                                </span>
+                                <span className="flex-shrink-0 font-semibold" style={{ color: "var(--blue)" }}>{fmt(inv.total)}</span>
                               </div>
                             ))}
                           </div>
@@ -720,8 +699,25 @@ export default function GastosPage() {
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                };
+                return (
+                  <>
+                    {/* Desktop: two truly independent columns */}
+                    <div className="hidden md:flex gap-3 items-start">
+                      <div className="flex-1 flex flex-col gap-3">
+                        {filtered.filter((_, i) => i % 2 === 0).map(renderCard)}
+                      </div>
+                      <div className="flex-1 flex flex-col gap-3">
+                        {filtered.filter((_, i) => i % 2 !== 0).map(renderCard)}
+                      </div>
+                    </div>
+                    {/* Mobile: single column */}
+                    <div className="flex flex-col gap-3 md:hidden">
+                      {filtered.map(renderCard)}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           );
         })()}
