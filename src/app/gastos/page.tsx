@@ -587,7 +587,7 @@ export default function GastosPage() {
               )}
 
               {/* Card grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3" style={{ alignItems: "start" }}>
                 {filtered.map((group) => {
                   const isExpanded = expandedSuppliers.has(group.supplier);
                   const currentTag = supplierTags[group.supplier] ?? "";
@@ -686,32 +686,38 @@ export default function GastosPage() {
                         </button>
                       </div>
 
-                      {/* Invoice list (expanded) */}
-                      {isExpanded && group.invoices.length > 0 && (
-                        <div className="border-t px-4 py-3 space-y-0"
-                          style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
-                          {group.invoices.map((inv: { id: string; invoice_number: string | null; invoice_date: string; cuenta_pnl: string | null; total: number }) => (
-                            <div key={inv.id} className="flex items-center justify-between gap-2 py-2 border-b last:border-b-0 text-xs"
-                              style={{ borderColor: "var(--border-subtle)" }}>
-                              <span className="flex-1 truncate" style={{ color: "var(--text)" }}>
-                                {inv.invoice_number ? `#${inv.invoice_number}` : "Sin número"}
-                              </span>
-                              <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
-                                {fmtDate(inv.invoice_date)}
-                              </span>
-                              {inv.cuenta_pnl && (
-                                <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded"
-                                  style={{ background: "color-mix(in srgb, var(--pink-dark) 15%, transparent)", color: "var(--pink-dark)" }}>
-                                  {inv.cuenta_pnl}
+                      {/* Invoice list (animated expand) */}
+                      <div style={{
+                        display: "grid",
+                        gridTemplateRows: isExpanded ? "1fr" : "0fr",
+                        transition: "grid-template-rows 0.25s ease",
+                      }}>
+                        <div style={{ overflow: "hidden", minHeight: 0 }}>
+                          <div className="border-t px-4 py-3"
+                            style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
+                            {group.invoices.map((inv: { id: string; invoice_number: string | null; invoice_date: string; cuenta_pnl: string | null; total: number }) => (
+                              <div key={inv.id} className="flex items-center justify-between gap-2 py-2 border-b last:border-b-0 text-xs"
+                                style={{ borderColor: "var(--border-subtle)" }}>
+                                <span className="flex-1 truncate" style={{ color: "var(--text)" }}>
+                                  {inv.invoice_number ? `#${inv.invoice_number}` : "Sin número"}
                                 </span>
-                              )}
-                              <span className="flex-shrink-0 font-semibold" style={{ color: "var(--blue)" }}>
-                                {fmt(inv.total)}
-                              </span>
-                            </div>
-                          ))}
+                                <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
+                                  {fmtDate(inv.invoice_date)}
+                                </span>
+                                {inv.cuenta_pnl && (
+                                  <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded"
+                                    style={{ background: "color-mix(in srgb, var(--pink-dark) 15%, transparent)", color: "var(--pink-dark)" }}>
+                                    {inv.cuenta_pnl}
+                                  </span>
+                                )}
+                                <span className="flex-shrink-0 font-semibold" style={{ color: "var(--blue)" }}>
+                                  {fmt(inv.total)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })}

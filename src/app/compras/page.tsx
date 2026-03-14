@@ -1142,7 +1142,7 @@ export default function ComprasPage() {
               )}
 
               {/* Card grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3" style={{ alignItems: "start" }}>
                 {filtered.map((group) => {
                   const isExpanded = expandedSuppliers.has(group.supplier);
                   const currentTag = supplierTags[group.supplier] ?? "";
@@ -1230,26 +1230,33 @@ export default function ComprasPage() {
                         </button>
                       </div>
 
-                      {isExpanded && (
-                        <div className="border-t px-4 py-3 space-y-0"
-                          style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
-                          {group.items.map((item: DbLineItem) => (
-                            <div key={item.id} className="flex items-center justify-between gap-2 py-2 border-b last:border-b-0 text-xs"
-                              style={{ borderColor: "var(--border-subtle)" }}>
-                              <span className="flex-1 truncate" style={{ color: "var(--text)" }}>{item.description}</span>
-                              <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
-                                {formatDate(item.invoice_date)}
-                              </span>
-                              <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
-                                {item.quantity != null ? `${item.quantity} ${item.unit_normalized ?? item.unit ?? ""}` : ""}
-                              </span>
-                              <span className="flex-shrink-0 font-semibold" style={{ color: "var(--blue)" }}>
-                                {formatCurrency(item.total)}
-                              </span>
-                            </div>
-                          ))}
+                      {/* Items list (animated expand) */}
+                      <div style={{
+                        display: "grid",
+                        gridTemplateRows: isExpanded ? "1fr" : "0fr",
+                        transition: "grid-template-rows 0.25s ease",
+                      }}>
+                        <div style={{ overflow: "hidden", minHeight: 0 }}>
+                          <div className="border-t px-4 py-3"
+                            style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
+                            {group.items.map((item: DbLineItem) => (
+                              <div key={item.id} className="flex items-center justify-between gap-2 py-2 border-b last:border-b-0 text-xs"
+                                style={{ borderColor: "var(--border-subtle)" }}>
+                                <span className="flex-1 truncate" style={{ color: "var(--text)" }}>{item.description}</span>
+                                <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
+                                  {formatDate(item.invoice_date)}
+                                </span>
+                                <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
+                                  {item.quantity != null ? `${item.quantity} ${item.unit_normalized ?? item.unit ?? ""}` : ""}
+                                </span>
+                                <span className="flex-shrink-0 font-semibold" style={{ color: "var(--blue)" }}>
+                                  {formatCurrency(item.total)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
