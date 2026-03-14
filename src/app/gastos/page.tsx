@@ -604,7 +604,7 @@ export default function GastosPage() {
                       <div className="p-4 flex-1">
                         {/* Row 1: name + tag */}
                         <div className="flex items-start justify-between gap-2 mb-3">
-                          <span className="text-sm font-semibold leading-tight truncate" style={{ color: "var(--text)" }} title={group.supplier}>
+                          <span className="text-base font-semibold leading-tight truncate" style={{ color: "var(--text)" }} title={group.supplier}>
                             {group.supplier}
                           </span>
                           {/* Classification tag */}
@@ -650,28 +650,27 @@ export default function GastosPage() {
                           </div>
                         </div>
 
-                        {/* Big spend number */}
-                        <p className="text-2xl font-bold mb-2"
-                          style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.03em" }}>
+                        {/* Spend number */}
+                        <p className="text-lg font-bold mb-1"
+                          style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.02em" }}>
                           {fmt(group.totalSpend)}
                         </p>
 
-                        {/* Invoice count (prominent) + date range */}
-                        <div className="flex items-center gap-2.5 mb-3">
-                          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
-                            {group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}
-                          </span>
+                        {/* Invoice count + date range */}
+                        <div className="flex items-center gap-2.5 mb-3 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                          <span>{group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}</span>
                           {firstDate && (
-                            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                              {firstDate === lastDate ? fmtDate(firstDate) : `${fmtDate(firstDate)} – ${fmtDate(lastDate)}`}
-                            </span>
+                            <>
+                              <span style={{ color: "var(--border)" }}>·</span>
+                              <span>{firstDate === lastDate ? fmtDate(firstDate) : `${fmtDate(firstDate)} – ${fmtDate(lastDate)}`}</span>
+                            </>
                           )}
                         </div>
 
                         {/* Expand toggle */}
                         <button
                           type="button"
-                          className="flex items-center gap-1.5 text-[11px] transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer"
                           style={{ color: isExpanded ? "var(--blue)" : "var(--text-dim)" }}
                           onClick={() => setExpandedSuppliers((prev) => {
                             const next = new Set(prev);

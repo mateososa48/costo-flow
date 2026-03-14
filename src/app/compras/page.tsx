@@ -1155,7 +1155,7 @@ export default function ComprasPage() {
                       <div className="p-4 flex-1">
                         {/* Name + tag */}
                         <div className="flex items-start justify-between gap-2 mb-3">
-                          <span className="text-sm font-semibold leading-tight truncate" style={{ color: "var(--text)" }} title={group.supplier}>
+                          <span className="text-base font-semibold leading-tight truncate" style={{ color: "var(--text)" }} title={group.supplier}>
                             {group.supplier}
                           </span>
                           <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -1201,20 +1201,20 @@ export default function ComprasPage() {
                         </div>
 
                         {/* Spend */}
-                        <p className="text-2xl font-bold mb-2"
-                          style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.03em" }}>
+                        <p className="text-lg font-bold mb-1"
+                          style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.02em" }}>
                           {formatCurrency(group.totalSpend)}
                         </p>
 
-                        {/* Article count (prominent) */}
-                        <p className="text-sm font-semibold mb-3" style={{ color: "var(--text)" }}>
+                        {/* Article count */}
+                        <p className="text-[11px] mb-3" style={{ color: "var(--text-muted)" }}>
                           {group.itemCount} artículo{group.itemCount !== 1 ? "s" : ""}
                         </p>
 
                         {/* Expand toggle */}
                         <button
                           type="button"
-                          className="flex items-center gap-1.5 text-[11px] transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer"
                           style={{ color: isExpanded ? "var(--blue)" : "var(--text-dim)" }}
                           onClick={() => setExpandedSuppliers((prev) => {
                             const next = new Set(prev);
