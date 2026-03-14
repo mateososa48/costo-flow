@@ -113,6 +113,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   }
 
   const initials = user ? user.slice(0, 2).toUpperCase() : "?";
+  const [mobileGastosOpen, setMobileGastosOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex">
@@ -294,11 +295,12 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
-        {/* Gastos: links to whichever sub-page is active, or /compras by default */}
-        <Link
-          href={pathname.startsWith("/gastos") ? "/gastos" : "/compras"}
+        {/* Gastos: tap to choose sub-page */}
+        <button
+          type="button"
           className="relative flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors duration-150"
           style={{ color: gastosActive ? "var(--blue)" : "var(--text-muted)" }}
+          onClick={() => setMobileGastosOpen(o => !o)}
         >
           <GastosIcon active={gastosActive} />
           <span className="text-[10px] font-medium">Gastos</span>
@@ -306,7 +308,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             <span className="absolute top-1.5 right-1/4 w-2 h-2 rounded-full translate-x-3"
               style={{ background: "var(--pink-dark)" }} />
           )}
-        </Link>
+        </button>
         {NAV_BOTTOM.map(({ href, label, Icon }) => {
           const active = pathname.startsWith(href);
           return (
@@ -319,6 +321,49 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
+
+        {/* Gastos sub-page chooser sheet */}
+        {mobileGastosOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setMobileGastosOpen(false)}
+            />
+            {/* Sheet */}
+            <div
+              className="fixed left-0 right-0 z-50 px-4 pb-2"
+              style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 64px)" }}
+            >
+              <div className="rounded-[var(--radius)] border overflow-hidden"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 -4px 24px rgba(0,0,0,0.12)" }}>
+                <p className="px-4 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-widest"
+                  style={{ color: "var(--text-dim)" }}>Gastos</p>
+                {GASTOS_CHILDREN.map(({ href, label, Icon }) => {
+                  const active = pathname.startsWith(href);
+                  return (
+                    <Link key={href} href={href}
+                      className="flex items-center gap-3 px-4 py-3 border-t transition-colors duration-150"
+                      style={{
+                        borderColor: "var(--border-subtle)",
+                        background: active ? "var(--blue-glow)" : "transparent",
+                        color: active ? "var(--blue)" : "var(--text)",
+                      }}
+                      onClick={() => setMobileGastosOpen(false)}
+                    >
+                      <Icon active={active} />
+                      <span className="text-sm font-medium">{label}</span>
+                      {href === "/compras" && hasUnmatched && (
+                        <span className="ml-auto w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ background: "var(--pink-dark)" }} />
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </nav>
 
       {/* ── Tutorial overlay ─────────────────────────────────────────── */}
