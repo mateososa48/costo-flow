@@ -2953,33 +2953,36 @@ function IngredientEditRow({
       </div>
 
       {/* Actions */}
-      <div className="space-y-2.5 pt-1">
-        <div className="flex gap-2">
-          <Button variant="secondary" size="md" className="flex-1" onClick={onClose}>Cancelar</Button>
-          <Button size="md" className="flex-1" loading={saving} disabled={!name.trim()} onClick={handleSave}>Guardar</Button>
-        </div>
-        <div className="flex justify-center pt-0.5">
+      <div className="pt-1">
+        <div className="flex items-center gap-2">
+          {/* Delete — left side */}
           {confirmDelete ? (
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs" style={{ color: "var(--text-muted)" }}>¿Eliminar este ingrediente?</span>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <button type="button"
-                className="text-xs font-semibold px-2.5 py-1 rounded-md transition-colors"
-                style={{ background: "var(--danger-dim)", color: "var(--danger)" }}
+                className="text-xs font-semibold px-2.5 py-2 rounded-[var(--radius-sm)] transition-colors"
+                style={{ background: "rgba(var(--danger-rgb,220,38,38),0.12)", color: "var(--danger)" }}
                 onClick={handleDelete}>
                 {deleting ? "Eliminando…" : "Sí, eliminar"}
               </button>
-              <button type="button" className="text-xs transition-opacity hover:opacity-60"
+              <button type="button" className="text-xs px-2 py-2 transition-opacity hover:opacity-60"
                 style={{ color: "var(--text-muted)" }}
                 onClick={() => setConfirmDelete(false)}>No</button>
             </div>
           ) : (
             <button type="button"
-              className="text-xs transition-opacity hover:opacity-60"
-              style={{ color: "var(--danger)" }}
+              className="text-xs font-medium px-2.5 py-2 rounded-[var(--radius-sm)] transition-colors flex-shrink-0"
+              style={{ background: "rgba(220,38,38,0.08)", color: "var(--danger)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.14)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.08)"; }}
               onClick={() => setConfirmDelete(true)}>
-              Eliminar ingrediente
+              Eliminar
             </button>
           )}
+          {/* Spacer */}
+          <div className="flex-1" />
+          {/* Cancel + Save */}
+          <Button variant="secondary" size="md" onClick={onClose}>Cancelar</Button>
+          <Button size="md" loading={saving} disabled={!name.trim()} onClick={handleSave}>Guardar</Button>
         </div>
       </div>
     </div>
