@@ -113,9 +113,10 @@ export default function GastosPage() {
 
   const [loading, setLoading] = useState(false);
 
-  // Period presets + supplier search
+  // Period presets + supplier search + supplier sort
   const [activePreset, setActivePreset] = useState("");
   const [supplierSearch, setSupplierSearch] = useState("");
+  const [supplierSortMode, setSupplierSortMode] = useState<"spend" | "count" | "alpha">("spend");
 
   function applyPreset(preset: string) {
     const { from, to } = getPresetRange(preset);
@@ -507,139 +508,247 @@ export default function GastosPage() {
         )}
 
         {/* ── Proveedores tab ── */}
-        {!loading && view === "suppliers" && (
-          <div className="space-y-2">
-            {/* Supplier search */}
-            {suppliers.length > 0 && (
-              <div className="relative mb-3">
-                <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: "var(--text-muted)" }}>
-                  <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
-                  <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                </svg>
-                <input
-                  type="text"
-                  value={supplierSearch}
-                  onChange={(e) => setSupplierSearch(e.target.value)}
-                  placeholder="Buscar proveedor..."
-                  className="w-full pl-8 pr-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
-                  style={{ background: "var(--surface)", borderColor: supplierSearch ? "var(--blue)" : "var(--border)", color: "var(--text)" }}
-                />
-                {supplierSearch && (
-                  <button type="button" onClick={() => setSupplierSearch("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
-                    style={{ color: "var(--text-muted)" }}>
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                      <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            )}
-            {suppliers.filter((g) => !supplierSearch || g.supplier.toLowerCase().includes(supplierSearch.toLowerCase())).length === 0 && (
-              <p className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
-                {supplierSearch ? `Sin resultados para "${supplierSearch}"` : "No hay proveedores para este período."}
-              </p>
-            )}
-            {suppliers.filter((g) => !supplierSearch || g.supplier.toLowerCase().includes(supplierSearch.toLowerCase())).map((group) => {
-              const isExpanded = expandedSuppliers.has(group.supplier);
-              const currentTag = supplierTags[group.supplier] ?? "";
-              const isEditingTag = editingSupplierTag === group.supplier;
-              return (
-                <div key={group.supplier} className="rounded-[var(--radius)] border overflow-hidden"
-                  style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <div className="flex items-center">
-                    <button
-                      type="button"
-                      className="flex-1 flex items-center gap-3 px-4 py-3 text-left"
-                      onClick={() => setExpandedSuppliers((prev) => {
-                        const next = new Set(prev);
-                        isExpanded ? next.delete(group.supplier) : next.add(group.supplier);
-                        return next;
-                      })}
-                    >
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
-                        className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`}
-                        style={{ color: "var(--text-muted)" }}>
-                        <path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        {!loading && view === "suppliers" && (() => {
+          const q = supplierSearch.trim().toLowerCase();
+          const maxSpend = suppliers.reduce((m, g) => Math.max(m, g.totalSpend), 0);
+          const grandTotal = suppliers.reduce((s, g) => s + g.totalSpend, 0);
+          const filtered = suppliers
+            .filter((g) => !q || g.supplier.toLowerCase().includes(q))
+            .slice()
+            .sort((a, b) => {
+              if (supplierSortMode === "count") return b.invoiceCount - a.invoiceCount;
+              if (supplierSortMode === "alpha") return a.supplier.localeCompare(b.supplier, "es");
+              return b.totalSpend - a.totalSpend;
+            });
+
+          return (
+            <div className="space-y-4">
+              {/* Controls row */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Search */}
+                <div className="relative flex-1 min-w-[180px]">
+                  <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: "var(--text-muted)" }}>
+                    <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
+                    <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={supplierSearch}
+                    onChange={(e) => setSupplierSearch(e.target.value)}
+                    placeholder="Buscar proveedor..."
+                    className="w-full pl-8 pr-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+                    style={{ background: "var(--surface)", borderColor: supplierSearch ? "var(--blue)" : "var(--border)", color: "var(--text)" }}
+                  />
+                  {supplierSearch && (
+                    <button type="button" onClick={() => setSupplierSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
+                      style={{ color: "var(--text-muted)" }}>
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
                       </svg>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{group.supplier}</span>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
-                          <span>{group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}</span>
-                          <span className="font-semibold" style={{ color: "var(--blue)" }}>{fmt(group.totalSpend)}</span>
-                        </div>
-                      </div>
                     </button>
-                    {/* Supply type tag */}
-                    <div className="px-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                      {isEditingTag ? (
-                        <select
-                          autoFocus
-                          value={currentTag}
-                          className="px-2 py-1 rounded-[var(--radius-sm)] border text-xs appearance-none focus:outline-none focus:ring-1"
-                          style={{ background: "var(--surface)", borderColor: "var(--blue)", color: "var(--text)" }}
-                          onBlur={() => setEditingSupplierTag(null)}
-                          onChange={async (e) => {
-                            const supplyType = e.target.value;
-                            setSupplierTags((prev) => ({ ...prev, [group.supplier]: supplyType }));
-                            setEditingSupplierTag(null);
-                            await fetch("/api/compras/suppliers/tags", {
-                              method: "PUT",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ supplier: group.supplier, supplyType }),
-                            });
-                          }}
-                        >
-                          <option value="">Sin clasificar</option>
-                          {(dropdownOptions.cuentaPnl as string[]).map((opt) => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <button
-                          type="button"
-                          title="Clasificar proveedor"
-                          className="text-[10px] px-2 py-1 rounded-full transition-colors"
-                          style={{
-                            background: currentTag ? "var(--blue-glow)" : "var(--surface-raised)",
-                            color: currentTag ? "var(--blue)" : "var(--text-dim)",
-                            border: `1px solid ${currentTag ? "color-mix(in srgb, var(--blue) 25%, transparent)" : "var(--border-subtle)"}`,
-                          }}
-                          onClick={() => setEditingSupplierTag(group.supplier)}
-                        >
-                          {currentTag || "Clasificar ✎"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {isExpanded && group.invoices.length > 0 && (
-                    <div className="border-t px-4 py-3 space-y-1.5" style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
-                      {group.invoices.map((inv) => (
-                        <div key={inv.id} className="flex items-center justify-between gap-2 py-1.5 text-xs">
-                          <span className="flex-1 truncate" style={{ color: "var(--text)" }}>
-                            {inv.invoice_number ? `Factura #${inv.invoice_number}` : "Factura sin número"}
-                          </span>
-                          <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
-                            {fmtDate(inv.invoice_date)}
-                          </span>
-                          {inv.cuenta_pnl && (
-                            <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded"
-                              style={{ background: "color-mix(in srgb, var(--pink-dark) 15%, transparent)", color: "var(--pink-dark)" }}>
-                              {inv.cuenta_pnl}
-                            </span>
-                          )}
-                          <span className="flex-shrink-0 font-medium" style={{ color: "var(--blue)" }}>
-                            {fmt(inv.total)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        )}
+                {/* Sort pills */}
+                <div className="flex items-center gap-1 p-0.5 rounded-[var(--radius-sm)]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border-subtle)" }}>
+                  {([["spend", "Mayor gasto"], ["count", "Más facturas"], ["alpha", "A–Z"]] as [typeof supplierSortMode, string][]).map(([mode, label]) => (
+                    <button key={mode} type="button"
+                      className="text-[11px] px-2.5 py-1 rounded transition-colors"
+                      style={{
+                        background: supplierSortMode === mode ? "var(--surface)" : "transparent",
+                        color: supplierSortMode === mode ? "var(--text)" : "var(--text-muted)",
+                        fontWeight: supplierSortMode === mode ? 600 : 400,
+                        boxShadow: supplierSortMode === mode ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                      }}
+                      onClick={() => setSupplierSortMode(mode)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Summary strip */}
+              {filtered.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-2.5 rounded-[var(--radius-sm)]"
+                  style={{ background: "var(--surface-raised)", border: "1px solid var(--border-subtle)" }}>
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    <span className="font-semibold" style={{ color: "var(--text)" }}>{filtered.length}</span> proveedor{filtered.length !== 1 ? "es" : ""}
+                  </span>
+                  <span className="text-xs font-semibold" style={{ color: "var(--blue)" }}>
+                    {fmt(filtered.reduce((s, g) => s + g.totalSpend, 0))} total
+                  </span>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {filtered.length === 0 && (
+                <p className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
+                  {supplierSearch ? `Sin resultados para "${supplierSearch}"` : "No hay proveedores para este período."}
+                </p>
+              )}
+
+              {/* Card grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {filtered.map((group, idx) => {
+                  const isExpanded = expandedSuppliers.has(group.supplier);
+                  const currentTag = supplierTags[group.supplier] ?? "";
+                  const isEditingTag = editingSupplierTag === group.supplier;
+                  const pct = grandTotal > 0 ? (group.totalSpend / grandTotal) * 100 : 0;
+                  const barWidth = maxSpend > 0 ? (group.totalSpend / maxSpend) * 100 : 0;
+                  const sortedDates = group.invoices.map((i: { invoice_date: string }) => i.invoice_date).sort();
+                  const firstDate = sortedDates[0];
+                  const lastDate = sortedDates[sortedDates.length - 1];
+                  const isTop = idx === 0 && supplierSortMode === "spend";
+
+                  return (
+                    <div key={group.supplier}
+                      className="rounded-[var(--radius)] border overflow-hidden flex flex-col"
+                      style={{
+                        borderColor: isTop ? "color-mix(in srgb, var(--blue) 35%, transparent)" : "var(--border)",
+                        background: "var(--surface)",
+                      }}>
+                      {/* Card body */}
+                      <div className="p-4 flex-1">
+                        {/* Row 1: rank + name + tag */}
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[10px] font-bold tabular-nums w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                              style={{
+                                background: isTop ? "var(--blue)" : "var(--surface-raised)",
+                                color: isTop ? "#fff" : "var(--text-dim)",
+                                border: isTop ? "none" : "1px solid var(--border-subtle)",
+                              }}>
+                              {idx + 1}
+                            </span>
+                            <span className="text-sm font-semibold leading-tight truncate" style={{ color: "var(--text)" }} title={group.supplier}>
+                              {group.supplier}
+                            </span>
+                          </div>
+                          {/* Classification tag */}
+                          <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {isEditingTag ? (
+                              <select
+                                autoFocus
+                                value={currentTag}
+                                className="px-2 py-0.5 rounded-[var(--radius-sm)] border text-[11px] appearance-none focus:outline-none focus:ring-1"
+                                style={{ background: "var(--surface)", borderColor: "var(--blue)", color: "var(--text)" }}
+                                onBlur={() => setEditingSupplierTag(null)}
+                                onChange={async (e) => {
+                                  const supplyType = e.target.value;
+                                  setSupplierTags((prev) => ({ ...prev, [group.supplier]: supplyType }));
+                                  setEditingSupplierTag(null);
+                                  await fetch("/api/compras/suppliers/tags", {
+                                    method: "PUT",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ supplier: group.supplier, supplyType }),
+                                  });
+                                }}
+                              >
+                                <option value="">Sin clasificar</option>
+                                {(dropdownOptions.cuentaPnl as string[]).map((opt) => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <button
+                                type="button"
+                                title="Clasificar proveedor"
+                                className="text-[10px] px-2 py-0.5 rounded-full transition-colors cursor-pointer"
+                                style={{
+                                  background: currentTag ? "var(--blue-glow)" : "var(--surface-raised)",
+                                  color: currentTag ? "var(--blue)" : "var(--text-dim)",
+                                  border: `1px solid ${currentTag ? "color-mix(in srgb, var(--blue) 25%, transparent)" : "var(--border-subtle)"}`,
+                                }}
+                                onClick={() => setEditingSupplierTag(group.supplier)}
+                              >
+                                {currentTag || "Clasificar ✎"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Big spend number */}
+                        <p className="text-2xl font-bold mb-1"
+                          style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.03em" }}>
+                          {fmt(group.totalSpend)}
+                        </p>
+
+                        {/* Meta: invoice count + date range */}
+                        <div className="flex items-center gap-2.5 text-[11px] mb-3" style={{ color: "var(--text-muted)" }}>
+                          <span>{group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}</span>
+                          {firstDate && (
+                            <>
+                              <span style={{ color: "var(--border)" }}>·</span>
+                              <span>
+                                {firstDate === lastDate ? fmtDate(firstDate) : `${fmtDate(firstDate)} – ${fmtDate(lastDate)}`}
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Spend bar */}
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between text-[10px] mb-1" style={{ color: "var(--text-muted)" }}>
+                            <span>{pct.toFixed(1)}% del período</span>
+                          </div>
+                          <div className="h-1.5 rounded-full" style={{ background: "var(--border)" }}>
+                            <div className="h-full rounded-full"
+                              style={{ width: `${barWidth}%`, background: "var(--blue)", opacity: 0.65, transition: "width 0.4s ease" }} />
+                          </div>
+                        </div>
+
+                        {/* Expand toggle */}
+                        <button
+                          type="button"
+                          className="flex items-center gap-1.5 text-[11px] transition-colors cursor-pointer"
+                          style={{ color: isExpanded ? "var(--blue)" : "var(--text-dim)" }}
+                          onClick={() => setExpandedSuppliers((prev) => {
+                            const next = new Set(prev);
+                            isExpanded ? next.delete(group.supplier) : next.add(group.supplier);
+                            return next;
+                          })}
+                        >
+                          <svg width="8" height="8" viewBox="0 0 8 8" fill="none"
+                            className={`transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}>
+                            <path d="M2 1l3 3-3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          Ver {group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}
+                        </button>
+                      </div>
+
+                      {/* Invoice list (expanded) */}
+                      {isExpanded && group.invoices.length > 0 && (
+                        <div className="border-t px-4 py-3 space-y-0"
+                          style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
+                          {group.invoices.map((inv: { id: string; invoice_number: string | null; invoice_date: string; cuenta_pnl: string | null; total: number }) => (
+                            <div key={inv.id} className="flex items-center justify-between gap-2 py-2 border-b last:border-b-0 text-xs"
+                              style={{ borderColor: "var(--border-subtle)" }}>
+                              <span className="flex-1 truncate" style={{ color: "var(--text)" }}>
+                                {inv.invoice_number ? `#${inv.invoice_number}` : "Sin número"}
+                              </span>
+                              <span className="flex-shrink-0" style={{ color: "var(--text-muted)" }}>
+                                {fmtDate(inv.invoice_date)}
+                              </span>
+                              {inv.cuenta_pnl && (
+                                <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded"
+                                  style={{ background: "color-mix(in srgb, var(--pink-dark) 15%, transparent)", color: "var(--pink-dark)" }}>
+                                  {inv.cuenta_pnl}
+                                </span>
+                              )}
+                              <span className="flex-shrink-0 font-semibold" style={{ color: "var(--blue)" }}>
+                                {fmt(inv.total)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── Análisis tab ── */}
         {!loading && view === "analytics" && analytics && (

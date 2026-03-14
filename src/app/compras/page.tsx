@@ -1222,12 +1222,6 @@ export default function ComprasPage() {
                 return dt.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
               }
 
-              // MoM delta: last two months in returned data
-              const lastTwo = allMonthlyTotals.slice(-2);
-              const momDelta = lastTwo.length === 2 && lastTwo[0].total > 0
-                ? ((lastTwo[1].total - lastTwo[0].total) / lastTwo[0].total) * 100
-                : null;
-
               return (
                 <>
                   {/* ── KPI Band ── */}
@@ -1237,19 +1231,10 @@ export default function ComprasPage() {
                       <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--blue)" }}>
                         Gasto Total
                       </p>
-                      <p className="text-2xl font-bold leading-none mb-2"
+                      <p className="text-2xl font-bold leading-none"
                         style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.03em" }}>
                         {formatCurrency(d.kpis.totalSpend)}
                       </p>
-                      {momDelta !== null && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                          style={{
-                            background: momDelta >= 0 ? "var(--danger-dim)" : "var(--success-dim)",
-                            color: momDelta >= 0 ? "var(--danger)" : "var(--success)",
-                          }}>
-                          {momDelta >= 0 ? "↑" : "↓"} {Math.abs(momDelta).toFixed(1)}% vs mes anterior
-                        </span>
-                      )}
                     </div>
                     {[
                       { label: "Facturas", value: d.kpis.uniqueInvoices.toLocaleString("es-MX") },
