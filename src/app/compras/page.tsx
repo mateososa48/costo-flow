@@ -1244,11 +1244,11 @@ export default function ComprasPage() {
                 return (
                   <>
                     {/* Desktop: two truly independent columns */}
-                    <div className="hidden md:flex gap-3 items-start">
-                      <div className="flex-1 flex flex-col gap-3">
+                    <div className="hidden md:flex gap-3 items-start w-full">
+                      <div className="flex-1 min-w-0 flex flex-col gap-3">
                         {filtered.filter((_, i) => i % 2 === 0).map(renderCard)}
                       </div>
-                      <div className="flex-1 flex flex-col gap-3">
+                      <div className="flex-1 min-w-0 flex flex-col gap-3">
                         {filtered.filter((_, i) => i % 2 !== 0).map(renderCard)}
                       </div>
                     </div>
