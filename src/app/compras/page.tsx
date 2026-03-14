@@ -193,6 +193,8 @@ export default function ComprasPage() {
   const [ingredientSearch, setIngredientSearch] = useState("");
   const [unmatchedCollapsed, setUnmatchedCollapsed] = useState(false);
   const [editModalIngredient, setEditModalIngredient] = useState<Ingredient | null>(null);
+  const [normalizeMode, setNormalizeMode] = useState<"list" | "identify">("list");
+  const [ingredientCategoryFilter, setIngredientCategoryFilter] = useState("");
   // Invoice reclassification state
   const [reclassifyingId, setReclassifyingId] = useState<string | null>(null);
   const [reclassifyValue, setReclassifyValue] = useState("");
@@ -1551,275 +1553,51 @@ export default function ComprasPage() {
 
         {/* ─── NORMALIZE VIEW ──────────────────────────────────────── */}
         {view === "normalize" && (
-          <div className="space-y-4">
+          <div>
             <style>{`
-              @keyframes ingFadeIn {
-                from { opacity: 0; transform: translateY(5px); }
-                to   { opacity: 1; transform: translateY(0); }
-              }
-              .ing-card {
-                animation: ingFadeIn 0.22s ease both;
-                transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+              .ing-row {
+                transition: background 0.15s ease;
                 cursor: pointer;
               }
-              .ing-card:hover {
-                border-color: color-mix(in srgb, var(--blue) 45%, var(--border)) !important;
-                box-shadow: 0 3px 14px rgba(0,0,0,0.09);
-                transform: translateY(-1px);
+              .ing-row:hover {
+                background: var(--surface-raised) !important;
               }
-              .ing-card.edit-mode:hover {
-                border-color: color-mix(in srgb, var(--blue) 45%, var(--border)) !important;
-                transform: none;
-                box-shadow: none;
-              }
-              .unmatched-body {
+              .ing-row-expand {
                 display: grid;
-                transition: grid-template-rows 0.28s ease;
+                transition: grid-template-rows 0.22s ease;
               }
-              .unmatched-body > div {
-                overflow: hidden;
-                min-height: 0;
+              .ing-row-expand > div { overflow: hidden; min-height: 0; }
+              .ing-chevron {
+                transition: transform 0.2s ease;
               }
             `}</style>
 
             {normalizeLoading && (
-              <div className="flex justify-center py-12">
+              <div className="flex justify-center py-16">
                 <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
                   style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
               </div>
             )}
 
-            {!normalizeLoading && (
-              <>
-                {/* ── Unidentified Tray ─────────────────────────────── */}
-                <div className="rounded-[var(--radius)] border overflow-hidden"
-                  style={{
-                    borderColor: "color-mix(in srgb, var(--blue) 35%, var(--border))",
-                    transition: "border-color 0.3s ease",
-                  }}>
+            {!normalizeLoading && normalizeMode === "list" && (() => {
+              const q = ingredientSearch.trim().toLowerCase();
+              const filteredIngredients = ingredients.filter(i => {
+                const matchesSearch = !q ||
+                  i.canonical_name.toLowerCase().includes(q) ||
+                  i.aliases.some(a => a.toLowerCase().includes(q));
+                const matchesCat = !ingredientCategoryFilter || i.category === ingredientCategoryFilter;
+                return matchesSearch && matchesCat;
+              });
+              const uniqueCategories = Array.from(new Set(
+                ingredients.map(i => i.category).filter(Boolean)
+              )).sort() as string[];
 
-                  {/* Tray header — always visible, clickable to collapse */}
-                  <div
-                    className="px-4 py-3 flex items-center justify-between gap-3 select-none"
-                    style={{
-                      background: "var(--surface)",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => setUnmatchedCollapsed(c => !c)}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${unmatched.length > 0 ? "animate-pulse" : ""}`}
-                        style={{ background: "var(--blue)" }} />
-                      <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>Sin identificar</span>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-                        style={{
-                          background: "var(--blue-glow)",
-                          color: "var(--blue)",
-                        }}>
-                        {unmatched.length === 0 ? "Todo identificado ✓" : `${unmatched.length} artículo${unmatched.length !== 1 ? "s" : ""}`}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {unmatched.length > 0 && !aiSuggestions && !unmatchedCollapsed && (
-                        <button type="button"
-                          disabled={aiLoading}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-sm)] text-xs font-medium"
-                          style={{ background: "var(--blue-glow)", color: "var(--blue)", border: "1px solid color-mix(in srgb, var(--blue) 25%, transparent)" }}
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            setAiLoading(true);
-                            setAiProgress(0);
-                            const startTime = Date.now();
-                            const progressInterval = setInterval(() => {
-                              const elapsed = (Date.now() - startTime) / 1000;
-                              const p = Math.min(85, Math.round(85 * (1 - Math.exp(-elapsed / 20))));
-                              setAiProgress(p);
-                            }, 300);
-                            try {
-                              const res = await fetch("/api/compras/ingredients/suggest-batch", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ items: unmatched }),
-                              });
-                              let data: { suggestions?: AISuggestion[]; error?: string };
-                              try { data = await res.json(); } catch {
-                                alert("Error: la respuesta del servidor no es JSON válido"); return;
-                              }
-                              if (res.ok) {
-                                setAiProgress(100);
-                                const suggestions = data.suggestions ?? [];
-                                if (suggestions.length === 0) {
-                                  alert("La IA no devolvió sugerencias. Intenta de nuevo.");
-                                } else {
-                                  setAiSuggestions(suggestions);
-                                  setAiChecked(new Set(suggestions.map((_: AISuggestion, i: number) => i)));
-                                }
-                              } else {
-                                alert(`Error ${res.status}: ${data.error ?? "Error desconocido"}`);
-                              }
-                            } catch (err: unknown) {
-                              alert(`Error de red: ${err instanceof Error ? err.message : String(err)}`);
-                            } finally {
-                              clearInterval(progressInterval);
-                              setAiLoading(false);
-                              setAiProgress(0);
-                            }
-                          }}
-                        >
-                          {aiLoading ? (
-                            <>
-                              <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin"
-                                style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
-                              Analizando...
-                            </>
-                          ) : (
-                            <>
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z" />
-                              </svg>
-                              Sugerir con IA
-                            </>
-                          )}
-                        </button>
-                      )}
-                      {aiSuggestions && !unmatchedCollapsed && (
-                        <button type="button"
-                          className="text-xs px-2 py-1 rounded"
-                          style={{ color: "var(--text-muted)", background: "var(--surface-raised)", border: "1px solid var(--border)" }}
-                          onClick={(e) => { e.stopPropagation(); setAiSuggestions(null); setAiChecked(new Set()); }}
-                        >
-                          Volver
-                        </button>
-                      )}
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
-                        style={{
-                          color: "var(--text-dim)",
-                          transform: unmatchedCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
-                          transition: "transform 0.25s ease",
-                          flexShrink: 0,
-                        }}>
-                        <path d="M2.5 5l4.5 4 4.5-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Collapsible tray body */}
-                  <div className="unmatched-body" style={{ gridTemplateRows: unmatchedCollapsed ? "0fr" : "1fr" }}>
-                    <div>
-                      {aiLoading && (
-                        <div className="px-4 pt-3 pb-2">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Analizando ingredientes con IA…</span>
-                            <span className="text-xs font-medium" style={{ color: "var(--blue)" }}>{aiProgress}%</span>
-                          </div>
-                          <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
-                            <div className="h-full rounded-full"
-                              style={{ width: `${aiProgress}%`, background: "var(--blue)", transition: "width 0.4s ease-out" }} />
-                          </div>
-                        </div>
-                      )}
-                      {unmatched.length === 0 ? (
-                        <div className="px-4 py-6 text-center">
-                          <p className="text-sm" style={{ color: "var(--text-dim)" }}>Todo identificado ✓</p>
-                        </div>
-                      ) : aiSuggestions ? (
-                        <div>
-                          <div className="divide-y max-h-72 overflow-y-auto" style={{ borderColor: "var(--border-subtle)" }}>
-                            {aiSuggestions.map((s, i) => {
-                              const checked = aiChecked.has(i);
-                              return (
-                                <div key={i}
-                                  className="px-4 py-2.5 cursor-pointer"
-                                  style={{ background: checked ? "var(--blue-glow)" : undefined }}
-                                  onClick={() => setAiChecked((prev) => {
-                                    const next = new Set(prev);
-                                    checked ? next.delete(i) : next.add(i);
-                                    return next;
-                                  })}
-                                >
-                                  <div className="flex items-start gap-2">
-                                    <input type="checkbox" readOnly checked={checked} className="mt-0.5 flex-shrink-0 accent-[#0450A9]" />
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{s.canonicalName}</p>
-                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
-                                          style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
-                                          {s.matchCount} art.
-                                        </span>
-                                      </div>
-                                      {s.category && <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{s.category}</p>}
-                                      <div className="flex flex-wrap gap-1 mt-1">
-                                        {s.aliases.map((a) => (
-                                          <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-full"
-                                            style={{ background: "var(--surface-raised)", color: "var(--text-dim)" }}>{a}</span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <div className="px-4 py-3 border-t flex items-center justify-between gap-3"
-                            style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
-                            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                              {aiChecked.size} de {aiSuggestions.length} seleccionados
-                            </span>
-                            <Button size="sm" loading={aiConfirming} disabled={aiChecked.size === 0}
-                              onClick={async () => {
-                                setAiConfirming(true);
-                                try {
-                                  const selected = aiSuggestions.filter((_, i) => aiChecked.has(i));
-                                  for (const s of selected) {
-                                    await fetch("/api/compras/ingredients", {
-                                      method: "POST",
-                                      headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({ canonicalName: s.canonicalName, aliases: s.aliases, category: s.category || null }),
-                                    });
-                                  }
-                                  setAiSuggestions(null);
-                                  setAiChecked(new Set());
-                                  fetchNormalize();
-                                } finally { setAiConfirming(false); }
-                              }}
-                            >
-                              Confirmar ({aiChecked.size})
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="divide-y max-h-64 overflow-y-auto" style={{ borderColor: "var(--border-subtle)" }}>
-                          {unmatched.map((u) => (
-                            <div key={u.description} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm truncate" style={{ color: "var(--text)" }}>{u.description}</p>
-                                <p className="text-xs" style={{ color: "var(--text-dim)" }}>{u.count} artículo{u.count !== 1 ? "s" : ""}</p>
-                              </div>
-                              <div className="flex gap-1.5 flex-shrink-0">
-                                <button type="button"
-                                  className="px-2 py-1 rounded text-xs font-medium"
-                                  style={{ background: "var(--blue-glow)", color: "var(--blue)" }}
-                                  onClick={() => { setCreateIngredientFor(u.description); setMergeFor(null); }}
-                                >Nuevo</button>
-                                <button type="button"
-                                  className="px-2 py-1 rounded text-xs font-medium"
-                                  style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}
-                                  onClick={() => { setMergeFor(u.description); setCreateIngredientFor(null); setMergingIntoId(""); }}
-                                >Unir</button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Ingredients overview ───────────────────────────── */}
-                <div>
-                  {/* Controls row */}
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="relative flex-1">
+              return (
+                <>
+                  {/* ── Toolbar ── */}
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    {/* Search */}
+                    <div className="relative flex-1 min-w-[180px]">
                       <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ color: "var(--text-muted)" }}>
                         <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                       </svg>
@@ -1828,7 +1606,7 @@ export default function ComprasPage() {
                         placeholder="Buscar ingrediente o alias…"
                         value={ingredientSearch}
                         onChange={e => setIngredientSearch(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 text-sm rounded-[var(--radius-sm)] border focus:outline-none"
+                        className="w-full pl-8 pr-8 py-1.5 text-sm rounded-[var(--radius-sm)] border focus:outline-none"
                         style={{
                           background: "var(--surface)",
                           borderColor: ingredientSearch ? "var(--blue)" : "var(--border)",
@@ -1838,25 +1616,56 @@ export default function ComprasPage() {
                       />
                       {ingredientSearch && (
                         <button type="button"
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2"
-                          style={{ color: "var(--text-muted)" }}
-                          onClick={() => setIngredientSearch("")}
-                        >
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition-opacity"
+                          onClick={() => setIngredientSearch("")}>
+                          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                            <path d="M1 1l9 9M10 1L1 10" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" />
                           </svg>
                         </button>
                       )}
                     </div>
 
-                    {/* count */}
-                    {ingredients.length > 0 && (
-                      <span className="text-[10px] flex-shrink-0 tabular-nums" style={{ color: "var(--text-muted)" }}>
-                        {ingredientSearch
-                          ? `${ingredients.filter(i => i.canonical_name.toLowerCase().includes(ingredientSearch.toLowerCase()) || i.aliases.some(a => a.toLowerCase().includes(ingredientSearch.toLowerCase()))).length} / ${ingredients.length}`
-                          : `${ingredients.length} ingrediente${ingredients.length !== 1 ? "s" : ""}`
-                        }
-                      </span>
+                    {/* Category filter */}
+                    {uniqueCategories.length > 0 && (
+                      <div className="relative">
+                        <select
+                          value={ingredientCategoryFilter}
+                          onChange={e => setIngredientCategoryFilter(e.target.value)}
+                          className="pl-3 pr-7 py-1.5 text-xs rounded-[var(--radius-sm)] border appearance-none cursor-pointer focus:outline-none"
+                          style={{
+                            background: "var(--surface)",
+                            borderColor: ingredientCategoryFilter ? "var(--blue)" : "var(--border)",
+                            color: ingredientCategoryFilter ? "var(--text)" : "var(--text-muted)",
+                            transition: "border-color 0.15s ease",
+                          }}>
+                          <option value="">Categoría</option>
+                          {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ color: "var(--text-dim)" }}>
+                          <path d="M1.5 3.5l3.5 3 3.5-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    )}
+
+                    {/* Spacer */}
+                    <div className="flex-1 min-w-0" />
+
+                    {/* Count */}
+                    <span className="text-[10px] flex-shrink-0 tabular-nums" style={{ color: "var(--text-muted)" }}>
+                      {filteredIngredients.length}{(q || ingredientCategoryFilter) ? ` / ${ingredients.length}` : ""} ingrediente{ingredients.length !== 1 ? "s" : ""}
+                    </span>
+
+                    {/* Identify mode button */}
+                    {unmatchedCount > 0 && (
+                      <button type="button"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium flex-shrink-0"
+                        style={{ background: "var(--blue-glow)", color: "var(--blue)", border: "1px solid color-mix(in srgb, var(--blue) 25%, transparent)" }}
+                        onClick={() => setNormalizeMode("identify")}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        Identificar {unmatchedCount}
+                      </button>
                     )}
 
                     {/* Edit mode controls */}
@@ -1866,9 +1675,8 @@ export default function ComprasPage() {
                           <button type="button"
                             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium flex-shrink-0"
                             style={{ background: "#fee2e2", color: "#b91c1c" }}
-                            onClick={() => setConfirmDeleteIngredients(true)}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                            onClick={() => setConfirmDeleteIngredients(true)}>
+                            <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
                               <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9M6.5 8v4M9.5 8v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
                             Eliminar ({selectedIngredientIds.size})
@@ -1877,118 +1685,380 @@ export default function ComprasPage() {
                         <button type="button"
                           className="px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium flex-shrink-0"
                           style={{
-                            background: ingredientEditMode ? "var(--surface)" : "var(--blue-glow)",
-                            color: ingredientEditMode ? "var(--text-muted)" : "var(--blue)",
-                            border: "1px solid",
-                            borderColor: ingredientEditMode ? "var(--border)" : "color-mix(in srgb, var(--blue) 25%, transparent)",
+                            background: ingredientEditMode ? "var(--surface)" : "var(--surface-raised)",
+                            color: ingredientEditMode ? "var(--text)" : "var(--text-muted)",
+                            border: "1px solid var(--border)",
                           }}
-                          onClick={() => { setIngredientEditMode(m => !m); setSelectedIngredientIds(new Set()); }}
-                        >
+                          onClick={() => { setIngredientEditMode(m => !m); setSelectedIngredientIds(new Set()); setExpandedIngredientId(null); }}>
                           {ingredientEditMode ? "Cancelar" : "Editar"}
                         </button>
                       </>
                     )}
                   </div>
 
-                  {/* Card grid */}
+                  {/* ── Ingredient list table ── */}
                   {ingredients.length === 0 ? (
-                    <div className="rounded-[var(--radius)] border py-12 text-center"
+                    <div className="rounded-[var(--radius)] border py-14 text-center"
                       style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                       <p className="text-sm" style={{ color: "var(--text-dim)" }}>Ningún ingrediente registrado aún</p>
                     </div>
-                  ) : (() => {
-                    const q = ingredientSearch.trim().toLowerCase();
-                    const filtered = q
-                      ? ingredients.filter(i =>
-                          i.canonical_name.toLowerCase().includes(q) ||
-                          i.aliases.some(a => a.toLowerCase().includes(q))
-                        )
-                      : ingredients;
-
-                    if (filtered.length === 0) return (
-                      <div className="rounded-[var(--radius)] border py-10 text-center"
-                        style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                        <p className="text-sm" style={{ color: "var(--text-dim)" }}>Sin resultados para "{ingredientSearch}"</p>
+                  ) : filteredIngredients.length === 0 ? (
+                    <div className="rounded-[var(--radius)] border py-10 text-center"
+                      style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                      <p className="text-sm" style={{ color: "var(--text-dim)" }}>Sin resultados</p>
+                      <button type="button" className="mt-2 text-xs underline" style={{ color: "var(--text-muted)" }}
+                        onClick={() => { setIngredientSearch(""); setIngredientCategoryFilter(""); }}>
+                        Limpiar filtros
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="rounded-[var(--radius)] border overflow-hidden"
+                      style={{ borderColor: "var(--border)" }}>
+                      {/* Column headers */}
+                      <div className="grid px-4 py-2 border-b select-none"
+                        style={{
+                          gridTemplateColumns: "1fr 130px 56px 28px",
+                          borderColor: "var(--border)",
+                          background: "var(--surface-raised)",
+                        }}>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Ingrediente</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Categoría</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Unidad</span>
+                        <span />
                       </div>
-                    );
 
-                    return (
-                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
-                        {filtered.map((ing, idx) => {
-                          const checked = selectedIngredientIds.has(ing.id);
+                      {/* Rows */}
+                      <div style={{ background: "var(--surface)" }}>
+                        {filteredIngredients.map((ing) => {
+                          const isExpanded = expandedIngredientId === ing.id && !ingredientEditMode;
+                          const isChecked = selectedIngredientIds.has(ing.id);
                           return (
-                            <div key={ing.id}
-                              className={`ing-card rounded-[var(--radius)] border p-3 ${ingredientEditMode ? "edit-mode" : ""}`}
-                              style={{
-                                background: checked ? "var(--blue-glow)" : "var(--surface)",
-                                borderColor: checked
-                                  ? "color-mix(in srgb, var(--blue) 50%, transparent)"
-                                  : "var(--border)",
-                                animationDelay: `${Math.min(idx * 25, 400)}ms`,
-                              }}
-                              onClick={() => {
-                                if (ingredientEditMode) {
-                                  setSelectedIngredientIds(prev => {
-                                    const next = new Set(prev);
-                                    checked ? next.delete(ing.id) : next.add(ing.id);
-                                    return next;
-                                  });
-                                } else {
-                                  setEditModalIngredient(ing);
-                                }
-                              }}
-                            >
-                              {/* Card header */}
-                              <div className="flex items-start justify-between gap-1.5 mb-1">
-                                <p className="text-sm font-semibold leading-snug min-w-0"
-                                  style={{ color: "var(--text)", wordBreak: "break-word" }}>
+                            <div key={ing.id} className="border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
+                              {/* Row */}
+                              <div
+                                className="ing-row grid px-4 py-2.5"
+                                style={{
+                                  gridTemplateColumns: "1fr 130px 56px 28px",
+                                  background: isChecked ? "var(--blue-glow)" : isExpanded ? "var(--surface-raised)" : undefined,
+                                }}
+                                onClick={() => {
+                                  if (ingredientEditMode) {
+                                    setSelectedIngredientIds(prev => {
+                                      const next = new Set(prev);
+                                      isChecked ? next.delete(ing.id) : next.add(ing.id);
+                                      return next;
+                                    });
+                                  } else {
+                                    setExpandedIngredientId(isExpanded ? null : ing.id);
+                                  }
+                                }}>
+                                {/* Name + aliases */}
+                                <div className="min-w-0 flex items-center gap-2 pr-3">
                                   {ingredientEditMode && (
-                                    <input type="checkbox" readOnly checked={checked}
-                                      className="mr-1.5 align-middle accent-[#0450A9]" />
+                                    <input type="checkbox" readOnly checked={isChecked}
+                                      className="flex-shrink-0 accent-[#0450A9]" />
                                   )}
-                                  {ing.canonical_name}
-                                </p>
-                                {ing.default_unit && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded font-mono flex-shrink-0 mt-0.5"
-                                    style={{ background: "var(--blue-glow)", color: "var(--blue)" }}>
-                                    {ing.default_unit}
-                                  </span>
-                                )}
-                              </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>
+                                      {ing.canonical_name}
+                                    </p>
+                                    {ing.aliases.length > 0 && (
+                                      <p className="text-[10px] truncate mt-0.5" style={{ color: "var(--text-muted)" }}>
+                                        {ing.aliases.join(" · ")}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
 
-                              {/* Category */}
-                              {ing.category && (
-                                <p className="text-[10px] mb-1.5" style={{ color: "var(--text-muted)" }}>{ing.category}</p>
-                              )}
-
-                              {/* Aliases */}
-                              {ing.aliases.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1.5">
-                                  {ing.aliases.slice(0, 4).map((a) => (
-                                    <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-full"
-                                      style={{ background: "var(--surface-raised)", color: "var(--text-dim)" }}>
-                                      {a}
-                                    </span>
-                                  ))}
-                                  {ing.aliases.length > 4 && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full"
-                                      style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
-                                      +{ing.aliases.length - 4}
+                                {/* Category */}
+                                <div className="flex items-center">
+                                  {ing.category && (
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full truncate max-w-full"
+                                      style={{ background: "var(--blue-glow)", color: "var(--blue)" }}>
+                                      {ing.category}
                                     </span>
                                   )}
                                 </div>
-                              )}
+
+                                {/* Unit */}
+                                <div className="flex items-center">
+                                  {ing.default_unit && (
+                                    <span className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
+                                      {ing.default_unit}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Chevron */}
+                                {!ingredientEditMode && (
+                                  <div className="flex items-center justify-center">
+                                    <svg className="ing-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                                      style={{ color: "var(--text-dim)", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+                                      <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Inline edit (expand) */}
+                              <div className="ing-row-expand" style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}>
+                                <div>
+                                  <div className="border-t" style={{ borderColor: "var(--border-subtle)", background: "var(--surface)" }}>
+                                    <div className="p-5">
+                                      <IngredientEditRow
+                                        ingredient={ing}
+                                        onClose={() => setExpandedIngredientId(null)}
+                                        onSaved={(updated) => {
+                                          setIngredients(prev => prev.map(i => i.id === updated.id ? updated : i));
+                                          setExpandedIngredientId(null);
+                                        }}
+                                        onDeleted={(id) => {
+                                          setIngredients(prev => prev.filter(i => i.id !== id));
+                                          setExpandedIngredientId(null);
+                                          fetchNormalize();
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           );
                         })}
                       </div>
-                    );
-                  })()}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            {!normalizeLoading && normalizeMode === "identify" && (() => {
+              const identifySearch = ingredientSearch.trim().toLowerCase();
+              const identifyFiltered = identifySearch
+                ? ingredients.filter(i =>
+                    i.canonical_name.toLowerCase().includes(identifySearch) ||
+                    i.aliases.some(a => a.toLowerCase().includes(identifySearch))
+                  )
+                : ingredients;
+
+              return (
+                <div>
+                  {/* Identify mode header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <button type="button"
+                        className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-[var(--radius-sm)]"
+                        style={{ background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}
+                        onClick={() => { setNormalizeMode("list"); setIngredientSearch(""); }}>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M7.5 2L3 6l4.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Salir
+                      </button>
+                      <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>Modo identificar</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full"
+                        style={{ background: "var(--blue-glow)", color: "var(--blue)" }}>
+                        {unmatched.length} sin identificar
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* AI loading bar */}
+                  {aiLoading && (
+                    <div className="mb-3 px-4 py-2.5 rounded-[var(--radius-sm)] border"
+                      style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs" style={{ color: "var(--text-muted)" }}>Analizando con IA…</span>
+                        <span className="text-xs font-medium" style={{ color: "var(--blue)" }}>{aiProgress}%</span>
+                      </div>
+                      <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+                        <div className="h-full rounded-full" style={{ width: `${aiProgress}%`, background: "var(--blue)", transition: "width 0.4s ease-out" }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 50/50 split */}
+                  <div className="grid grid-cols-2 gap-3" style={{ height: "calc(100vh - 280px)", minHeight: 400 }}>
+
+                    {/* Left: unidentified */}
+                    <div className="rounded-[var(--radius)] border overflow-hidden flex flex-col"
+                      style={{ borderColor: "var(--border)" }}>
+                      <div className="px-4 py-3 border-b flex items-center justify-between flex-shrink-0"
+                        style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>Sin identificar</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full tabular-nums"
+                            style={{ background: "var(--surface)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
+                            {unmatched.length}
+                          </span>
+                        </div>
+                        {!aiSuggestions && unmatched.length > 0 && (
+                          <button type="button"
+                            disabled={aiLoading}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-sm)] text-xs font-medium"
+                            style={{ background: "var(--blue-glow)", color: "var(--blue)", border: "1px solid color-mix(in srgb, var(--blue) 25%, transparent)", opacity: aiLoading ? 0.6 : 1 }}
+                            onClick={async () => {
+                              setAiLoading(true); setAiProgress(0);
+                              const startTime = Date.now();
+                              const progressInterval = setInterval(() => {
+                                const elapsed = (Date.now() - startTime) / 1000;
+                                setAiProgress(Math.min(85, Math.round(85 * (1 - Math.exp(-elapsed / 20)))));
+                              }, 300);
+                              try {
+                                const res = await fetch("/api/compras/ingredients/suggest-batch", {
+                                  method: "POST", headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ items: unmatched }),
+                                });
+                                let data: { suggestions?: AISuggestion[]; error?: string };
+                                try { data = await res.json(); } catch { alert("Error: respuesta no válida"); return; }
+                                if (res.ok) {
+                                  setAiProgress(100);
+                                  const suggestions = data.suggestions ?? [];
+                                  if (suggestions.length === 0) { alert("La IA no devolvió sugerencias."); }
+                                  else { setAiSuggestions(suggestions); setAiChecked(new Set(suggestions.map((_: AISuggestion, i: number) => i))); }
+                                } else { alert(`Error ${res.status}: ${data.error ?? "Error desconocido"}`); }
+                              } catch (err: unknown) {
+                                alert(`Error de red: ${err instanceof Error ? err.message : String(err)}`);
+                              } finally { clearInterval(progressInterval); setAiLoading(false); setAiProgress(0); }
+                            }}>
+                            {aiLoading ? (
+                              <><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />Analizando...</>
+                            ) : (
+                              <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z" /></svg>Sugerir con IA</>
+                            )}
+                          </button>
+                        )}
+                        {aiSuggestions && (
+                          <button type="button"
+                            className="text-xs px-2 py-1 rounded"
+                            style={{ color: "var(--text-muted)", background: "var(--surface)", border: "1px solid var(--border)" }}
+                            onClick={() => { setAiSuggestions(null); setAiChecked(new Set()); }}>
+                            Volver
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="overflow-y-auto flex-1" style={{ background: "var(--surface)" }}>
+                        {aiSuggestions ? (
+                          <>
+                            <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
+                              {aiSuggestions.map((s, i) => {
+                                const checked = aiChecked.has(i);
+                                return (
+                                  <div key={i}
+                                    className="px-4 py-2.5 cursor-pointer transition-colors duration-100"
+                                    style={{ background: checked ? "var(--blue-glow)" : undefined }}
+                                    onClick={() => setAiChecked(prev => {
+                                      const next = new Set(prev);
+                                      checked ? next.delete(i) : next.add(i); return next;
+                                    })}>
+                                    <div className="flex items-start gap-2">
+                                      <input type="checkbox" readOnly checked={checked} className="mt-0.5 flex-shrink-0 accent-[#0450A9]" />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{s.canonicalName}</p>
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
+                                            style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>{s.matchCount} art.</span>
+                                        </div>
+                                        {s.category && <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{s.category}</p>}
+                                        <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--text-dim)" }}>{s.aliases.join(" · ")}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div className="sticky bottom-0 px-4 py-3 border-t flex items-center justify-between gap-3"
+                              style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
+                              <span className="text-xs" style={{ color: "var(--text-muted)" }}>{aiChecked.size} / {aiSuggestions.length}</span>
+                              <Button size="sm" loading={aiConfirming} disabled={aiChecked.size === 0}
+                                onClick={async () => {
+                                  setAiConfirming(true);
+                                  try {
+                                    const selected = aiSuggestions.filter((_, i) => aiChecked.has(i));
+                                    for (const s of selected) {
+                                      await fetch("/api/compras/ingredients", {
+                                        method: "POST", headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ canonicalName: s.canonicalName, aliases: s.aliases, category: s.category || null }),
+                                      });
+                                    }
+                                    setAiSuggestions(null); setAiChecked(new Set()); fetchNormalize();
+                                  } finally { setAiConfirming(false); }
+                                }}>
+                                Confirmar ({aiChecked.size})
+                              </Button>
+                            </div>
+                          </>
+                        ) : unmatched.length === 0 ? (
+                          <div className="flex items-center justify-center h-full">
+                            <p className="text-sm" style={{ color: "var(--text-dim)" }}>Todo identificado ✓</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
+                            {unmatched.map((u) => (
+                              <div key={u.description} className="flex items-center justify-between gap-3 px-4 py-2.5"
+                                style={{ transition: "background 0.1s ease" }}>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm truncate" style={{ color: "var(--text)" }}>{u.description}</p>
+                                  <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{u.count} artículo{u.count !== 1 ? "s" : ""}</p>
+                                </div>
+                                <div className="flex gap-1.5 flex-shrink-0">
+                                  <button type="button"
+                                    className="px-2 py-1 rounded text-xs font-medium"
+                                    style={{ background: "var(--blue-glow)", color: "var(--blue)" }}
+                                    onClick={() => { setCreateIngredientFor(u.description); setMergeFor(null); }}>
+                                    Nuevo
+                                  </button>
+                                  <button type="button"
+                                    className="px-2 py-1 rounded text-xs font-medium"
+                                    style={{ background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}
+                                    onClick={() => { setMergeFor(u.description); setCreateIngredientFor(null); setMergingIntoId(""); }}>
+                                    Unir
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: ingredients reference */}
+                    <div className="rounded-[var(--radius)] border overflow-hidden flex flex-col"
+                      style={{ borderColor: "var(--border)" }}>
+                      <div className="px-4 py-3 border-b flex-shrink-0"
+                        style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
+                        <div className="relative">
+                          <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ color: "var(--text-muted)" }}>
+                            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                          </svg>
+                          <input type="text" placeholder="Buscar ingrediente…"
+                            value={ingredientSearch}
+                            onChange={e => setIngredientSearch(e.target.value)}
+                            className="w-full pl-8 pr-3 py-1.5 text-sm rounded-[var(--radius-sm)] border focus:outline-none"
+                            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }} />
+                        </div>
+                      </div>
+                      <div className="overflow-y-auto flex-1 divide-y" style={{ borderColor: "var(--border-subtle)", background: "var(--surface)" }}>
+                        {identifyFiltered.length === 0 ? (
+                          <div className="flex items-center justify-center h-full">
+                            <p className="text-sm" style={{ color: "var(--text-dim)" }}>Sin resultados</p>
+                          </div>
+                        ) : identifyFiltered.map((ing) => (
+                          <div key={ing.id} className="px-4 py-2.5">
+                            <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{ing.canonical_name}</p>
+                            {ing.category && <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{ing.category}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </>
-            )}
+              );
+            })()}
           </div>
         )}
+
 
       </div>
 
