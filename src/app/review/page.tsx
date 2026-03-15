@@ -163,7 +163,7 @@ export default function ReviewPage() {
     <Shell>
       {/* Sticky review header — inside content area */}
       <div className="sticky top-0 z-20 px-4 py-3 flex items-center justify-between gap-4"
-        style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
+        style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => { saveDraft(invoices); router.push("/upload"); }}
@@ -176,11 +176,11 @@ export default function ReviewPage() {
             </svg>
           </button>
           <div className="flex items-center gap-2">
-            <span className="font-display text-lg font-bold" style={{ color: "var(--text)" }}>
+            <span className="font-display text-xl font-bold" style={{ color: "var(--text)" }}>
               Revisar facturas
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-full border font-medium"
-              style={{ color: "var(--text-muted)", borderColor: "var(--border)", background: "var(--surface-raised)" }}>
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white"
+              style={{ background: "var(--pink-dark)" }}>
               {invoices.length}
             </span>
           </div>
@@ -203,9 +203,10 @@ export default function ReviewPage() {
           <div className="flex items-center gap-4" style={{ color: "var(--text-muted)" }}>
             <span>{invoices.length} factura{invoices.length !== 1 ? "s" : ""}</span>
             <span className="w-px h-4" style={{ background: "var(--border)" }} />
-            <span>
-              Total:{" "}
-              <span className="font-semibold" style={{ color: "var(--blue)" }}>
+            <span className="flex items-center gap-1.5">
+              Total:
+              <span className="px-2 py-0.5 rounded-[var(--radius-sm)] text-sm font-bold"
+                style={{ background: "var(--blue-light)", color: "var(--blue)" }}>
                 {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(
                   invoices.reduce((sum, inv) => sum + inv.total, 0)
                 )}
@@ -222,11 +223,11 @@ export default function ReviewPage() {
           <select
             value={restaurant}
             onChange={(e) => updateRestaurant(e.target.value as Restaurant)}
-            className="text-xs font-medium px-2.5 py-1.5 rounded-[var(--radius-sm)] border appearance-none cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2"
+            className="text-xs font-semibold px-2.5 py-1.5 rounded-[var(--radius-sm)] border appearance-none cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2"
             style={{
-              background: "var(--surface)",
-              borderColor: "var(--border)",
-              color: "var(--text)",
+              background: "var(--blue-light)",
+              borderColor: "var(--blue-light)",
+              color: "var(--blue)",
             }}
           >
             {RESTAURANT_OPTIONS.map((opt) => (
@@ -274,15 +275,23 @@ export default function ReviewPage() {
           </p>
         )}
 
-        <Button
-          size="lg"
-          className="w-full animate-fade-up"
-          disabled={!allValid || submitting}
-          loading={submitting}
-          onClick={() => doSubmit(false)}
-        >
-          Enviar {invoices.length} factura{invoices.length !== 1 ? "s" : ""} a Google Sheets — {RESTAURANT_LABELS[restaurant]}
-        </Button>
+        <div className="border-t pt-4 animate-fade-up" style={{ borderColor: "var(--border)" }}>
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={!allValid || submitting}
+            loading={submitting}
+            onClick={() => doSubmit(false)}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="flex-shrink-0" style={{ opacity: 0.85 }}>
+              <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/>
+              <line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" strokeWidth="1.8"/>
+              <line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" strokeWidth="1.8"/>
+              <line x1="9" y1="9" x2="9" y2="21" stroke="currentColor" strokeWidth="1.8"/>
+            </svg>
+            Enviar {invoices.length} factura{invoices.length !== 1 ? "s" : ""} a Google Sheets — {RESTAURANT_LABELS[restaurant]}
+          </Button>
+        </div>
       </div>
 
       <DuplicateWarningModal

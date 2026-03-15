@@ -54,28 +54,34 @@ export default function InvoiceCard({
 
   return (
     <div
-      className="rounded-[var(--radius)] border transition-all duration-200"
+      className="rounded-[var(--radius)] border border-l-[3px] transition-all duration-200"
       style={{
         background: "var(--surface)",
         borderColor: hasRequiredGaps ? "var(--warning)" : "var(--border)",
+        borderLeftColor: hasRequiredGaps ? "var(--warning)" : "var(--pink-dark)",
         boxShadow: "var(--shadow-card)",
         animationDelay: `${index * 0.05}s`,
       }}
     >
       {/* Header */}
       <div
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none rounded-t-[calc(var(--radius)-1px)]"
         onClick={() => setExpanded((v) => !v)}
+        style={{
+          background: hasRequiredGaps
+            ? "linear-gradient(to bottom, rgba(217,119,6,0.05) 0%, transparent 100%)"
+            : "var(--surface-raised)",
+        }}
       >
         {/* Number badge */}
-        <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white"
-          style={{ background: "var(--pink-dark)" }}>
+        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+          style={{ background: "linear-gradient(135deg, var(--pink-dark) 0%, #A86362 100%)", boxShadow: "0 1px 4px rgba(201,127,126,0.4)" }}>
           {index + 1}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>
+            <span className="text-[15px] font-semibold truncate" style={{ color: "var(--text)" }}>
               {invoice.supplier || "Proveedor desconocido"}
             </span>
             {invoice.invoiceNumber && (
@@ -95,7 +101,7 @@ export default function InvoiceCard({
           </div>
           <div className="flex items-center gap-2 flex-wrap mt-0.5">
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>{invoice.invoiceDate}</span>
-            <span className="text-xs font-semibold" style={{ color: "var(--blue)" }}>
+            <span className="text-sm font-bold" style={{ color: "var(--blue)" }}>
               {formatCurrency(invoice.total)}
             </span>
             <ConfidenceBadge confidence={invoice.extractionConfidence} />

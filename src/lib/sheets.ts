@@ -81,17 +81,22 @@ export async function appendToSheet(
   const sheets = getSheetsClient();
   const row = invoiceToSheetRow(invoice);
 
-  // Read column A from row 8 downward to find the first empty cell
+  // Read columns A and B from row 8 to find the last row with any content.
+  // Checking both columns handles manually-entered rows that leave column A blank.
   const readResponse = await withRetry(() => sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${SHEET_TAB}!A8:A`,
+    range: `${SHEET_TAB}!A8:B`,
   }));
 
-  const colA = (readResponse.data.values ?? []) as string[][];
-  // Find the first index where A is blank
-  let emptyIndex = colA.findIndex((r) => !r[0] || r[0].trim() === "");
-  if (emptyIndex === -1) emptyIndex = colA.length; // all filled — go to next row
-  const targetRow = 8 + emptyIndex; // 1-indexed sheet row
+  const rows = (readResponse.data.values ?? []) as string[][];
+  // Find the LAST row with any content in A or B, then append after it
+  let lastFilledIndex = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const aVal = rows[i][0]?.trim() ?? "";
+    const bVal = rows[i][1]?.trim() ?? "";
+    if (aVal !== "" || bVal !== "") lastFilledIndex = i;
+  }
+  const targetRow = 8 + lastFilledIndex + 1; // 1-indexed sheet row after last filled
 
   await withRetry(() => sheets.spreadsheets.values.update({
     spreadsheetId,
