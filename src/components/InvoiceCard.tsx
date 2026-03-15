@@ -54,18 +54,17 @@ export default function InvoiceCard({
 
   return (
     <div
-      className="rounded-[var(--radius)] border border-l-[3px] transition-all duration-200"
+      className="rounded-[var(--radius)] border transition-all duration-200"
       style={{
         background: "var(--surface)",
         borderColor: hasRequiredGaps ? "var(--warning)" : "var(--border)",
-        borderLeftColor: hasRequiredGaps ? "var(--warning)" : "var(--pink-dark)",
         boxShadow: "var(--shadow-card)",
         animationDelay: `${index * 0.05}s`,
       }}
     >
       {/* Header */}
       <div
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none rounded-t-[calc(var(--radius)-1px)]"
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
         onClick={() => setExpanded((v) => !v)}
         style={{
           background: hasRequiredGaps
@@ -74,8 +73,8 @@ export default function InvoiceCard({
         }}
       >
         {/* Number badge */}
-        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-          style={{ background: "linear-gradient(135deg, var(--pink-dark) 0%, #A86362 100%)", boxShadow: "0 1px 4px rgba(201,127,126,0.4)" }}>
+        <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white"
+          style={{ background: "var(--pink-dark)" }}>
           {index + 1}
         </div>
 
