@@ -112,7 +112,7 @@ export default function InvoiceCard({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setConfirmingRemove(true); }}
-              className="w-7 h-7 rounded-md flex items-center justify-center transition-all duration-150"
+              className="w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-all duration-150"
               style={{ color: "var(--text-dim)" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--danger)"; (e.currentTarget as HTMLElement).style.background = "var(--danger-dim)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = ""; }}
@@ -146,7 +146,7 @@ export default function InvoiceCard({
           )}
           <button
             type="button"
-            className="w-7 h-7 rounded-md flex items-center justify-center transition-all duration-150"
+            className="w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-all duration-150"
             style={{ color: "var(--text-muted)" }}
             aria-label={expanded ? "Colapsar" : "Expandir"}
             onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}

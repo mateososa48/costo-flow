@@ -56,7 +56,7 @@ export default function Modal({
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-md transition-colors duration-150"
+                className="p-2.5 rounded-md transition-colors duration-150"
                 style={{ color: "var(--text-muted)" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface-raised)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ""; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}

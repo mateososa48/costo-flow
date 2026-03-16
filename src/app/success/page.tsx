@@ -112,12 +112,12 @@ export default function SuccessPage() {
           </div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button variant="secondary" size="lg" className="flex-1"
             onClick={() => { sessionStorage.removeItem("submitResult"); router.push("/upload"); }}>
             Subir más facturas
           </Button>
-          <Button variant="ghost" size="lg" onClick={() => router.push("/history")}>
+          <Button variant="ghost" size="lg" className="flex-1 sm:flex-none" onClick={() => router.push("/history")}>
             Ver historial
           </Button>
         </div>

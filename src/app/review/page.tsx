@@ -199,10 +199,10 @@ export default function ReviewPage() {
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
         {/* Stats */}
-        <div className="flex items-center justify-between gap-4 text-sm animate-fade-up">
-          <div className="flex items-center gap-4" style={{ color: "var(--text-muted)" }}>
+        <div className="flex items-center justify-between gap-2 text-sm animate-fade-up">
+          <div className="flex flex-wrap items-center gap-2" style={{ color: "var(--text-muted)" }}>
             <span>{invoices.length} factura{invoices.length !== 1 ? "s" : ""}</span>
-            <span className="w-px h-4" style={{ background: "var(--border)" }} />
+            <span className="w-px h-4 hidden sm:block" style={{ background: "var(--border)" }} />
             <span className="flex items-center gap-1.5">
               Total:
               <span className="px-2 py-0.5 rounded-[var(--radius-sm)] text-sm font-bold"
@@ -213,17 +213,14 @@ export default function ReviewPage() {
               </span>
             </span>
             {pendingCount > 0 && (
-              <>
-                <span className="w-px h-4" style={{ background: "var(--border)" }} />
-                <span style={{ color: "var(--warning)" }}>{pendingCount} sin categoría</span>
-              </>
+              <span style={{ color: "var(--warning)" }}>{pendingCount} sin categoría</span>
             )}
           </div>
           {/* Restaurant selector */}
           <select
             value={restaurant}
             onChange={(e) => updateRestaurant(e.target.value as Restaurant)}
-            className="text-xs font-semibold px-2.5 py-1.5 rounded-[var(--radius-sm)] border appearance-none cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2"
+            className="flex-shrink-0 text-xs font-semibold px-2.5 py-1.5 rounded-[var(--radius-sm)] border appearance-none cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2"
             style={{
               background: "var(--blue-light)",
               borderColor: "var(--blue-light)",

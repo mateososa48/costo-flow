@@ -653,8 +653,8 @@ export default function ComprasPage() {
             <span className="w-px h-4" style={{ background: "var(--border)" }} />
             <select
               value={selectedMonth}
-              className="px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
-              style={{ background: "var(--surface)", borderColor: selectedMonth ? "var(--blue)" : "var(--border)", color: selectedMonth ? "var(--text)" : "var(--text-dim)", minWidth: 160 }}
+              className="w-full sm:w-auto sm:min-w-[160px] px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: selectedMonth ? "var(--blue)" : "var(--border)", color: selectedMonth ? "var(--text)" : "var(--text-dim)" }}
               onChange={(e) => handleMonthSelect(e.target.value)}
             >
               <option value="">Mes</option>
@@ -664,8 +664,8 @@ export default function ComprasPage() {
             </select>
             <select
               value={selectedWeek}
-              className="px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
-              style={{ background: "var(--surface)", borderColor: selectedWeek ? "var(--blue)" : "var(--border)", color: selectedWeek ? "var(--text)" : "var(--text-dim)", minWidth: 160 }}
+              className="w-full sm:w-auto sm:min-w-[160px] px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: selectedWeek ? "var(--blue)" : "var(--border)", color: selectedWeek ? "var(--text)" : "var(--text-dim)" }}
               onChange={(e) => handleWeekSelect(e.target.value)}
             >
               <option value="">Semana</option>
@@ -673,7 +673,7 @@ export default function ComprasPage() {
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
-            <div className="flex items-center gap-1 ml-1">
+            <div className="flex items-center gap-1 w-full sm:w-auto">
               <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "var(--text-muted)" }}>Desde</span>
               <input
                 type="date"
@@ -1494,7 +1494,7 @@ export default function ComprasPage() {
 
                   {/* ── Restaurant split (if multiple) ── */}
                   {d.spendByRestaurant.length > 1 && (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {d.spendByRestaurant.map((r) => (
                         <div key={r.restaurant} className="rounded-[var(--radius)] border p-3"
                           style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
@@ -1538,6 +1538,8 @@ export default function ComprasPage() {
               .ing-chevron {
                 transition: transform 0.2s ease;
               }
+              .ing-grid { grid-template-columns: 1fr 28px; }
+              @media (min-width: 640px) { .ing-grid { grid-template-columns: 1fr 130px 56px 28px; } }
             `}</style>
 
             {normalizeLoading && (
@@ -1683,15 +1685,14 @@ export default function ComprasPage() {
                     <div className="rounded-[var(--radius)] border overflow-hidden"
                       style={{ borderColor: "var(--border)" }}>
                       {/* Column headers */}
-                      <div className="grid px-4 py-2 border-b select-none"
+                      <div className="ing-grid grid px-4 py-2 border-b select-none"
                         style={{
-                          gridTemplateColumns: "1fr 130px 56px 28px",
                           borderColor: "var(--border)",
                           background: "var(--surface-raised)",
                         }}>
                         <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Ingrediente</span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Categoría</span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Unidad</span>
+                        <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Categoría</span>
+                        <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Unidad</span>
                         <span />
                       </div>
 
@@ -1704,9 +1705,8 @@ export default function ComprasPage() {
                             <div key={ing.id} className="border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
                               {/* Row */}
                               <div
-                                className="ing-row grid px-4 py-2.5"
+                                className="ing-row ing-grid grid px-4 py-2.5"
                                 style={{
-                                  gridTemplateColumns: "1fr 130px 56px 28px",
                                   background: isChecked ? "var(--blue-glow)" : isExpanded ? "var(--surface-raised)" : undefined,
                                 }}
                                 onClick={() => {
@@ -1739,7 +1739,7 @@ export default function ComprasPage() {
                                 </div>
 
                                 {/* Category */}
-                                <div className="flex items-center">
+                                <div className="hidden sm:flex items-center">
                                   {ing.category && (
                                     <span className="text-[10px] px-2 py-0.5 rounded-full truncate max-w-full"
                                       style={{ background: "var(--blue-glow)", color: "var(--blue)" }}>
@@ -1749,7 +1749,7 @@ export default function ComprasPage() {
                                 </div>
 
                                 {/* Unit */}
-                                <div className="flex items-center">
+                                <div className="hidden sm:flex items-center">
                                   {ing.default_unit && (
                                     <span className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
                                       {ing.default_unit}

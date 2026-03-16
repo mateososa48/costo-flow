@@ -142,7 +142,12 @@ export default function UploadZone({ files, onChange }: UploadZoneProps) {
         </div>
         <div>
           <p className="text-sm font-medium" style={{ color: "var(--text)" }}>
-            {dragActive ? "Suelta aquí" : "Arrastra facturas o haz clic"}
+            {dragActive ? "Suelta aquí" : (
+              <>
+                <span className="hidden sm:inline">Arrastra facturas o </span>
+                <span>Toca para seleccionar</span>
+              </>
+            )}
           </p>
           <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
             PDF, JPG, PNG, WEBP, HEIC — varios archivos
@@ -203,7 +208,7 @@ export default function UploadZone({ files, onChange }: UploadZoneProps) {
                 <button
                   type="button"
                   onClick={() => removeFile(id)}
-                  className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-150 opacity-0 group-hover:opacity-100"
+                  className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center transition-all duration-150 sm:opacity-0 sm:group-hover:opacity-100"
                   style={{ color: "var(--text-dim)" }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--danger)"; (e.currentTarget as HTMLElement).style.background = "var(--danger-dim)"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = ""; }}
