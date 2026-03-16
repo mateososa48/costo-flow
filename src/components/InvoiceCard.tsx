@@ -112,10 +112,8 @@ export default function InvoiceCard({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setConfirmingRemove(true); }}
-              className="w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-all duration-150"
+              className="w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-all duration-150 hover-danger"
               style={{ color: "var(--text-dim)" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--danger)"; (e.currentTarget as HTMLElement).style.background = "var(--danger-dim)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = ""; }}
               aria-label="Eliminar factura"
             >
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -396,11 +394,9 @@ function LineItemsSection({
               </div>
               <button
                 type="button"
-                className="self-center w-6 h-6 rounded flex items-center justify-center transition-colors duration-150"
+                className="self-center w-6 h-6 rounded flex items-center justify-center transition-colors duration-150 hover-danger"
                 style={{ color: "var(--text-dim)" }}
                 onClick={() => removeItem(idx)}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--danger)"; (e.currentTarget as HTMLElement).style.background = "var(--danger-dim)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = ""; }}
                 aria-label="Eliminar artículo"
               >
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -415,8 +411,6 @@ function LineItemsSection({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors duration-150"
             style={{ color: "var(--blue)", background: "var(--blue-light)" }}
             onClick={addItem}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--blue)"; (e.currentTarget as HTMLElement).style.color = "white"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--blue-light)"; (e.currentTarget as HTMLElement).style.color = "var(--blue)"; }}
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M5 1v8M1 5h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />

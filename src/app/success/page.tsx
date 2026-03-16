@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
+import StepIndicator from "@/components/StepIndicator";
 import Button from "@/components/ui/Button";
 import type { SubmitApiResponse } from "@/types";
 
@@ -38,6 +39,7 @@ export default function SuccessPage() {
   return (
     <Shell>
       <div className="max-w-xl mx-auto px-4 py-12 md:py-16 space-y-6 animate-fade-up">
+        <StepIndicator currentPath="/success" />
         {/* Success icon */}
         <div className="flex justify-center">
           <div className="w-16 h-16 rounded-full flex items-center justify-center border"
@@ -66,13 +68,11 @@ export default function SuccessPage() {
             {uniqueUrls.map((url, i) => (
               <a
                 key={i} href={url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-3 px-4 py-3.5 transition-colors duration-150"
+                className="flex items-center gap-3 px-4 py-3.5 transition-colors duration-150 hover-surface"
                 style={{
                   background: "var(--surface)",
                   borderBottom: i < uniqueUrls.length - 1 ? `1px solid var(--border)` : undefined,
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface-raised)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface)"; }}
               >
                 <div className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center border"
                   style={{ borderColor: "var(--success)", background: "var(--success-dim)" }}>

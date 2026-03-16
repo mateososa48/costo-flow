@@ -68,6 +68,9 @@ export default function HistoryPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<FilterMode>("all");
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     document.title = "Historial — Aventura Gourmet";
@@ -79,10 +82,30 @@ export default function HistoryPage() {
   }, []);
 
   const filtered = entries.filter((e) => {
-    if (filter === "all") return true;
-    if (filter === "submitted") return e.action === "submitted" || e.action === "duplicate_bypassed";
-    return e.action === filter;
+    // Action filter
+    if (filter === "submitted" && e.action !== "submitted" && e.action !== "duplicate_bypassed") return false;
+    if (filter !== "all" && filter !== "submitted" && e.action !== filter) return false;
+    // Search filter
+    if (search) {
+      const q = search.toLowerCase();
+      const match = e.supplier.toLowerCase().includes(q)
+        || e.user?.toLowerCase().includes(q)
+        || e.invoiceNumber?.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    // Date range filter
+    if (dateFrom) {
+      const entryDate = (e.invoiceDate || e.createdAt).slice(0, 10);
+      if (entryDate < dateFrom) return false;
+    }
+    if (dateTo) {
+      const entryDate = (e.invoiceDate || e.createdAt).slice(0, 10);
+      if (entryDate > dateTo) return false;
+    }
+    return true;
   });
+
+  const hasActiveFilters = !!search || !!dateFrom || !!dateTo;
 
   const totalSubmitted = entries
     .filter((e) => e.action === "submitted" || e.action === "duplicate_bypassed")
@@ -108,19 +131,65 @@ export default function HistoryPage() {
           </p>
         </div>
 
-        {/* Filter tabs */}
+        {/* Filter tabs + search/date */}
         {loaded && entries.length > 0 && (
-          <div className="flex items-center gap-1 border-b" style={{ borderColor: "var(--border)" }}>
-            {filterTabs.map(({ key, label }) => (
-              <button key={key} onClick={() => setFilter(key)}
-                className="px-3 py-2.5 text-xs font-medium border-b-2 -mb-px transition-colors duration-150"
-                style={{
-                  borderColor: filter === key ? "var(--blue)" : "transparent",
-                  color: filter === key ? "var(--blue)" : "var(--text-muted)",
-                }}>
-                {label}
-              </button>
-            ))}
+          <div className="space-y-3">
+            <div className="flex items-center gap-1 border-b" style={{ borderColor: "var(--border)" }}>
+              {filterTabs.map(({ key, label }) => (
+                <button key={key} onClick={() => setFilter(key)}
+                  className="px-3 py-2.5 text-xs font-medium border-b-2 -mb-px transition-colors duration-150"
+                  style={{
+                    borderColor: filter === key ? "var(--blue)" : "transparent",
+                    color: filter === key ? "var(--blue)" : "var(--text-muted)",
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* Search + date range */}
+            <div className="flex flex-wrap gap-2">
+              <div className="relative flex-1 min-w-[180px]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}>
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Buscar proveedor, usuario o # factura..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 rounded-[var(--radius-sm)] border text-sm transition-colors focus:outline-none focus:ring-2"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                />
+              </div>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="px-3 py-2 rounded-[var(--radius-sm)] border text-sm"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                title="Desde"
+              />
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="px-3 py-2 rounded-[var(--radius-sm)] border text-sm"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                title="Hasta"
+              />
+              {hasActiveFilters && (
+                <button
+                  onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); }}
+                  className="px-3 py-2 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+                  style={{ color: "var(--blue)", background: "var(--blue-glow)" }}
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -130,7 +199,7 @@ export default function HistoryPage() {
               style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
           </div>
         ) : entries.length === 0 ? (
-          <div className="animate-fade-up text-center py-20 space-y-3">
+          <div className="animate-fade-up text-center py-20 space-y-4">
             <div className="w-14 h-14 rounded-full mx-auto flex items-center justify-center"
               style={{ background: "var(--surface-raised)" }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -144,6 +213,16 @@ export default function HistoryPage() {
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               Las facturas enviadas, eliminadas y reclasificadas aparecerán aquí
             </p>
+            <a href="/upload"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-[var(--radius-sm)] text-sm font-semibold text-white transition-all duration-150 active:scale-[0.98]"
+              style={{ background: "var(--blue)" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Subir tu primera factura
+            </a>
           </div>
         ) : (
           <>
@@ -218,10 +297,8 @@ export default function HistoryPage() {
                         )}
                         {entry.spreadsheetUrl && (
                           <a href={entry.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
-                            className="p-1.5 rounded-md transition-colors duration-150"
+                            className="p-1.5 rounded-md transition-colors duration-150 hover-blue-bg"
                             style={{ color: "var(--text-muted)" }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--blue)"; (e.currentTarget as HTMLElement).style.background = "var(--blue-glow)"; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; (e.currentTarget as HTMLElement).style.background = ""; }}
                             title="Ver hoja de cálculo"
                           >
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

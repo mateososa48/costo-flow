@@ -200,6 +200,19 @@ input[type="date"] {
   100% { transform: scale(1.6); opacity: 0; }
 }
 
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.8; }
+}
+
+/* ─── Accessible hover utilities (replace onMouseEnter/onMouseLeave) ── */
+.hover-blue:hover       { color: var(--blue) !important; }
+.hover-blue-bg:hover    { background: var(--blue-glow) !important; color: var(--blue) !important; }
+.hover-blue-border:hover { border-color: var(--blue) !important; color: var(--blue) !important; }
+.hover-danger:hover     { color: var(--danger) !important; background: var(--danger-dim) !important; }
+.hover-surface:hover    { background: var(--surface-raised) !important; }
+.hover-blue-row:hover   { background: var(--blue-glow) !important; }
+
 /* ─── Login panel gradient ───────────────────────────────────────────── */
 .login-panel-gradient {
   background: linear-gradient(135deg, #0350A9 0%, #ECB8B7 100%);

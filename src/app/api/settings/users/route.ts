@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { config } from "@/config";
 import { readOverride, writeOverride } from "@/lib/settings-override";
+import log from "@/lib/logger";
 
 export async function GET() {
   const session = await getSession();
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
   try {
     await writeOverride({ adminNames: parsed.data.names });
   } catch (err) {
-    console.error("[settings/users] writeOverride failed:", err);
+    log.error({ ctx: "settings", msg: "writeOverride failed (users)", err });
     return NextResponse.json({ error: "No se pudo guardar. Intenta de nuevo." }, { status: 500 });
   }
   return NextResponse.json({ ok: true });

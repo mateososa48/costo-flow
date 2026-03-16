@@ -5,8 +5,9 @@ import { config } from "@/config";
 import { appendToSheet, checkDuplicates, appendAuditLog } from "@/lib/sheets";
 import dropdownOptions from "../../../../../data/dropdown_options.json";
 import type { ExtractedInvoice, SubmitApiResponse, SubmitResult } from "@/types";
-import getSupabase, { saveInvoiceWithItems } from "@/lib/supabase";
+import getSupabase, { saveInvoiceWithItems, checkDuplicatesViaSupabase } from "@/lib/supabase";
 import { appendAuditEntries } from "@/lib/audit-log";
+import log from "@/lib/logger";
 
 const validConceptos = new Set<string>(dropdownOptions.concepto as string[]);
 const validCuentasPnl = new Set<string>(dropdownOptions.cuentaPnl as string[]);
@@ -107,9 +108,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         continue;
       }
 
-      // Duplicate check
+      // Duplicate check — try Supabase first (fast, indexed), fall back to Sheets
       if (!bypassDuplicates) {
-        const duplicates = await checkDuplicates(spreadsheetId, invoice);
+        let duplicates = await checkDuplicatesViaSupabase(invoice);
+        if (duplicates === null) {
+          // Supabase unavailable or empty — fall back to reading full sheet
+          duplicates = await checkDuplicates(spreadsheetId, invoice);
+        }
         if (duplicates.length > 0) {
           results.push({
             invoiceId: invoice.id,
@@ -142,28 +147,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         spreadsheetUrl,
       });
 
-      // Fire-and-forget: save invoice + line items to Supabase
-      saveInvoiceWithItems(invoice, spreadsheetUrl, user).catch((err) =>
-        console.error(`[supabase] background save failed for ${invoice.id}:`, err)
-      );
+      // Save invoice + line items to Supabase (awaited for data integrity)
+      try {
+        await saveInvoiceWithItems(invoice, spreadsheetUrl, user);
+      } catch (sbErr) {
+        log.error({ ctx: "submit", msg: "Supabase save failed", data: { invoiceId: invoice.id }, err: sbErr });
+        // Don't fail the request — Sheets write already succeeded
+      }
 
-      // Fire-and-forget: durable audit log to Supabase
-      const supabase = getSupabase();
-      if (supabase) {
-        appendAuditEntries(supabase, [{
-          action: bypassDuplicates ? "duplicate_bypassed" : "submitted",
-          user,
-          restaurant: invoice.restaurant,
-          supplier: invoice.supplier,
-          invoiceId: invoice.id,
-          invoiceNumber: invoice.invoiceNumber,
-          invoiceDate: invoice.invoiceDate,
-          total: invoice.total,
-          spreadsheetUrl,
-        }]).catch((err) => console.error("[audit-log] submit write failed:", err));
+      // Durable audit log to Supabase (awaited)
+      try {
+        const supabase = getSupabase();
+        if (supabase) {
+          await appendAuditEntries(supabase, [{
+            action: bypassDuplicates ? "duplicate_bypassed" : "submitted",
+            user,
+            restaurant: invoice.restaurant,
+            supplier: invoice.supplier,
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoiceNumber,
+            invoiceDate: invoice.invoiceDate,
+            total: invoice.total,
+            spreadsheetUrl,
+          }]);
+        }
+      } catch (auditErr) {
+        log.error({ ctx: "submit", msg: "Audit log write failed", err: auditErr });
       }
     } catch (err) {
-      console.error(`[submit] Error for invoice ${invoice.id}:`, err);
+      log.error({ ctx: "submit", msg: "Invoice submit failed", data: { invoiceId: invoice.id }, err });
       results.push({
         invoiceId: invoice.id,
         status: "error",

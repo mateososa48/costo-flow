@@ -168,7 +168,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
-    return NextResponse.json({ kpis, monthlySpend, cuentas, breakdown, topSuppliers });
+    return NextResponse.json({ kpis, monthlySpend, cuentas, breakdown, topSuppliers }, {
+      headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" },
+    });
   }
 
   return NextResponse.json({ error: "Invalid view" }, { status: 400 });

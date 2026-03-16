@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
 import InvoiceCard from "@/components/InvoiceCard";
 import DuplicateWarningModal from "@/components/DuplicateWarningModal";
+import StepIndicator from "@/components/StepIndicator";
 import Button from "@/components/ui/Button";
 import type {
   ExtractedInvoice,
@@ -161,6 +162,7 @@ export default function ReviewPage() {
 
   return (
     <Shell>
+      <StepIndicator currentPath="/review" />
       {/* Sticky review header — inside content area */}
       <div className="sticky top-0 z-20 px-4 py-3 flex items-center justify-between gap-4"
         style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>

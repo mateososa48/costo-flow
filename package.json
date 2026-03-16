@@ -12,6 +12,7 @@
     "@napi-rs/canvas": "^0.1.58",
     "@supabase/supabase-js": "^2.99.0",
     "@vercel/analytics": "^1.6.1",
+    "bcryptjs": "^3.0.3",
     "googleapis": "^144.0.0",
     "iron-session": "^8.0.4",
     "next": "^15.2.0",
@@ -24,6 +25,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.14",
     "@types/node": "^22",
     "@types/react": "^19",

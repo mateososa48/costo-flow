@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Shell from "@/components/Shell";
+import { useToast } from "@/contexts/ToastContext";
 import { RESTAURANT_LABELS } from "@/types";
 import type { Restaurant, DropdownsResponse } from "@/types";
 
@@ -157,16 +158,15 @@ function PasswordSection() {
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const { toast } = useToast();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (next !== confirm) {
-      setMessage({ type: "error", text: "Las contraseñas nuevas no coinciden" });
+      toast.error("Las contraseñas nuevas no coinciden");
       return;
     }
     setLoading(true);
-    setMessage(null);
     try {
       const res = await fetch("/api/settings/password", {
         method: "POST",
@@ -175,13 +175,13 @@ function PasswordSection() {
       });
       const data = await res.json() as { ok?: boolean; error?: string };
       if (!res.ok) {
-        setMessage({ type: "error", text: data.error ?? "Error al cambiar contraseña" });
+        toast.error(data.error ?? "Error al cambiar contraseña");
       } else {
-        setMessage({ type: "success", text: "Contraseña actualizada correctamente" });
+        toast.success("Contraseña actualizada correctamente");
         setCurrent(""); setNext(""); setConfirm("");
       }
     } catch {
-      setMessage({ type: "error", text: "Error de conexión" });
+      toast.error("Error de conexión");
     } finally {
       setLoading(false);
     }
@@ -211,12 +211,6 @@ function PasswordSection() {
           </div>
         </div>
 
-        {message && (
-          <p className="text-xs" style={{ color: message.type === "success" ? "var(--success)" : "var(--danger)" }}>
-            {message.text}
-          </p>
-        )}
-
         <button
           type="submit"
           disabled={loading || !current || !next || !confirm}
@@ -237,8 +231,8 @@ function UsersSection() {
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [currentUser, setCurrentUser] = useState("");
+  const { toast } = useToast();
 
   useEffect(() => {
     try { setCurrentUser(sessionStorage.getItem("user") ?? ""); } catch {}
@@ -252,7 +246,6 @@ function UsersSection() {
 
   async function saveNames(updated: string[]) {
     setSaving(true);
-    setMessage(null);
     try {
       const res = await fetch("/api/settings/users", {
         method: "POST",
@@ -261,14 +254,13 @@ function UsersSection() {
       });
       const data = await res.json() as { ok?: boolean; error?: string };
       if (!res.ok) {
-        setMessage({ type: "error", text: data.error ?? "Error al guardar" });
+        toast.error(data.error ?? "Error al guardar");
       } else {
         setNames(updated);
-        setMessage({ type: "success", text: "Usuarios actualizados" });
-        setTimeout(() => setMessage(null), 3000);
+        toast.success("Usuarios actualizados");
       }
     } catch {
-      setMessage({ type: "error", text: "Error de conexión" });
+      toast.error("Error de conexión");
     } finally {
       setSaving(false);
     }
@@ -322,18 +314,8 @@ function UsersSection() {
                   type="button"
                   disabled={saving || names.length <= 1 || name === currentUser}
                   onClick={() => removeUser(name)}
-                  className="w-6 h-6 rounded flex items-center justify-center transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-6 h-6 rounded flex items-center justify-center transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed hover-danger"
                   style={{ color: "var(--text-dim)" }}
-                  onMouseEnter={e => {
-                    if (!saving && names.length > 1 && name !== currentUser) {
-                      (e.currentTarget as HTMLElement).style.color = "var(--danger)";
-                      (e.currentTarget as HTMLElement).style.background = "var(--danger-dim)";
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.color = "var(--text-dim)";
-                    (e.currentTarget as HTMLElement).style.background = "";
-                  }}
                   title={name === currentUser ? "No puedes eliminarte a ti mismo" : "Eliminar usuario"}
                 >
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -366,11 +348,6 @@ function UsersSection() {
             </button>
           </div>
 
-          {message && (
-            <p className="text-xs" style={{ color: message.type === "success" ? "var(--success)" : "var(--danger)" }}>
-              {message.text}
-            </p>
-          )}
         </div>
       )}
     </Section>
@@ -436,16 +413,8 @@ function SheetRegistrySection({ registry }: { registry: Record<string, string> }
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-1.5 rounded transition-colors duration-150 flex-shrink-0"
+                className="p-1.5 rounded transition-colors duration-150 flex-shrink-0 hover-blue-bg"
                 style={{ color: "var(--text-muted)" }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.color = "var(--blue)";
-                  (e.currentTarget as HTMLElement).style.background = "var(--blue-light)";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
-                  (e.currentTarget as HTMLElement).style.background = "";
-                }}
                 title="Abrir hoja de cálculo"
               >
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none">

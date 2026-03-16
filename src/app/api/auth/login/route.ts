@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { config } from "@/config";
 import { readOverride } from "@/lib/settings-override";
+import { verifyPassword } from "@/lib/auth";
 
 const loginSchema = z.object({
   name: z.string().min(1),
@@ -31,7 +32,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Usuario no encontrado" }, { status: 401 });
   }
 
-  if (password !== sharedPassword) {
+  const passwordValid = await verifyPassword(password, sharedPassword);
+  if (!passwordValid) {
     return NextResponse.json({ error: "Contraseña incorrecta" }, { status: 401 });
   }
 

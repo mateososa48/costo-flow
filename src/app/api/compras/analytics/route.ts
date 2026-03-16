@@ -136,5 +136,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     spendBySupplier,
     topItems,
     spendByRestaurant,
+  }, {
+    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" },
   });
 }

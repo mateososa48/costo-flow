@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import getSupabase from "@/lib/supabase";
+import log from "@/lib/logger";
 
 const BUNDLED_FILE = path.join(process.cwd(), "data", "settings-override.json");
 const WRITABLE_FILE =
@@ -47,7 +48,7 @@ async function writeToSupabase(data: SettingsOverride): Promise<boolean> {
     .from("app_settings")
     .upsert({ key: "main", value: data, updated_at: new Date().toISOString() }, { onConflict: "key" });
   if (error) {
-    console.error("[settings-override] Supabase write failed:", error.message);
+    log.error({ ctx: "settings", msg: "Supabase write failed", data: { detail: error.message } });
     return false;
   }
   return true;

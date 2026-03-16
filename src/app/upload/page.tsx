@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
 import UploadZone from "@/components/UploadZone";
+import StepIndicator from "@/components/StepIndicator";
 import Button from "@/components/ui/Button";
 import type { Restaurant, ParseApiResponse, ExtractedInvoice } from "@/types";
 
@@ -96,6 +97,7 @@ export default function UploadPage() {
   return (
     <Shell>
       <div className="max-w-2xl mx-auto px-4 py-8 md:py-12 space-y-7">
+        <StepIndicator currentPath="/upload" />
         {/* Header */}
         <div className="animate-fade-up">
           <h1 className="font-display text-3xl md:text-4xl font-bold"
@@ -205,10 +207,8 @@ export default function UploadPage() {
                   </button>
                   <button
                     onClick={() => deleteDraft(draft.id)}
-                    className="w-7 h-7 flex items-center justify-center rounded-md flex-shrink-0 transition-colors duration-150"
+                    className="w-7 h-7 flex items-center justify-center rounded-md flex-shrink-0 transition-colors duration-150 hover-danger"
                     style={{ color: "var(--text-dim)" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--danger)"; (e.currentTarget as HTMLElement).style.background = "var(--danger-dim)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = ""; }}
                     aria-label="Eliminar borrador"
                   >
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">

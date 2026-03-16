@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import TutorialOverlay from "./TutorialOverlay";
+import ErrorBoundary from "./ErrorBoundary";
 
 // ─── Icons ────────────────────────────────────────────────────────────
 function UploadIcon({ active }: { active?: boolean }) {
@@ -220,10 +221,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] text-sm transition-all duration-150"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] text-sm transition-all duration-150 hover-surface"
             style={{ color: "var(--text-muted)" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface-raised)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ""; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -271,12 +270,12 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         {/* Desktop offset */}
         <div className="hidden md:block" style={{ paddingLeft: "var(--sidebar-width)" }}>
           <div className="min-h-screen">
-            {children}
+            <ErrorBoundary>{children}</ErrorBoundary>
           </div>
         </div>
         {/* Mobile: top bar + bottom nav padding */}
         <div className="md:hidden pt-14 pb-20">
-          {children}
+          <ErrorBoundary>{children}</ErrorBoundary>
         </div>
       </main>
 

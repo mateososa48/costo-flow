@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    document.title = "Iniciar sesión — Aventura Gourmet";
     fetch("/api/config/dropdowns")
       .then((r) => r.json())
       .then((data: DropdownsResponse) => setAdminNames(data.adminNames))

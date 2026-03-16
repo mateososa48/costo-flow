@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
 import { getCostType } from "@/lib/cost-classification";
 import { appendAuditEntries } from "@/lib/audit-log";
+import log from "@/lib/logger";
 
 const updateSchema = z.object({
   cuentaPnl: z.string().min(1),
@@ -61,7 +62,7 @@ export async function PUT(
       invoiceDate: (existing.invoice_date as string | null) ?? undefined,
       total: Number(existing.total ?? 0),
       details: { from: (existing.cuenta_pnl as string | null) ?? "Sin categoría", to: cuentaPnl },
-    }]).catch((err) => console.error("[audit-log] reclassify write failed:", err));
+    }]).catch((err) => log.error({ ctx: "audit-log", msg: "Reclassify audit write failed", err }));
   }
 
   return NextResponse.json(data);
@@ -103,7 +104,7 @@ export async function DELETE(
       invoiceNumber: (existing.invoice_number as string | null) ?? undefined,
       invoiceDate: (existing.invoice_date as string | null) ?? undefined,
       total: Number(existing.total ?? 0),
-    }]).catch((err) => console.error("[audit-log] delete write failed:", err));
+    }]).catch((err) => log.error({ ctx: "audit-log", msg: "Delete audit write failed", err }));
   }
 
   return NextResponse.json({ success: true });

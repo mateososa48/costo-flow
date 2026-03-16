@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import Providers from "@/components/Providers";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -43,9 +44,11 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-screen bg-[var(--bg)] text-[var(--text)] antialiased">
-        <div className="relative min-h-screen">
-          {children}
-        </div>
+        <Providers>
+          <div className="relative min-h-screen">
+            {children}
+          </div>
+        </Providers>
         <Analytics />
       </body>
     </html>

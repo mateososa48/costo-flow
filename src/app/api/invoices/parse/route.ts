@@ -6,6 +6,9 @@ import { extractFromPdf } from "@/lib/pdf";
 import { extractInvoiceFromImage, extractInvoiceFromText } from "@/lib/openai";
 import { lookupSupplier } from "@/lib/supplier-mapping";
 import { getSession } from "@/lib/session";
+import { checkRateLimit } from "@/lib/rate-limit";
+import getSupabase from "@/lib/supabase";
+import log from "@/lib/logger";
 import type { ExtractedInvoice, Restaurant, ParseApiResponse } from "@/types";
 
 const ALLOWED_MIME_TYPES = [
@@ -22,6 +25,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limiting: max 20 parse requests per 5 minutes per user
+  const rateLimitKey = `parse:${session.user ?? "anonymous"}`;
+  const rateResult = checkRateLimit(rateLimitKey, { maxRequests: 20, windowMs: 5 * 60 * 1000 });
+  if (!rateResult.allowed) {
+    const retryAfter = Math.ceil((rateResult.resetAt - Date.now()) / 1000);
+    return NextResponse.json(
+      { error: "Demasiadas solicitudes. Intenta de nuevo en unos minutos." },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } }
+    );
   }
 
   let formData: FormData;
@@ -93,8 +107,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Look up supplier mapping
     const mapping = lookupSupplier(extraction.supplier);
 
+    const invoiceId = uuidv4();
+
+    // Upload original file to Supabase Storage (non-blocking on failure)
+    let fileUrl: string | undefined;
+    try {
+      const supabase = getSupabase();
+      if (supabase) {
+        const ext = file.type === "application/pdf" ? "pdf" : "jpg";
+        const path = `invoices/${invoiceId}.${ext}`;
+        const originalBuffer = Buffer.from(await file.arrayBuffer());
+        const { error: uploadError } = await supabase.storage
+          .from("invoice-files")
+          .upload(path, originalBuffer, {
+            contentType: file.type,
+            upsert: true,
+          });
+        if (!uploadError) {
+          fileUrl = path;
+        }
+      }
+    } catch {
+      // Storage upload failure is non-critical
+    }
+
     return {
-      id: uuidv4(),
+      id: invoiceId,
       restaurant: restaurant as Restaurant,
       invoiceDate: extraction.invoiceDate,
       supplier: extraction.supplier,
@@ -109,6 +147,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       extractionConfidence: confidence,
       mathWarning: !mathOk,
       extractionMethod: "llm_vision",
+      fileUrl,
     };
   }
 
@@ -123,7 +162,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       invoices.push(result.value);
     } else {
       const err = result.reason;
-      console.error(`[parse] Error processing file "${files[i].name}":`, err);
+      log.error({ ctx: "parse", msg: `Error processing file "${files[i].name}"`, err });
       errors.push({
         filename: files[i].name,
         error: err instanceof Error ? err.message : "Unknown error",

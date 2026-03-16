@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import Shell from "@/components/Shell";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
+import { SkeletonAnalytics, SkeletonTable } from "@/components/ui/Skeleton";
+import FilterChips from "@/components/ui/FilterChips";
+import ExportButton from "@/components/ui/ExportButton";
 import { RESTAURANT_LABELS } from "@/types";
 import type { Restaurant } from "@/types";
 import dropdownOptions from "../../../data/dropdown_options.json";
+
+const GastosAnalytics = lazy(() => import("./GastosAnalytics"));
 
 type ViewMode = "invoices" | "suppliers" | "analytics";
 
@@ -191,6 +192,17 @@ export default function GastosPage() {
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text)" }}>Gastos Operativos</h1>
+          {view === "invoices" && (
+            <ExportButton
+              href="/api/compras/export"
+              params={{
+                type: "invoices",
+                ...(restaurant && { restaurant }),
+                ...(dateFrom && { dateFrom }),
+                ...(dateTo && { dateTo }),
+              }}
+            />
+          )}
         </div>
 
         {/* ── Stats strip ── */}
@@ -273,17 +285,42 @@ export default function GastosPage() {
           </div>
         </div>
 
-        {loading && (
-          <div className="flex justify-center py-12">
-            <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
-              style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
+        {/* Active filter chips */}
+        {hasFilters && (
+          <div className="mb-4">
+            <FilterChips
+              chips={[
+                ...(restaurant ? [{ label: RESTAURANT_LABELS[restaurant as Restaurant] ?? restaurant, onRemove: () => setRestaurant("") }] : []),
+                ...(activePreset ? [{ label: activePreset === "thisMonth" ? "Este mes" : activePreset === "lastMonth" ? "Mes pasado" : activePreset === "last30" ? "Últ. 30d" : "YTD", onRemove: () => { setActivePreset(""); setDateFrom(""); setDateTo(""); } }] : []),
+                ...(!activePreset && dateFrom ? [{ label: `Desde ${dateFrom}`, onRemove: () => setDateFrom("") }] : []),
+                ...(!activePreset && dateTo ? [{ label: `Hasta ${dateTo}`, onRemove: () => setDateTo("") }] : []),
+              ]}
+              onClearAll={() => { setRestaurant(""); setDateFrom(""); setDateTo(""); setActivePreset(""); }}
+            />
           </div>
         )}
+
+        {loading && (view === "analytics" ? <SkeletonAnalytics /> : <SkeletonTable rows={6} />)}
 
         {/* ── Facturas tab ── */}
         {!loading && view === "invoices" && (() => {
           if (invoices.length === 0) return (
-            <p className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>No hay gastos operativos para este período.</p>
+            <div className="text-center py-16 space-y-4">
+              <div className="w-14 h-14 mx-auto rounded-full flex items-center justify-center"
+                style={{ background: "var(--surface-raised)" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ color: "var(--text-dim)" }}>
+                  <rect x="2" y="5" width="20" height="14" rx="2" />
+                  <line x1="2" y1="10" x2="22" y2="10" />
+                </svg>
+              </div>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>No hay gastos operativos para este período.</p>
+              <a href="/upload"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-[var(--radius-sm)] text-sm font-semibold text-white transition-all duration-150 active:scale-[0.98]"
+                style={{ background: "var(--blue)" }}>
+                Subir facturas
+              </a>
+            </div>
           );
           // Group invoices by cuenta_pnl
           const groups: Record<string, DbInvoice[]> = {};
@@ -712,149 +749,11 @@ export default function GastosPage() {
         })()}
 
         {/* ── Análisis tab ── */}
-        {!loading && view === "analytics" && analytics && (() => {
-          const totalSpend = analytics.kpis.totalSpend;
-          const avgPerInvoice = analytics.kpis.invoiceCount > 0 ? totalSpend / analytics.kpis.invoiceCount : 0;
-          const maxCat = analytics.breakdown[0]?.value ?? 1;
-          const maxSup = analytics.topSuppliers[0]?.total ?? 1;
-
-          // Aggregate monthlySpend rows into a single total per month for the area chart
-          const monthlyTotals = analytics.monthlySpend.map((row) => ({
-            month: row.month as string,
-            total: Object.entries(row).filter(([k]) => k !== "month").reduce((s, [, v]) => s + Number(v), 0),
-          }));
-
-          function fmtMonth(m: string) {
-            const [y, mo] = m.split("-");
-            const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-            return `${months[parseInt(mo) - 1]} ${y.slice(2)}`;
-          }
-
-          return (
-            <div className="space-y-4">
-              {/* ── KPI Band ── */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="rounded-[var(--radius)] border p-4"
-                  style={{ borderColor: "color-mix(in srgb, var(--blue) 30%, transparent)", background: "var(--blue-glow)" }}>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--blue)" }}>
-                    Gasto Total
-                  </p>
-                  <p className="text-2xl font-bold leading-none"
-                    style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.03em" }}>
-                    {fmt(totalSpend)}
-                  </p>
-                </div>
-                {[
-                  { label: "Facturas", value: analytics.kpis.invoiceCount.toLocaleString("es-MX") },
-                  { label: "Proveedores", value: analytics.kpis.uniqueSuppliers.toLocaleString("es-MX") },
-                  { label: "Prom / Factura", value: fmt(avgPerInvoice) },
-                ].map(kpi => (
-                  <div key={kpi.label} className="rounded-[var(--radius)] border p-4"
-                    style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)" }}>{kpi.label}</p>
-                    <p className="text-2xl font-bold leading-none"
-                      style={{ fontFamily: "var(--font-display)", color: "var(--text)", letterSpacing: "-0.03em" }}>
-                      {kpi.value}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {/* ── Monthly Trend (Area Chart) ── */}
-              {monthlyTotals.length > 0 && (
-                <div className="rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-4" style={{ color: "var(--text-dim)" }}>Tendencia mensual</p>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <AreaChart data={monthlyTotals} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="areaGradOp" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--blue)" stopOpacity={0.15} />
-                          <stop offset="95%" stopColor="var(--blue)" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                      <XAxis dataKey="month" tick={{ fontSize: 10, fill: "var(--text-muted)" }}
-                        tickFormatter={(v: string) => fmtMonth(v)} />
-                      <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }}
-                        tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip
-                        formatter={(value: unknown) => [fmt(Number(value)), "Gasto"]}
-                        labelFormatter={(label: unknown) => fmtMonth(String(label))}
-                        contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
-                        labelStyle={{ color: "var(--text)", fontWeight: 600 }}
-                      />
-                      <Area type="monotone" dataKey="total" stroke="var(--blue)" strokeWidth={2} fill="url(#areaGradOp)"
-                        dot={{ fill: "var(--blue)", r: 3, strokeWidth: 0 }}
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        activeDot={{ r: 5, strokeWidth: 0 } as any} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
-              {/* ── Category + Supplier Row ── */}
-              <div className="grid md:grid-cols-5 gap-4">
-                {/* Category breakdown — 3 cols */}
-                <div className="md:col-span-3 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Por categoría</p>
-                  {analytics.breakdown.length === 0 ? (
-                    <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
-                  ) : (
-                    <div>
-                      {analytics.breakdown.slice(0, 10).map((c) => {
-                        const pct = totalSpend > 0 ? (c.value / totalSpend) * 100 : 0;
-                        const barWidth = (c.value / maxCat) * 100;
-                        return (
-                          <div key={c.name} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <span className="text-xs truncate pr-2 flex-1 min-w-0" style={{ color: "var(--text)" }}>{c.name}</span>
-                              <div className="flex items-center gap-2.5 flex-shrink-0">
-                                <span className="text-[10px] tabular-nums" style={{ color: "var(--text-dim)" }}>{pct.toFixed(1)}%</span>
-                                <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--text)" }}>{fmt(c.value)}</span>
-                              </div>
-                            </div>
-                            <div className="h-1 rounded-full" style={{ background: "var(--border)" }}>
-                              <div className="h-full rounded-full" style={{ width: `${barWidth}%`, background: "var(--blue)", opacity: 0.65 }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Top Suppliers — 2 cols */}
-                <div className="md:col-span-2 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Top proveedores</p>
-                  {analytics.topSuppliers.length === 0 ? (
-                    <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
-                  ) : (
-                    <div>
-                      {analytics.topSuppliers.slice(0, 8).map((s) => {
-                        const barWidth = (s.total / maxSup) * 100;
-                        const pct = totalSpend > 0 ? (s.total / totalSpend) * 100 : 0;
-                        return (
-                          <div key={s.supplier} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <span className="text-xs truncate pr-2 flex-1 min-w-0" title={s.supplier} style={{ color: "var(--text)" }}>{s.supplier}</span>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <span className="text-[10px] tabular-nums" style={{ color: "var(--text-dim)" }}>{pct.toFixed(1)}%</span>
-                                <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--text)" }}>{fmt(s.total)}</span>
-                              </div>
-                            </div>
-                            <div className="h-1 rounded-full" style={{ background: "var(--border)" }}>
-                              <div className="h-full rounded-full" style={{ width: `${barWidth}%`, background: "var(--pink-dark)", opacity: 0.75 }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        {!loading && view === "analytics" && analytics && (
+          <Suspense fallback={<SkeletonAnalytics />}>
+            <GastosAnalytics analytics={analytics} />
+          </Suspense>
+        )}
       </div>
 
       {/* Bulk delete invoices confirmation modal */}

@@ -56,10 +56,8 @@ export default function Modal({
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-2.5 rounded-md transition-colors duration-150"
+                className="p-2.5 rounded-md transition-colors duration-150 hover-surface"
                 style={{ color: "var(--text-muted)" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface-raised)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ""; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
                 aria-label="Cerrar"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

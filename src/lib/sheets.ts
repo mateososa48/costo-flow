@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { config } from "@/config";
+import log from "@/lib/logger";
 import type { ExtractedInvoice, DuplicateMatch } from "@/types";
 
 const SHEET_TAB = "Informe de Gastos";
@@ -207,6 +208,6 @@ export async function appendAuditLog(entry: {
     });
   } catch (err) {
     // Log audit failures but don't block the submit
-    console.error("[audit-log] Failed to write audit entry:", err);
+    log.error({ ctx: "audit-log", msg: "Failed to write audit entry to Sheets", err });
   }
 }

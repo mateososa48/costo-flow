@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import type { ExtractedInvoice } from "@/types";
+import type { ExtractedInvoice, DuplicateMatch } from "@/types";
 import { getCostType } from "@/lib/cost-classification";
 import { normalizeUnit } from "@/lib/unit-normalizer";
 
@@ -45,6 +45,7 @@ export async function saveInvoiceWithItems(
       cuenta_pnl: invoice.cuentaPnl,
       submitted_by: submittedBy,
       spreadsheet_url: spreadsheetUrl,
+      file_url: invoice.fileUrl ?? null,
     },
     { onConflict: "id" }
   );
@@ -95,4 +96,53 @@ export async function saveInvoiceWithItems(
       throw new Error(`Supabase line_items insert failed: ${itemsError.message}`);
     }
   }
+}
+
+/**
+ * Check for duplicate invoices via Supabase (fast, indexed).
+ * Matches same supplier + same month + (same invoice_number OR same total).
+ * Returns null if Supabase is unavailable or has no data (caller should fall back to Sheets).
+ */
+export async function checkDuplicatesViaSupabase(
+  invoice: ExtractedInvoice
+): Promise<DuplicateMatch[] | null> {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+
+  const [yearStr, monthStr] = invoice.invoiceDate.split("-");
+  const monthStart = `${yearStr}-${monthStr}-01`;
+  const nextMonth = Number(monthStr) === 12
+    ? `${Number(yearStr) + 1}-01-01`
+    : `${yearStr}-${String(Number(monthStr) + 1).padStart(2, "0")}-01`;
+
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("supplier, invoice_number, total, invoice_date")
+    .ilike("supplier", invoice.supplier.trim())
+    .gte("invoice_date", monthStart)
+    .lt("invoice_date", nextMonth);
+
+  // If table doesn't exist or query fails, signal caller to use Sheets fallback
+  if (error) return null;
+  if (!data || data.length === 0) return null;
+
+  const matches: DuplicateMatch[] = [];
+  for (const row of data) {
+    const invoiceNumberMatch =
+      invoice.invoiceNumber &&
+      row.invoice_number &&
+      row.invoice_number.trim() === invoice.invoiceNumber.trim();
+    const totalMatch = Math.abs(Number(row.total) - invoice.total) < 0.01;
+
+    if (invoiceNumberMatch || totalMatch) {
+      matches.push({
+        supplier: row.supplier,
+        invoiceNumber: row.invoice_number || undefined,
+        total: Number(row.total),
+        invoiceDate: row.invoice_date,
+      });
+    }
+  }
+
+  return matches;
 }

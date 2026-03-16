@@ -40,5 +40,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     totalSpend,
     uniqueSuppliers: supplierSet.size,
     supplierList: Array.from(supplierSet).sort(),
+  }, {
+    headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" },
   });
 }

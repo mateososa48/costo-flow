@@ -167,10 +167,8 @@ export default function UploadZone({ files, onChange }: UploadZoneProps) {
       {/* Camera button — mobile only */}
       <label
         htmlFor="camera-input"
-        className="md:hidden w-full py-2.5 rounded-[var(--radius)] border text-sm flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.99] cursor-pointer select-none"
+        className="md:hidden w-full py-2.5 rounded-[var(--radius)] border text-sm flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.99] cursor-pointer select-none hover-blue-border"
         style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text-muted)" }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--blue)"; (e.currentTarget as HTMLElement).style.color = "var(--blue)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
@@ -208,10 +206,8 @@ export default function UploadZone({ files, onChange }: UploadZoneProps) {
                 <button
                   type="button"
                   onClick={() => removeFile(id)}
-                  className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center transition-all duration-150 sm:opacity-0 sm:group-hover:opacity-100"
+                  className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center transition-all duration-150 sm:opacity-0 sm:group-hover:opacity-100 hover-danger"
                   style={{ color: "var(--text-dim)" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--danger)"; (e.currentTarget as HTMLElement).style.background = "var(--danger-dim)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLElement).style.background = ""; }}
                   aria-label="Quitar archivo"
                 >
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">

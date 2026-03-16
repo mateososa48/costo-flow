@@ -3,6 +3,8 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { config } from "@/config";
 import { readOverride, writeOverride } from "@/lib/settings-override";
+import { verifyPassword, hashPassword } from "@/lib/auth";
+import log from "@/lib/logger";
 
 const schema = z.object({
   currentPassword: z.string().min(1),
@@ -31,14 +33,16 @@ export async function POST(request: NextRequest) {
   const override = await readOverride();
   const effectivePassword = override.sharedPassword ?? config.auth.sharedPassword;
 
-  if (currentPassword !== effectivePassword) {
+  const passwordValid = await verifyPassword(currentPassword, effectivePassword);
+  if (!passwordValid) {
     return NextResponse.json({ error: "Contraseña actual incorrecta" }, { status: 401 });
   }
 
   try {
-    await writeOverride({ sharedPassword: newPassword });
+    const hashedNew = await hashPassword(newPassword);
+    await writeOverride({ sharedPassword: hashedNew });
   } catch (err) {
-    console.error("[settings/password] writeOverride failed:", err);
+    log.error({ ctx: "settings", msg: "writeOverride failed (password)", err });
     return NextResponse.json({ error: "No se pudo guardar. Intenta de nuevo." }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
