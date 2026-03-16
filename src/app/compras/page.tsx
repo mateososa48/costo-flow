@@ -969,7 +969,7 @@ export default function ComprasPage() {
                             {restaurantLabel(inv.restaurant)}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
                           <span>{formatDate(inv.invoice_date)}</span>
                           <span className="font-semibold" style={{ color: "var(--blue)" }}>{formatCurrency(inv.total)}</span>
                           <span>{inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}</span>
@@ -1402,8 +1402,8 @@ export default function ComprasPage() {
                             const barWidth = (c.value / maxCat) * 100;
                             return (
                               <div key={c.name} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="text-xs truncate pr-2" style={{ color: "var(--text)", maxWidth: "55%" }}>{c.name}</span>
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="text-xs truncate pr-2 flex-1 min-w-0" style={{ color: "var(--text)" }}>{c.name}</span>
                                   <div className="flex items-center gap-2.5 flex-shrink-0">
                                     <span className="text-[10px] tabular-nums" style={{ color: "var(--text-dim)" }}>{pct.toFixed(1)}%</span>
                                     <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--text)" }}>{formatCurrency(c.value)}</span>
@@ -1431,8 +1431,8 @@ export default function ComprasPage() {
                             const pct = d.kpis.totalSpend > 0 ? (s.total / d.kpis.totalSpend) * 100 : 0;
                             return (
                               <div key={s.supplier} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="text-xs truncate pr-2" title={s.supplier} style={{ color: "var(--text)", maxWidth: "55%" }}>{s.supplier}</span>
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="text-xs truncate pr-2 flex-1 min-w-0" title={s.supplier} style={{ color: "var(--text)" }}>{s.supplier}</span>
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     <span className="text-[10px] tabular-nums" style={{ color: "var(--text-dim)" }}>{pct.toFixed(1)}%</span>
                                     <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--text)" }}>{formatCurrency(s.total)}</span>

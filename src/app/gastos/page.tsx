@@ -200,22 +200,22 @@ export default function GastosPage() {
             { label: "facturas", value: String(stats.invoiceCount) },
             { label: "proveedores", value: String(stats.supplierCount) },
           ].map((s, i) => (
-            <div key={i} className="px-4 py-3 rounded-[var(--radius)] border text-sm"
+            <div key={i} className="px-3 py-2.5 rounded-[var(--radius)] border text-sm flex flex-col gap-0.5"
               style={{
                 background: i === 0 ? "var(--blue-glow)" : "var(--surface)",
                 borderColor: i === 0 ? "color-mix(in srgb, var(--blue) 25%, transparent)" : "var(--border)",
               }}>
-              <span className={i === 0 ? "text-xl font-bold" : "font-semibold"} style={{ color: i === 0 ? "var(--blue)" : "var(--text)" }}>
+              <span className={i === 0 ? "text-base sm:text-xl font-bold leading-tight" : "font-semibold leading-tight"} style={{ color: i === 0 ? "var(--blue)" : "var(--text)" }}>
                 {s.value}
               </span>
-              <span className="ml-2 text-xs" style={{ color: "var(--text-dim)" }}>{s.label}</span>
+              <span className="text-[10px] leading-tight" style={{ color: "var(--text-dim)" }}>{s.label}</span>
             </div>
           ))}
         </div>
 
         {/* ── Tab nav + filters ── */}
-        <div className="flex items-center justify-between gap-4 mb-5 border-b" style={{ borderColor: "var(--border)" }}>
-          <div className="flex gap-1">
+        <div className="flex flex-col mb-5 border-b" style={{ borderColor: "var(--border)" }}>
+          <div className="flex gap-1 overflow-x-auto">
             {(["invoices", "suppliers", "analytics"] as ViewMode[]).map((v) => {
               const labels: Record<ViewMode, string> = { invoices: "Facturas", suppliers: "Proveedores", analytics: "Análisis" };
               return (
@@ -230,7 +230,7 @@ export default function GastosPage() {
               );
             })}
           </div>
-          <div className="flex flex-wrap items-center gap-1.5 pb-2">
+          <div className="flex flex-wrap items-center gap-1.5 py-2">
             {/* Period presets */}
             {[
               { key: "thisMonth", label: "Este mes" },
@@ -806,8 +806,8 @@ export default function GastosPage() {
                         const barWidth = (c.value / maxCat) * 100;
                         return (
                           <div key={c.name} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-xs truncate pr-2" style={{ color: "var(--text)", maxWidth: "55%" }}>{c.name}</span>
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className="text-xs truncate pr-2 flex-1 min-w-0" style={{ color: "var(--text)" }}>{c.name}</span>
                               <div className="flex items-center gap-2.5 flex-shrink-0">
                                 <span className="text-[10px] tabular-nums" style={{ color: "var(--text-dim)" }}>{pct.toFixed(1)}%</span>
                                 <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--text)" }}>{fmt(c.value)}</span>
@@ -835,8 +835,8 @@ export default function GastosPage() {
                         const pct = totalSpend > 0 ? (s.total / totalSpend) * 100 : 0;
                         return (
                           <div key={s.supplier} className="py-2 border-b last:border-b-0" style={{ borderColor: "var(--border-subtle)" }}>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-xs truncate pr-2" title={s.supplier} style={{ color: "var(--text)", maxWidth: "55%" }}>{s.supplier}</span>
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className="text-xs truncate pr-2 flex-1 min-w-0" title={s.supplier} style={{ color: "var(--text)" }}>{s.supplier}</span>
                               <div className="flex items-center gap-2 flex-shrink-0">
                                 <span className="text-[10px] tabular-nums" style={{ color: "var(--text-dim)" }}>{pct.toFixed(1)}%</span>
                                 <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--text)" }}>{fmt(s.total)}</span>

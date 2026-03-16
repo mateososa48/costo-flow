@@ -196,7 +196,7 @@ export default function HistoryPage() {
                             {RESTAURANT_LABELS[entry.restaurant as Restaurant] ?? entry.restaurant}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
                           {entry.invoiceDate && <span>{formatDate(entry.invoiceDate)}</span>}
                           {entry.invoiceDate && <span>·</span>}
                           <span>{formatDate(entry.createdAt)} {formatTime(entry.createdAt)}</span>
