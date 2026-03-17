@@ -90,12 +90,14 @@ export async function appendToSheet(
   }));
 
   const rows = (readResponse.data.values ?? []) as string[][];
-  // Find the LAST row with any content in A or B, then append after it
+  // Find the LAST row with a date in column A (actual invoice rows).
+  // We intentionally ignore column B here: the sheet template has formula/summary
+  // rows in column B that extend far below the last real invoice, which caused
+  // new data to be written hundreds of rows too low.
   let lastFilledIndex = -1;
   for (let i = 0; i < rows.length; i++) {
     const aVal = rows[i][0]?.trim() ?? "";
-    const bVal = rows[i][1]?.trim() ?? "";
-    if (aVal !== "" || bVal !== "") lastFilledIndex = i;
+    if (aVal !== "") lastFilledIndex = i;
   }
   const targetRow = 8 + lastFilledIndex + 1; // 1-indexed sheet row after last filled
 
