@@ -79,7 +79,7 @@ export default function SuppliersView({
                   }}
                   onClick={() => setEditingSupplierTag(group.supplier)}
                 >
-                  {currentTag || "Clasificar \u270e"}
+                  {currentTag || "Clasificar ✎"}
                 </button>
               )}
             </div>
@@ -89,7 +89,7 @@ export default function SuppliersView({
             {formatCurrency(group.totalSpend)}
           </p>
           <p className="text-[11px] mb-3" style={{ color: "var(--text-muted)" }}>
-            {group.itemCount} art\u00edculo{group.itemCount !== 1 ? "s" : ""}
+            {group.itemCount} artículo{group.itemCount !== 1 ? "s" : ""}
           </p>
           <button
             type="button"
@@ -105,7 +105,7 @@ export default function SuppliersView({
               className={`transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}>
               <path d="M2 1l3 3-3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Ver art\u00edculos
+            Ver artículos
           </button>
         </div>
         <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.25s ease" }}>
@@ -157,7 +157,7 @@ export default function SuppliersView({
           )}
         </div>
         <div className="flex items-center gap-1 p-0.5 rounded-[var(--radius-sm)]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border-subtle)" }}>
-          {([["spend", "Mayor gasto"], ["count", "M\u00e1s art\u00edculos"], ["alpha", "A\u2013Z"]] as [typeof supplierSortMode, string][]).map(([mode, label]) => (
+          {([["spend", "Mayor gasto"], ["count", "Más artículos"], ["alpha", "A–Z"]] as [typeof supplierSortMode, string][]).map(([mode, label]) => (
             <button key={mode} type="button"
               className="text-[11px] px-2.5 py-1 rounded transition-colors"
               style={{
@@ -189,7 +189,7 @@ export default function SuppliersView({
       {/* Empty state */}
       {filtered.length === 0 && (
         <p className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
-          {supplierSearch ? `Sin resultados para "${supplierSearch}"` : "No hay proveedores para este per\u00edodo."}
+          {supplierSearch ? `Sin resultados para "${supplierSearch}"` : "No hay proveedores para este período."}
         </p>
       )}
 

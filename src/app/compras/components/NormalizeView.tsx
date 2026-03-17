@@ -119,7 +119,7 @@ export default function NormalizeView({
                 </svg>
                 <input
                   type="text"
-                  placeholder="Buscar ingrediente o alias\u2026"
+                  placeholder="Buscar ingrediente o alias…"
                   value={ingredientSearch}
                   onChange={e => setIngredientSearch(e.target.value)}
                   className="w-full pl-8 pr-8 py-1.5 text-sm rounded-[var(--radius-sm)] border focus:outline-none"
@@ -154,7 +154,7 @@ export default function NormalizeView({
                       color: ingredientCategoryFilter ? "var(--text)" : "var(--text-muted)",
                       transition: "border-color 0.15s ease",
                     }}>
-                    <option value="">Categor\u00eda</option>
+                    <option value="">Categoría</option>
                     {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ color: "var(--text-dim)" }}>
@@ -216,7 +216,7 @@ export default function NormalizeView({
             {ingredients.length === 0 ? (
               <div className="rounded-[var(--radius)] border py-14 text-center"
                 style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                <p className="text-sm" style={{ color: "var(--text-dim)" }}>Ning\u00fan ingrediente registrado a\u00fan</p>
+                <p className="text-sm" style={{ color: "var(--text-dim)" }}>Ningún ingrediente registrado aún</p>
               </div>
             ) : filteredIngredients.length === 0 ? (
               <div className="rounded-[var(--radius)] border py-10 text-center"
@@ -237,7 +237,7 @@ export default function NormalizeView({
                     background: "var(--surface-raised)",
                   }}>
                   <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Ingrediente</span>
-                  <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Categor\u00eda</span>
+                  <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Categoría</span>
                   <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Unidad</span>
                   <span />
                 </div>
@@ -278,7 +278,7 @@ export default function NormalizeView({
                               </p>
                               {ing.aliases.length > 0 && (
                                 <p className="text-[10px] truncate mt-0.5" style={{ color: "var(--text-muted)" }}>
-                                  {ing.aliases.join(" \u00b7 ")}
+                                  {ing.aliases.join(" · ")}
                                 </p>
                               )}
                             </div>
@@ -382,7 +382,7 @@ export default function NormalizeView({
               <div className="mb-3 px-4 py-2.5 rounded-[var(--radius-sm)] border"
                 style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>Analizando con IA\u2026</span>
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>Analizando con IA…</span>
                   <span className="text-xs font-medium" style={{ color: "var(--blue)" }}>{aiProgress}%</span>
                 </div>
                 <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
@@ -424,11 +424,11 @@ export default function NormalizeView({
                             body: JSON.stringify({ items: unmatched }),
                           });
                           let data: { suggestions?: AISuggestion[]; error?: string };
-                          try { data = await res.json(); } catch { alert("Error: respuesta no v\u00e1lida"); return; }
+                          try { data = await res.json(); } catch { alert("Error: respuesta no válida"); return; }
                           if (res.ok) {
                             setAiProgress(100);
                             const suggestions = data.suggestions ?? [];
-                            if (suggestions.length === 0) { alert("La IA no devolvi\u00f3 sugerencias."); }
+                            if (suggestions.length === 0) { alert("La IA no devolvió sugerencias."); }
                             else { setAiSuggestions(suggestions); setAiChecked(new Set(suggestions.map((_: AISuggestion, i: number) => i))); }
                           } else { alert(`Error ${res.status}: ${data.error ?? "Error desconocido"}`); }
                         } catch (err: unknown) {
@@ -475,7 +475,7 @@ export default function NormalizeView({
                                       style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>{s.matchCount} art.</span>
                                   </div>
                                   {s.category && <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{s.category}</p>}
-                                  <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--text-dim)" }}>{s.aliases.join(" \u00b7 ")}</p>
+                                  <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--text-dim)" }}>{s.aliases.join(" · ")}</p>
                                 </div>
                               </div>
                             </div>
@@ -505,7 +505,7 @@ export default function NormalizeView({
                     </>
                   ) : unmatched.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
-                      <p className="text-sm" style={{ color: "var(--text-dim)" }}>Todo identificado \u2713</p>
+                      <p className="text-sm" style={{ color: "var(--text-dim)" }}>Todo identificado ✓</p>
                     </div>
                   ) : (
                     <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
@@ -514,7 +514,7 @@ export default function NormalizeView({
                           style={{ transition: "background 0.1s ease" }}>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm truncate" style={{ color: "var(--text)" }}>{u.description}</p>
-                            <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{u.count} art\u00edculo{u.count !== 1 ? "s" : ""}</p>
+                            <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{u.count} artículo{u.count !== 1 ? "s" : ""}</p>
                           </div>
                           <div className="flex gap-1.5 flex-shrink-0">
                             <button type="button"
@@ -546,7 +546,7 @@ export default function NormalizeView({
                     <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ color: "var(--text-muted)" }}>
                       <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                     </svg>
-                    <input type="text" placeholder="Buscar ingrediente\u2026"
+                    <input type="text" placeholder="Buscar ingrediente…"
                       value={ingredientSearch}
                       onChange={e => setIngredientSearch(e.target.value)}
                       className="w-full pl-8 pr-3 py-1.5 text-sm rounded-[var(--radius-sm)] border focus:outline-none"
@@ -708,7 +708,7 @@ export default function NormalizeView({
       >
         <div className="space-y-4">
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            \u00bfEliminar <span className="font-medium" style={{ color: "var(--text)" }}>{selectedIngredientIds.size} ingrediente{selectedIngredientIds.size !== 1 ? "s" : ""}</span>? Los art\u00edculos vinculados quedar\u00e1n sin asignar. Esta acci\u00f3n no se puede deshacer.
+            ¿Eliminar <span className="font-medium" style={{ color: "var(--text)" }}>{selectedIngredientIds.size} ingrediente{selectedIngredientIds.size !== 1 ? "s" : ""}</span>? Los artículos vinculados quedarán sin asignar. Esta acción no se puede deshacer.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteIngredients(false)}>Cancelar</Button>
@@ -738,13 +738,13 @@ function CreateIngredientForm({
   const [catOpen, setCatOpen] = useState(false);
   const [catHighlight, setCatHighlight] = useState(-1);
 
-  const allCats = ["Sin categor\u00eda", ...(dropdownOptions.concepto as string[])];
+  const allCats = ["Sin categoría", ...(dropdownOptions.concepto as string[])];
   const filteredCats = catQuery.trim()
     ? allCats.filter((c) => c.toLowerCase().includes(catQuery.toLowerCase()))
     : allCats;
 
   function selectCat(val: string) {
-    setCategory(val === "Sin categor\u00eda" ? "" : val);
+    setCategory(val === "Sin categoría" ? "" : val);
     setCatQuery("");
     setCatOpen(false);
     setCatHighlight(-1);
@@ -753,22 +753,22 @@ function CreateIngredientForm({
   return (
     <div className="space-y-3">
       <div>
-        <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Nombre can\u00f3nico *</label>
+        <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Nombre canónico *</label>
         <input type="text" value={name}
           className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
           style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
           onChange={(e) => setName(e.target.value)} />
         <p className="text-[10px] mt-1" style={{ color: "var(--text-dim)" }}>
-          El alias "{initialName}" se agrega autom\u00e1ticamente.
+          El alias "{initialName}" se agrega automáticamente.
         </p>
       </div>
       <div>
-        <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Categor\u00eda</label>
+        <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Categoría</label>
         <div className="relative mt-1">
           <input
             type="text"
             value={catOpen ? catQuery : (category || "")}
-            placeholder="Sin categor\u00eda"
+            placeholder="Sin categoría"
             className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
             style={{ background: "var(--surface)", borderColor: "var(--border)", color: category && !catOpen ? "var(--text)" : "var(--text-dim)" }}
             onFocus={() => { setCatOpen(true); setCatQuery(""); }}
@@ -840,13 +840,13 @@ function IngredientEditRow({
   const [catOpen, setCatOpen] = useState(false);
   const [catHighlight, setCatHighlight] = useState(-1);
 
-  const allCats = ["Sin categor\u00eda", ...(dropdownOptions.concepto as string[])];
+  const allCats = ["Sin categoría", ...(dropdownOptions.concepto as string[])];
   const filteredCats = catQuery.trim()
     ? allCats.filter((c) => c.toLowerCase().includes(catQuery.toLowerCase()))
     : allCats;
 
   function selectCat(val: string) {
-    setCategory(val === "Sin categor\u00eda" ? "" : val);
+    setCategory(val === "Sin categoría" ? "" : val);
     setCatQuery("");
     setCatOpen(false);
     setCatHighlight(-1);
@@ -897,7 +897,7 @@ function IngredientEditRow({
       {/* Name */}
       <div>
         <label className="block text-[11px] font-semibold uppercase tracking-wider mb-1.5"
-          style={{ color: "var(--text-muted)" }}>Nombre can\u00f3nico</label>
+          style={{ color: "var(--text-muted)" }}>Nombre canónico</label>
         <input type="text" value={name}
           className="w-full px-3 py-2.5 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
           style={{ background: "var(--surface-raised)", borderColor: "var(--border)", color: "var(--text)" }}
@@ -908,12 +908,12 @@ function IngredientEditRow({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-[11px] font-semibold uppercase tracking-wider mb-1.5"
-            style={{ color: "var(--text-muted)" }}>Categor\u00eda</label>
+            style={{ color: "var(--text-muted)" }}>Categoría</label>
           <div className="relative">
             <input
               type="text"
               value={catOpen ? catQuery : (category || "")}
-              placeholder="Sin categor\u00eda"
+              placeholder="Sin categoría"
               className="w-full px-3 py-2.5 pr-8 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
               style={{ background: "var(--surface-raised)", borderColor: "var(--border)", color: category && !catOpen ? "var(--text)" : "var(--text-dim)" }}
               onFocus={() => { setCatOpen(true); setCatQuery(""); }}
@@ -953,7 +953,7 @@ function IngredientEditRow({
               className="w-full px-3 py-2.5 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-0"
               style={{ background: "var(--surface-raised)", borderColor: "var(--border)", color: defaultUnit ? "var(--text)" : "var(--text-dim)" }}
               onChange={(e) => setDefaultUnit(e.target.value)}>
-              <option value="">\u2014</option>
+              <option value="">—</option>
               {NORMALIZED_UNITS_LIST.map((u) => <option key={u} value={u}>{u}</option>)}
             </select>
             <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
@@ -989,7 +989,7 @@ function IngredientEditRow({
             id="ing-alias-input"
             type="text"
             value={newAlias}
-            placeholder={aliases.length === 0 ? "Escribe y presiona Enter\u2026" : "Agregar\u2026"}
+            placeholder={aliases.length === 0 ? "Escribe y presiona Enter…" : "Agregar…"}
             className="flex-1 min-w-[120px] text-xs bg-transparent outline-none py-1 px-1"
             style={{ color: "var(--text)" }}
             onChange={(e) => setNewAlias(e.target.value)}
@@ -1011,7 +1011,7 @@ function IngredientEditRow({
                 className="text-xs font-semibold px-2.5 py-2 rounded-[var(--radius-sm)] transition-colors"
                 style={{ background: "rgba(var(--danger-rgb,220,38,38),0.12)", color: "var(--danger)" }}
                 onClick={handleDelete}>
-                {deleting ? "Eliminando\u2026" : "S\u00ed, eliminar"}
+                {deleting ? "Eliminando…" : "Sí, eliminar"}
               </button>
               <button type="button" className="text-xs px-2 py-2 transition-opacity hover:opacity-60"
                 style={{ color: "var(--text-muted)" }}

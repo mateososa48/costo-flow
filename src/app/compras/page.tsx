@@ -121,12 +121,12 @@ export default function ComprasPage() {
       if (view === "items") setItems(data.items ?? []);
       else if (view === "invoices") setInvoices(data.invoices ?? []);
       else if (view === "suppliers") setSuppliers(data.suppliers ?? []);
-    } catch { setError("Error de conexi\u00f3n"); }
+    } catch { setError("Error de conexión"); }
     finally { setLoading(false); }
   }, [view, page, sortBy, sortDir, search, restaurant, supplier, dateFrom, dateTo]);
 
   // ── Effects ───────────────────────────────────────────────────────
-  useEffect(() => { document.title = "Gastos de Alimentos \u2014 Aventura Gourmet"; }, []);
+  useEffect(() => { document.title = "Gastos de Alimentos — Aventura Gourmet"; }, []);
   useEffect(() => { if (view !== "analytics" && view !== "normalize") fetchData(); }, [fetchData, view]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, dateFrom, dateTo]);
@@ -232,10 +232,10 @@ export default function ComprasPage() {
         <div className="flex items-center justify-between gap-2 border-b" style={{ borderColor: "var(--border)" }}>
           <div className="flex items-center gap-0 -mb-px overflow-x-auto">
             {([
-              { key: "items", label: "Art\u00edculos" },
+              { key: "items", label: "Artículos" },
               { key: "invoices", label: "Facturas" },
               { key: "suppliers", label: "Proveedores" },
-              { key: "analytics", label: "An\u00e1lisis" },
+              { key: "analytics", label: "Análisis" },
               { key: "normalize", label: "Ingredientes" },
             ] as const).map(({ key, label }) => (
               <button
@@ -339,7 +339,7 @@ export default function ComprasPage() {
               </svg>
             </div>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Los art\u00edculos de tus facturas aparecer\u00e1n aqu\u00ed despu\u00e9s de enviarlas a Google Sheets.
+              Los artículos de tus facturas aparecerán aquí después de enviarlas a Google Sheets.
             </p>
             <a href="/upload"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-[var(--radius-sm)] text-sm font-semibold text-white transition-all duration-150 active:scale-[0.98]"
@@ -383,7 +383,7 @@ export default function ComprasPage() {
         {!loading && pagination.totalPages > 1 && view !== "normalize" && view !== "analytics" && (
           <div className="flex items-center justify-between gap-4 pt-2">
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              P\u00e1gina {pagination.page} de {pagination.totalPages} ({pagination.total} resultado{pagination.total !== 1 ? "s" : ""})
+              Página {pagination.page} de {pagination.totalPages} ({pagination.total} resultado{pagination.total !== 1 ? "s" : ""})
             </p>
             <div className="flex items-center gap-1.5">
               <button

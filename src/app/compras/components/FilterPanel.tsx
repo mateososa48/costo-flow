@@ -57,7 +57,7 @@ export default function FilterPanel({
           <input
             type="text"
             value={search}
-            placeholder="Buscar art\u00edculo..."
+            placeholder="Buscar artículo..."
             className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
             style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
             onChange={(e) => setSearch(e.target.value)}
@@ -70,9 +70,9 @@ export default function FilterPanel({
           onChange={(e) => setRestaurant(e.target.value)}
         >
           <option value="">Todos los restaurantes</option>
-          <option value="motin_juarez">Mot\u00edn Ju\u00e1rez</option>
-          <option value="motin_roma">Mot\u00edn Roma</option>
-          <option value="queseria">Queser\u00eda</option>
+          <option value="motin_juarez">Motín Juárez</option>
+          <option value="motin_roma">Motín Roma</option>
+          <option value="queseria">Quesería</option>
         </select>
         <select
           value={supplier}
@@ -93,7 +93,7 @@ export default function FilterPanel({
         {[
           { key: "thisMonth", label: "Este mes" },
           { key: "lastMonth", label: "Mes pasado" },
-          { key: "last30", label: "\u00dalt. 30d" },
+          { key: "last30", label: "Últ. 30d" },
           { key: "ytd", label: "YTD" },
         ].map(({ key, label }) => (
           <button key={key} type="button" onClick={() => onApplyPreset(key)}

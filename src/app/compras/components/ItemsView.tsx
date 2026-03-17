@@ -85,7 +85,7 @@ export default function ItemsView({
       }
     } catch {
       setItems(previous);
-      setSaveError("Error de conexi\u00f3n. El cambio no fue guardado.");
+      setSaveError("Error de conexión. El cambio no fue guardado.");
     } finally {
       setSavingId(null);
     }
@@ -128,7 +128,7 @@ export default function ItemsView({
                   {[
                     { key: "date", label: "Fecha" },
                     { key: "supplier", label: "Proveedor" },
-                    { key: "description", label: "Descripci\u00f3n" },
+                    { key: "description", label: "Descripción" },
                     { key: "", label: "Cant." },
                     { key: "", label: "Unidad" },
                     { key: "", label: "P. Unit." },
@@ -197,8 +197,8 @@ export default function ItemsView({
                           >
                             <span className="group-hover/cell:underline">
                               {field === "total" || field === "unitPrice"
-                                ? (val ? formatCurrency(parseFloat(val)) : "\u2014")
-                                : (val || "\u2014")}
+                                ? (val ? formatCurrency(parseFloat(val)) : "—")
+                                : (val || "—")}
                             </span>
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                               className="opacity-0 group-hover/cell:opacity-40 transition-opacity flex-shrink-0"
@@ -259,16 +259,16 @@ export default function ItemsView({
       <Modal
         open={!!deleteConfirmId}
         onClose={() => setDeleteConfirmId(null)}
-        title="Eliminar art\u00edculo"
+        title="Eliminar artículo"
         maxWidth="max-w-sm"
       >
         <div className="space-y-4">
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            \u00bfEliminar{" "}
+            ¿Eliminar{" "}
             <span className="font-medium" style={{ color: "var(--text)" }}>
-              {deleteTarget?.description ?? "este art\u00edculo"}
+              {deleteTarget?.description ?? "este artículo"}
             </span>
-            ? Esta acci\u00f3n no se puede deshacer.
+            ? Esta acción no se puede deshacer.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={() => setDeleteConfirmId(null)}>
@@ -314,10 +314,10 @@ function MobileItemCard({
     <div className="rounded-[var(--radius)] border" style={{ borderColor: "var(--border)", background: "var(--surface)", boxShadow: "var(--shadow-card)" }}>
       <div className="flex items-center gap-3 px-3 py-2.5 cursor-pointer" onClick={() => setExpanded((v) => !v)}>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{item.description || "Sin descripci\u00f3n"}</p>
+          <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{item.description || "Sin descripción"}</p>
           <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
             <span>{item.supplier}</span>
-            <span>\u00b7</span>
+            <span>·</span>
             <span>{formatDate(item.invoice_date)}</span>
           </div>
         </div>
@@ -325,7 +325,7 @@ function MobileItemCard({
           <p className="text-sm font-semibold" style={{ color: "var(--blue)" }}>{formatCurrency(item.total)}</p>
           {item.quantity != null && (
             <p className="text-[10px]" style={{ color: "var(--text-dim)" }}>
-              {item.quantity} {item.unit_normalized ?? item.unit ?? ""} \u00d7 {item.unit_price != null ? formatCurrency(item.unit_price) : "\u2014"}
+              {item.quantity} {item.unit_normalized ?? item.unit ?? ""} × {item.unit_price != null ? formatCurrency(item.unit_price) : "—"}
             </p>
           )}
         </div>
@@ -334,7 +334,7 @@ function MobileItemCard({
         <div className="border-t px-3 py-2.5 space-y-2" style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
           <div className="grid grid-cols-2 gap-2 text-xs">
             {[
-              { label: "Descripci\u00f3n", field: "description", val: item.description },
+              { label: "Descripción", field: "description", val: item.description },
               { label: "Cantidad", field: "quantity", val: item.quantity != null ? String(item.quantity) : "" },
               { label: "Unidad", field: "unit", val: item.unit_normalized ?? item.unit ?? "" },
               { label: "P. Unitario", field: "unitPrice", val: item.unit_price != null ? String(item.unit_price) : "" },
@@ -363,7 +363,7 @@ function MobileItemCard({
                     style={{ color: "var(--text)" }}
                     onClick={(e) => { e.stopPropagation(); onEdit(field, val); }}
                   >
-                    <span>{val || "\u2014"}</span>
+                    <span>{val || "—"}</span>
                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                       style={{ color: "var(--text-dim)", opacity: 0.5, flexShrink: 0 }}>
                       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
@@ -551,7 +551,7 @@ function AddItemModal({
 
   async function handleAdd() {
     if (!description.trim() || !addSupplier.trim() || !total) {
-      setAddError("Descripci\u00f3n, proveedor y total son requeridos");
+      setAddError("Descripción, proveedor y total son requeridos");
       return;
     }
     setSaving(true);
@@ -574,15 +574,15 @@ function AddItemModal({
       if (!res.ok) { setAddError("Error al guardar"); return; }
       setDescription(""); setQuantity(""); setUnit(""); setUnitPrice(""); setTotal(""); setAddSupplier("");
       onAdded();
-    } catch { setAddError("Error de conexi\u00f3n"); }
+    } catch { setAddError("Error de conexión"); }
     finally { setSaving(false); }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Agregar art\u00edculo">
+    <Modal open={open} onClose={onClose} title="Agregar artículo">
       <div className="space-y-3">
         <div>
-          <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Descripci\u00f3n *</label>
+          <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Descripción *</label>
           <input type="text" value={description} placeholder="Nombre del producto..."
             className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
             style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
@@ -604,9 +604,9 @@ function AddItemModal({
                 className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
                 style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
                 onChange={(e) => setAddRestaurant(e.target.value)}>
-                <option value="motin_juarez">Mot\u00edn Ju\u00e1rez</option>
-                <option value="motin_roma">Mot\u00edn Roma</option>
-                <option value="queseria">Queser\u00eda</option>
+                <option value="motin_juarez">Motín Juárez</option>
+                <option value="motin_roma">Motín Roma</option>
+                <option value="queseria">Quesería</option>
               </select>
               <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
                 <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

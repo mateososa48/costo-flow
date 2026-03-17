@@ -89,7 +89,7 @@ export default function AnalyticsView({
                       labelFormatter={(label: unknown) => {
                         const dt = new Date(String(label) + "T00:00:00");
                         const end = new Date(dt); end.setDate(dt.getDate() + 6);
-                        return `Sem ${dt.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} \u2013 ${end.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`;
+                        return `Sem ${dt.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} – ${end.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`;
                       }}
                       contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 }}
                       labelStyle={{ color: "var(--text)", fontWeight: 600 }}
@@ -107,7 +107,7 @@ export default function AnalyticsView({
             <div className="grid md:grid-cols-5 gap-4">
               {/* Category breakdown */}
               <div className="md:col-span-3 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Por categor\u00eda</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Por categoría</p>
                 {d.categoryBreakdown.length === 0 ? (
                   <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
                 ) : (
@@ -170,7 +170,7 @@ export default function AnalyticsView({
                 <div className="px-4 py-3 border-b"
                   style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                   <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
-                    Top art\u00edculos por gasto
+                    Top artículos por gasto
                   </p>
                 </div>
                 <div style={{ background: "var(--surface)" }}>
@@ -188,7 +188,7 @@ export default function AnalyticsView({
                         </span>
                         <span className="text-[10px] flex-shrink-0 hidden sm:block tabular-nums"
                           style={{ color: "var(--text-dim)", minWidth: "40px", textAlign: "center" }}>
-                          \u00d7{item.count}
+                          ×{item.count}
                         </span>
                         <div className="flex items-center gap-2 flex-shrink-0" style={{ minWidth: "140px" }}>
                           <div className="flex-1 h-1 rounded-full" style={{ background: "var(--border)" }}>
@@ -238,7 +238,7 @@ export default function AnalyticsView({
             </svg>
           </div>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Los an\u00e1lisis se generar\u00e1n cuando tengas facturas registradas.
+            Los análisis se generarán cuando tengas facturas registradas.
           </p>
         </div>
       )}

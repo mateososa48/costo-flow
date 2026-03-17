@@ -137,7 +137,7 @@ export function formatCurrency(val: number): string {
 }
 
 export function formatDate(d: string): string {
-  if (!d) return "\u2014";
+  if (!d) return "—";
   try {
     return new Date(d + "T12:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
   } catch { return d; }
@@ -173,7 +173,7 @@ export function getWeekOptions() {
     sun.setDate(mon.getDate() + 6);
     const fmt = (d: Date) => d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
     const toISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    opts.push({ value: toISO(mon), label: `${fmt(mon)} \u2013 ${fmt(sun)}`, dateFrom: toISO(mon), dateTo: toISO(sun) });
+    opts.push({ value: toISO(mon), label: `${fmt(mon)} – ${fmt(sun)}`, dateFrom: toISO(mon), dateTo: toISO(sun) });
   }
   return opts;
 }

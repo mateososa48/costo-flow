@@ -175,7 +175,7 @@ export default function InvoicesView({
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
                       <span>{formatDate(inv.invoice_date)}</span>
                       <span className="font-semibold" style={{ color: "var(--blue)" }}>{formatCurrency(inv.total)}</span>
-                      <span>{inv.lineItems.length} art\u00edculo{inv.lineItems.length !== 1 ? "s" : ""}</span>
+                      <span>{inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}</span>
                       {inv.cuenta_pnl && !invoiceSelectMode && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full"
                           style={{ background: "var(--surface-raised)", color: "var(--text-dim)", border: "1px solid var(--border-subtle)" }}>
@@ -242,13 +242,13 @@ export default function InvoicesView({
                             } finally { setReclassifyingSaving(false); }
                           }}
                         >
-                          {reclassifyingSaving ? "..." : "\u2713"}
+                          {reclassifyingSaving ? "..." : "✓"}
                         </button>
                         <button type="button"
                           className="text-[10px]"
                           style={{ color: "var(--text-muted)" }}
                           onClick={() => setReclassifyingId(null)}
-                        >\u2715</button>
+                        >✕</button>
                       </span>
                     ) : (
                       <button
@@ -257,12 +257,12 @@ export default function InvoicesView({
                         style={{ background: "var(--surface)", color: "var(--text-dim)", border: "1px solid var(--border-subtle)" }}
                         onClick={() => { setReclassifyingId(inv.id); setReclassifyValue(inv.cuenta_pnl ?? ""); }}
                       >
-                        {inv.cuenta_pnl ?? "Sin categor\u00eda"} \u270e
+                        {inv.cuenta_pnl ?? "Sin categoría"} ✎
                       </button>
                     )}
                   </div>
                   {inv.lineItems.length === 0 ? (
-                    <p className="text-xs py-2" style={{ color: "var(--text-dim)" }}>Sin art\u00edculos individuales</p>
+                    <p className="text-xs py-2" style={{ color: "var(--text-dim)" }}>Sin artículos individuales</p>
                   ) : (
                     inv.lineItems.map((item) => (
                       <div key={item.id} className="flex items-center justify-between gap-2 py-1.5 text-xs">
@@ -292,7 +292,7 @@ export default function InvoicesView({
       >
         <div className="space-y-4">
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            \u00bfEliminar esta factura y todos sus art\u00edculos? Esta acci\u00f3n no se puede deshacer.
+            ¿Eliminar esta factura y todos sus artículos? Esta acción no se puede deshacer.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={() => setDeleteInvoiceId(null)}>
@@ -314,7 +314,7 @@ export default function InvoicesView({
       >
         <div className="space-y-4">
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            \u00bfEliminar <span className="font-medium" style={{ color: "var(--text)" }}>{selectedInvoiceIds.size} factura{selectedInvoiceIds.size !== 1 ? "s" : ""}</span> y todos sus art\u00edculos? Esta acci\u00f3n no se puede deshacer.
+            ¿Eliminar <span className="font-medium" style={{ color: "var(--text)" }}>{selectedInvoiceIds.size} factura{selectedInvoiceIds.size !== 1 ? "s" : ""}</span> y todos sus artículos? Esta acción no se puede deshacer.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteInvoices(false)}>
