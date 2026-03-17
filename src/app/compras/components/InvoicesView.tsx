@@ -10,12 +10,18 @@ interface InvoicesViewProps {
   invoices: DbInvoice[];
   setInvoices: React.Dispatch<React.SetStateAction<DbInvoice[]>>;
   fetchStats: () => void;
+  addModalOpen: boolean;
+  setAddModalOpen: (open: boolean) => void;
+  fetchData: () => void;
 }
 
 export default function InvoicesView({
   invoices,
   setInvoices,
   fetchStats,
+  addModalOpen,
+  setAddModalOpen,
+  fetchData,
 }: InvoicesViewProps) {
   const [invoiceSelectMode, setInvoiceSelectMode] = useState(false);
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set());
@@ -396,6 +402,187 @@ export default function InvoicesView({
           )}
         </div>
       </Modal>
+
+      <AddInvoiceModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onAdded={() => { setAddModalOpen(false); fetchData(); }}
+      />
     </>
+  );
+}
+
+// ─── Add Invoice Modal ───────────────────────────────────────────
+function AddInvoiceModal({
+  open,
+  onClose,
+  onAdded,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const [restaurant, setRestaurant] = useState("motin_juarez");
+  const [supplier, setSupplier] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10));
+  const [importe, setImporte] = useState("");
+  const [iva, setIva] = useState("");
+  const [total, setTotal] = useState("");
+  const [concepto, setConcepto] = useState("");
+  const [cuentaPnl, setCuentaPnl] = useState("");
+  const [comments, setComments] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleAdd() {
+    if (!supplier.trim() || !invoiceDate || !total) {
+      setError("Proveedor, fecha y total son requeridos");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/compras/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          restaurant,
+          supplier: supplier.trim(),
+          invoiceNumber: invoiceNumber.trim() || undefined,
+          invoiceDate,
+          importe: parseFloat(importe) || 0,
+          iva: parseFloat(iva) || 0,
+          total: parseFloat(total),
+          concepto: concepto || undefined,
+          cuentaPnl: cuentaPnl || undefined,
+          comments: comments.trim() || undefined,
+        }),
+      });
+      if (!res.ok) { setError("Error al guardar"); return; }
+      setSupplier(""); setInvoiceNumber(""); setImporte(""); setIva(""); setTotal("");
+      setConcepto(""); setCuentaPnl(""); setComments("");
+      onAdded();
+    } catch { setError("Error de conexión"); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Agregar factura">
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Proveedor *</label>
+            <input type="text" value={supplier} placeholder="Nombre del proveedor..."
+              className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+              onChange={(e) => setSupplier(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Restaurante</label>
+            <div className="relative mt-1">
+              <select value={restaurant}
+                className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                onChange={(e) => setRestaurant(e.target.value)}>
+                <option value="motin_juarez">Motín Juárez</option>
+                <option value="motin_roma">Motín Roma</option>
+                <option value="queseria">Quesería</option>
+              </select>
+              <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
+                <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Nº Factura</label>
+            <input type="text" value={invoiceNumber} placeholder="Opcional"
+              className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+              onChange={(e) => setInvoiceNumber(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Fecha *</label>
+            <input type="date" value={invoiceDate}
+              className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+              onChange={(e) => setInvoiceDate(e.target.value)} />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Importe</label>
+            <input type="number" value={importe} step="0.01" placeholder="$0"
+              className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+              onChange={(e) => setImporte(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>IVA</label>
+            <input type="number" value={iva} step="0.01" placeholder="$0"
+              className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+              onChange={(e) => setIva(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Total *</label>
+            <input type="number" value={total} step="0.01" placeholder="$0"
+              className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+              onChange={(e) => setTotal(e.target.value)} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Concepto</label>
+            <div className="relative mt-1">
+              <select value={concepto}
+                className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: concepto ? "var(--text)" : "var(--text-dim)" }}
+                onChange={(e) => setConcepto(e.target.value)}>
+                <option value="">Seleccionar...</option>
+                {(dropdownOptions.concepto as string[]).map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+              <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
+                <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Cuenta P&L</label>
+            <div className="relative mt-1">
+              <select value={cuentaPnl}
+                className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: cuentaPnl ? "var(--text)" : "var(--text-dim)" }}
+                onChange={(e) => setCuentaPnl(e.target.value)}>
+                <option value="">Seleccionar...</option>
+                {(dropdownOptions.cuentaPnl as string[]).map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+              <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
+                <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Comentarios</label>
+          <input type="text" value={comments} placeholder="Opcional"
+            className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+            onChange={(e) => setComments(e.target.value)} />
+        </div>
+        {error && <p className="text-xs" style={{ color: "var(--danger)" }}>{error}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
+          <Button size="sm" loading={saving} onClick={handleAdd}>Guardar</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

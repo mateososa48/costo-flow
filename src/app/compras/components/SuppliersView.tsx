@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import Modal from "@/components/ui/Modal";
+import Button from "@/components/ui/Button";
 import { DbLineItem, SupplierGroup, formatCurrency, formatDate } from "../types";
 import dropdownOptions from "../../../../data/dropdown_options.json";
 
@@ -8,12 +10,18 @@ interface SuppliersViewProps {
   suppliers: SupplierGroup[];
   supplierTags: Record<string, string>;
   setSupplierTags: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  addModalOpen: boolean;
+  setAddModalOpen: (open: boolean) => void;
+  fetchData: () => void;
 }
 
 export default function SuppliersView({
   suppliers,
   supplierTags,
   setSupplierTags,
+  addModalOpen,
+  setAddModalOpen,
+  fetchData,
 }: SuppliersViewProps) {
   const [supplierSearch, setSupplierSearch] = useState("");
   const [supplierSortMode, setSupplierSortMode] = useState<"spend" | "count" | "alpha">("alpha");
@@ -209,6 +217,87 @@ export default function SuppliersView({
           {filtered.map(renderCard)}
         </div>
       </>
+
+      <AddSupplierModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onAdded={(newSupplier, supplyType) => {
+          setSupplierTags((prev) => ({ ...prev, [newSupplier]: supplyType }));
+          setAddModalOpen(false);
+          fetchData();
+        }}
+      />
     </div>
+  );
+}
+
+// ─── Add Supplier Modal ──────────────────────────────────────────
+function AddSupplierModal({
+  open,
+  onClose,
+  onAdded,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onAdded: (supplier: string, supplyType: string) => void;
+}) {
+  const [supplierName, setSupplierName] = useState("");
+  const [supplyType, setSupplyType] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleAdd() {
+    if (!supplierName.trim()) { setError("El nombre del proveedor es requerido"); return; }
+    if (!supplyType) { setError("Selecciona una categoría"); return; }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/compras/suppliers/tags", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ supplier: supplierName.trim(), supplyType }),
+      });
+      if (!res.ok) { setError("Error al guardar"); return; }
+      const name = supplierName.trim();
+      setSupplierName(""); setSupplyType("");
+      onAdded(name, supplyType);
+    } catch { setError("Error de conexión"); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Agregar proveedor">
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Nombre del proveedor *</label>
+          <input type="text" value={supplierName} placeholder="Ej. Distribuidora García..."
+            className="w-full mt-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+            onChange={(e) => setSupplierName(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Categoría *</label>
+          <div className="relative mt-1">
+            <select value={supplyType}
+              className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: supplyType ? "var(--text)" : "var(--text-dim)" }}
+              onChange={(e) => setSupplyType(e.target.value)}>
+              <option value="">Seleccionar categoría...</option>
+              {(dropdownOptions.cuentaPnl as string[]).map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
+              <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
+        {error && <p className="text-xs" style={{ color: "var(--danger)" }}>{error}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
+          <Button size="sm" loading={saving} onClick={handleAdd}>Guardar</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

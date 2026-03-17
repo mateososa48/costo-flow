@@ -5,7 +5,8 @@ export type AuditAction =
   | "submitted"
   | "duplicate_bypassed"
   | "invoice_deleted"
-  | "invoice_reclassified";
+  | "invoice_reclassified"
+  | "invoice_added_manually";
 
 export type AuditEntry = {
   id: string;

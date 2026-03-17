@@ -11,7 +11,6 @@ import type {
 import { getPresetRange, getWeekOptions } from "./types";
 import FilterPanel from "./components/FilterPanel";
 import FilterChips from "@/components/ui/FilterChips";
-import ExportButton from "@/components/ui/ExportButton";
 import ItemsView from "./components/ItemsView";
 import InvoicesView from "./components/InvoicesView";
 import SuppliersView from "./components/SuppliersView";
@@ -207,24 +206,17 @@ export default function ComprasPage() {
             Gastos de Alimentos
           </h1>
           <div className="flex items-center gap-2">
-            {(view === "items" || view === "invoices") && (
-              <ExportButton
-                href="/api/compras/export"
-                params={{
-                  type: view === "invoices" ? "invoices" : "items",
-                  ...(restaurant && { restaurant }),
-                  ...(dateFrom && { dateFrom }),
-                  ...(dateTo && { dateTo }),
-                  ...(supplier && { supplier }),
-                }}
-              />
+            {(view === "items" || view === "invoices" || view === "suppliers") && (
+              <Button size="sm" onClick={() => setAddModalOpen(true)}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+                <span className="hidden sm:inline">
+                  {view === "items" ? "Agregar artículo" : view === "invoices" ? "Agregar factura" : "Agregar proveedor"}
+                </span>
+                <span className="sm:hidden">Agregar</span>
+              </Button>
             )}
-            <Button size="sm" onClick={() => setAddModalOpen(true)}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-              <span className="hidden sm:inline">Agregar</span>
-            </Button>
           </div>
         </div>
 
@@ -369,6 +361,8 @@ export default function ComprasPage() {
           <InvoicesView
             invoices={invoices} setInvoices={setInvoices}
             fetchStats={fetchStats}
+            addModalOpen={addModalOpen} setAddModalOpen={setAddModalOpen}
+            fetchData={fetchData}
           />
         )}
 
@@ -376,6 +370,8 @@ export default function ComprasPage() {
           <SuppliersView
             suppliers={suppliers}
             supplierTags={supplierTags} setSupplierTags={setSupplierTags}
+            addModalOpen={addModalOpen} setAddModalOpen={setAddModalOpen}
+            fetchData={fetchData}
           />
         )}
 
