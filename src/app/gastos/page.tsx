@@ -108,6 +108,10 @@ export default function GastosPage() {
   const [supplierSearch, setSupplierSearch] = useState("");
   const [supplierSortMode, setSupplierSortMode] = useState<"spend" | "count" | "alpha">("alpha");
 
+  // Invoice search + sort
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [invoiceSortMode, setInvoiceSortMode] = useState<"recent" | "date" | "alpha">("date");
+
   function applyPreset(preset: string) {
     const { from, to } = getPresetRange(preset);
     setDateFrom(from);
@@ -322,9 +326,18 @@ export default function GastosPage() {
               </a>
             </div>
           );
+          const q = invoiceSearch.trim().toLowerCase();
+          const sortedInvoices = invoices
+            .filter((inv) => !q || inv.supplier.toLowerCase().includes(q) || (inv.invoice_number ?? "").toLowerCase().includes(q))
+            .slice()
+            .sort((a, b) => {
+              if (invoiceSortMode === "recent") return (b.id ?? "").localeCompare(a.id ?? "");
+              if (invoiceSortMode === "alpha") return a.supplier.localeCompare(b.supplier, "es");
+              return (b.invoice_date ?? "").localeCompare(a.invoice_date ?? "");
+            });
           // Group invoices by cuenta_pnl
           const groups: Record<string, DbInvoice[]> = {};
-          for (const inv of invoices) {
+          for (const inv of sortedInvoices) {
             const key = inv.cuenta_pnl ?? "Sin categoría";
             if (!groups[key]) groups[key] = [];
             groups[key].push(inv);
@@ -332,6 +345,48 @@ export default function GastosPage() {
           const groupKeys = Object.keys(groups).sort();
           return (
             <div className="space-y-2">
+              {/* Search + sort bar */}
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <div className="relative flex-1 min-w-[180px]">
+                  <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: "var(--text-muted)" }}>
+                    <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
+                    <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={invoiceSearch}
+                    onChange={(e) => setInvoiceSearch(e.target.value)}
+                    placeholder="Buscar factura..."
+                    className="w-full pl-8 pr-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+                    style={{ background: "var(--surface)", borderColor: invoiceSearch ? "var(--blue)" : "var(--border)", color: "var(--text)" }}
+                  />
+                  {invoiceSearch && (
+                    <button type="button" onClick={() => setInvoiceSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
+                      style={{ color: "var(--text-muted)" }}>
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 p-0.5 rounded-[var(--radius-sm)]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border-subtle)" }}>
+                  {([["recent", "Recientes"], ["date", "Por fecha"], ["alpha", "A–Z"]] as [typeof invoiceSortMode, string][]).map(([mode, label]) => (
+                    <button key={mode} type="button"
+                      className="text-[11px] px-2.5 py-1 rounded transition-colors"
+                      style={{
+                        background: invoiceSortMode === mode ? "var(--surface)" : "transparent",
+                        color: invoiceSortMode === mode ? "var(--text)" : "var(--text-muted)",
+                        fontWeight: invoiceSortMode === mode ? 600 : 400,
+                        boxShadow: invoiceSortMode === mode ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                      }}
+                      onClick={() => setInvoiceSortMode(mode)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Select mode toolbar */}
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs" style={{ color: "var(--text-dim)" }}>
