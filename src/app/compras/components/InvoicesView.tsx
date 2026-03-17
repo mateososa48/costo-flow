@@ -132,36 +132,28 @@ export default function InvoicesView({
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Select mode toolbar */}
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs" style={{ color: "var(--text-dim)" }}>
-            {invoiceSelectMode && selectedInvoiceIds.size > 0
-              ? `${selectedInvoiceIds.size} seleccionada${selectedInvoiceIds.size !== 1 ? "s" : ""}`
-              : ""}
-          </span>
-          <div className="flex items-center gap-2">
-            {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
-              <button type="button"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
-                style={{ background: "var(--danger-dim, #fee2e2)", color: "var(--danger, #ef4444)", border: "1px solid var(--danger-border, #fca5a5)" }}
-                onClick={() => setConfirmDeleteInvoices(true)}
-              >
-                <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
-                  <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Eliminar ({selectedInvoiceIds.size})
-              </button>
-            )}
+          {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
             <button type="button"
-              className="px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
-              style={{ background: invoiceSelectMode ? "var(--surface)" : "var(--blue-glow)", color: invoiceSelectMode ? "var(--text-muted)" : "var(--blue)", border: "1px solid", borderColor: invoiceSelectMode ? "var(--border)" : "color-mix(in srgb, var(--blue) 25%, transparent)" }}
-              onClick={() => { setInvoiceSelectMode((m) => !m); setSelectedInvoiceIds(new Set()); }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+              style={{ background: "var(--danger-dim, #fee2e2)", color: "var(--danger, #ef4444)", border: "1px solid var(--danger-border, #fca5a5)" }}
+              onClick={() => setConfirmDeleteInvoices(true)}
             >
-              {invoiceSelectMode ? "Cancelar" : "Seleccionar"}
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Eliminar ({selectedInvoiceIds.size})
             </button>
-          </div>
+          )}
+          <button type="button"
+            className="px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+            style={{ background: invoiceSelectMode ? "var(--surface)" : "var(--blue-glow)", color: invoiceSelectMode ? "var(--text-muted)" : "var(--blue)", border: "1px solid", borderColor: invoiceSelectMode ? "var(--border)" : "color-mix(in srgb, var(--blue) 25%, transparent)" }}
+            onClick={() => { setInvoiceSelectMode((m) => !m); setSelectedInvoiceIds(new Set()); }}
+          >
+            {invoiceSelectMode ? "Cancelar" : "Seleccionar"}
+            {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
+              <span className="ml-1">({selectedInvoiceIds.size})</span>
+            )}
+          </button>
         </div>
 
         {filtered.map((inv) => {
