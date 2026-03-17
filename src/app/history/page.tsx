@@ -250,62 +250,66 @@ export default function HistoryPage() {
                   const colors = actionColor(entry.action);
                   return (
                     <div key={entry.id}
-                      className="flex items-center gap-3 px-4 py-3.5"
+                      className="flex items-start gap-3 px-4 py-3.5"
                       style={{
                         background: "var(--surface)",
                         borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : undefined,
                       }}
                     >
-                      {/* Dot */}
-                      <div className="flex-shrink-0 w-2 h-2 rounded-full" style={{ background: colors.dot }} />
+                      {/* Dot — vertically centered with supplier name */}
+                      <div className="flex-shrink-0 w-2 h-2 rounded-full mt-[7px]" style={{ background: colors.dot }} />
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>
+                        {/* Row 1: Supplier + Amount */}
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>
                             {entry.supplier}
                           </span>
-                          {/* Action badge */}
+                          {entry.total > 0 && (
+                            <span className="text-sm font-semibold flex-shrink-0 tabular-nums" style={{ color: "var(--text)" }}>
+                              {formatCurrency(entry.total)}
+                            </span>
+                          )}
+                        </div>
+                        {/* Row 2: Badges */}
+                        <div className="flex items-center gap-1.5 mt-1">
                           <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold"
                             style={{ background: colors.bg, color: colors.text }}>
                             {actionLabel(entry.action)}
                           </span>
-                          {/* Restaurant badge */}
                           <span className="text-[10px] px-1.5 py-0.5 rounded"
                             style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
                             {RESTAURANT_LABELS[entry.restaurant as Restaurant] ?? entry.restaurant}
                           </span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
-                          {entry.invoiceDate && <span>{formatDate(entry.invoiceDate)}</span>}
-                          {entry.invoiceDate && <span>·</span>}
-                          <span>{formatDate(entry.createdAt)} {formatTime(entry.createdAt)}</span>
-                          {entry.user && <span>· {entry.user}</span>}
                           {entry.details && entry.action === "invoice_reclassified" && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded"
+                              style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
+                              {entry.details.from} → {entry.details.to}
+                            </span>
+                          )}
+                        </div>
+                        {/* Row 3: Meta line */}
+                        <div className="flex items-center gap-1.5 mt-1 text-[11px]" style={{ color: "var(--text-dim)" }}>
+                          {entry.invoiceDate && <span>{formatDate(entry.invoiceDate)}</span>}
+                          {entry.invoiceDate && <span style={{ opacity: 0.4 }}>·</span>}
+                          <span>{formatDate(entry.createdAt)} {formatTime(entry.createdAt)}</span>
+                          {entry.user && (
                             <>
-                              <span>·</span>
-                              <span>{entry.details.from} → {entry.details.to}</span>
+                              <span style={{ opacity: 0.4 }}>·</span>
+                              <span>{entry.user}</span>
+                            </>
+                          )}
+                          {entry.spreadsheetUrl && (
+                            <>
+                              <span style={{ opacity: 0.4 }}>·</span>
+                              <a href={entry.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
+                                className="hover-blue transition-colors duration-150"
+                                style={{ color: "var(--text-dim)" }}>
+                                Hoja ↗
+                              </a>
                             </>
                           )}
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {entry.total > 0 && (
-                          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
-                            {formatCurrency(entry.total)}
-                          </span>
-                        )}
-                        {entry.spreadsheetUrl && (
-                          <a href={entry.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
-                            className="p-1.5 rounded-md transition-colors duration-150 hover-blue-bg"
-                            style={{ color: "var(--text-muted)" }}
-                            title="Ver hoja de cálculo"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                              <path d="M2.5 7H11.5M7.5 3L11.5 7L7.5 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </a>
-                        )}
                       </div>
                     </div>
                   );
