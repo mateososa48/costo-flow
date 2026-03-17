@@ -139,9 +139,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     let parsedRows = 0;
-    // Sample col A values (first 5 non-empty) to diagnose date format
     const sampleColA = rows.map(r => r[0]).filter(Boolean).slice(0, 5);
-    diagnostics.push({ key, spreadsheetId, restaurant, rawRowCount: rows.length, parsedRows: 0, firstRawRow: rows[0], sampleColA } as typeof diagnostics[0] & { sampleColA: string[] });
+    const lastRows = rows.slice(-5); // last 5 rows — invoice data would be here
+    const rowsWithSupplier = rows.filter(r => r[0]?.trim() && r[1]?.trim()).length;
+    diagnostics.push({ key, spreadsheetId, restaurant, rawRowCount: rows.length, parsedRows: 0, sampleColA, lastRows, rowsWithSupplier } as typeof diagnostics[0] & { sampleColA: string[]; lastRows: string[][]; rowsWithSupplier: number });
     const diagEntry = diagnostics[diagnostics.length - 1];
 
     for (let i = 0; i < rows.length; i++) {
