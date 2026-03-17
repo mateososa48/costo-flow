@@ -79,6 +79,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const sheets = google.sheets({ version: "v4", auth: getAuth() });
 
+  const diagnostics: { key: string; spreadsheetId: string; restaurant: string; rawRowCount: number; parsedRows: number; firstRawRow?: string[] }[] = [];
+
   const summary: {
     key: string;
     spreadsheetId: string;
@@ -111,6 +113,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       continue;
     }
 
+    let parsedRows = 0;
+    diagnostics.push({ key, spreadsheetId, restaurant, rawRowCount: rows.length, parsedRows: 0, firstRawRow: rows[0] });
+    const diagEntry = diagnostics[diagnostics.length - 1];
+
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       const rawDate = r[0]?.trim() ?? "";
@@ -119,6 +125,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       const invoiceDate = sheetDateToISO(rawDate);
       if (!invoiceDate) continue;
+      parsedRows++; diagEntry.parsedRows = parsedRows;
 
       const invoiceNumber = r[2]?.trim() ?? null;
       const importe = parseNum(r[3] ?? "");
@@ -181,5 +188,5 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const skipped = summary.filter((s) => s.action === "skipped").length;
   const errors = summary.filter((s) => s.action === "error");
 
-  return NextResponse.json({ dry, inserted, skipped, errorCount: errors.length, errors, rows: summary });
+  return NextResponse.json({ dry, inserted, skipped, errorCount: errors.length, errors, diagnostics, rows: summary });
 }
