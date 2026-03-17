@@ -45,7 +45,6 @@ export async function saveInvoiceWithItems(
       cuenta_pnl: invoice.cuentaPnl,
       submitted_by: submittedBy,
       spreadsheet_url: spreadsheetUrl,
-      file_url: invoice.fileUrl ?? null,
     },
     { onConflict: "id" }
   );
