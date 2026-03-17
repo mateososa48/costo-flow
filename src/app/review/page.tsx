@@ -135,6 +135,14 @@ export default function ReviewPage() {
       }
       if (warnings.length > 0 && !bypass) { setDuplicateWarnings(warnings); return; }
 
+      // Surface any Sheets-write failures immediately — don't silently go to success
+      const failed = data.results.filter((r) => r.status === "error");
+      if (failed.length > 0) {
+        const msg = failed.map((r) => r.error ?? "Error desconocido").join("\n");
+        setSubmitError(msg);
+        return;
+      }
+
       appendToHistory(invoices, data);
       sessionStorage.setItem("submitResult", JSON.stringify(data));
       sessionStorage.removeItem("invoices");
