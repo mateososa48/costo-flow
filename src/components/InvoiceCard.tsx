@@ -72,12 +72,6 @@ export default function InvoiceCard({
             : "var(--surface-raised)",
         }}
       >
-        {/* Number badge */}
-        <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white"
-          style={{ background: "var(--pink-dark)" }}>
-          {index + 1}
-        </div>
-
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[15px] font-semibold truncate" style={{ color: "var(--text)" }}>

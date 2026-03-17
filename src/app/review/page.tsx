@@ -162,10 +162,11 @@ export default function ReviewPage() {
 
   return (
     <Shell>
-      <StepIndicator currentPath="/review" />
-      {/* Sticky review header — inside content area */}
-      <div className="sticky top-0 z-20 px-4 py-3 flex items-center justify-between gap-4"
+      {/* Sticky review header — step indicator + controls */}
+      <div className="sticky top-0 z-20"
         style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+        <StepIndicator currentPath="/review" />
+      <div className="px-4 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => { saveDraft(invoices); router.push("/upload"); }}
@@ -197,6 +198,7 @@ export default function ReviewPage() {
             Enviar todo
           </Button>
         </div>
+      </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
