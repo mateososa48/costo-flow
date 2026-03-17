@@ -28,14 +28,39 @@ function getAuth() {
   });
 }
 
-/** Parse dd/mm/yyyy → yyyy-mm-dd */
+const SPANISH_MONTHS: Record<string, string> = {
+  ene: "01", feb: "02", mar: "03", abr: "04",
+  may: "05", jun: "06", jul: "07", ago: "08",
+  sep: "09", oct: "10", nov: "11", dic: "12",
+};
+
+/** Parse date strings from Google Sheets → yyyy-mm-dd.
+ *  Handles:
+ *   - dd/mm/yyyy  (written by our app via USER_ENTERED)
+ *   - D-MMM-YY   (Spanish locale short format, e.g. "5-ene-26")
+ */
 function sheetDateToISO(d: string): string | null {
   if (!d) return null;
-  const parts = d.split("/");
-  if (parts.length !== 3) return null;
-  const [day, month, year] = parts;
-  if (!day || !month || !year) return null;
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+
+  // dd/mm/yyyy
+  if (d.includes("/")) {
+    const parts = d.split("/");
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      if (day && month && year)
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+  }
+
+  // D-MMM-YY  (e.g. "5-ene-26", "10-ene-26")
+  const m = d.match(/^(\d{1,2})-([a-z]+)-(\d{2})$/i);
+  if (m) {
+    const [, day, abbr, yr2] = m;
+    const month = SPANISH_MONTHS[abbr.toLowerCase()];
+    if (month) return `20${yr2}-${month}-${day.padStart(2, "0")}`;
+  }
+
+  return null;
 }
 
 /** Parse a Spanish-locale number string (comma decimal) → number */
