@@ -162,11 +162,9 @@ export default function ReviewPage() {
 
   return (
     <Shell>
-      {/* Sticky review header — step indicator + controls */}
-      <div className="sticky top-0 z-20"
+      {/* Sticky review header */}
+      <div className="sticky top-0 z-20 px-4 py-3 flex items-center justify-between gap-4"
         style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-        <StepIndicator currentPath="/review" />
-      <div className="px-4 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => { saveDraft(invoices); router.push("/upload"); }}
@@ -178,15 +176,9 @@ export default function ReviewPage() {
               <path d="M12.5 4L7 10l5.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <div className="flex items-center gap-2">
-            <span className="font-display text-xl font-bold" style={{ color: "var(--text)" }}>
-              Revisar facturas
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white"
-              style={{ background: "var(--pink-dark)" }}>
-              {invoices.length}
-            </span>
-          </div>
+          <span className="font-display text-xl font-bold" style={{ color: "var(--text)" }}>
+            Revisar facturas
+          </span>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           {pendingCount > 0 && (
@@ -199,9 +191,10 @@ export default function ReviewPage() {
           </Button>
         </div>
       </div>
-      </div>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+        {/* Step indicator */}
+        <StepIndicator currentPath="/review" />
         {/* Stats */}
         <div className="flex items-center justify-between gap-2 text-sm animate-fade-up">
           <div className="flex flex-wrap items-center gap-2" style={{ color: "var(--text-muted)" }}>
