@@ -114,7 +114,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     let parsedRows = 0;
-    diagnostics.push({ key, spreadsheetId, restaurant, rawRowCount: rows.length, parsedRows: 0, firstRawRow: rows[0] });
+    // Sample col A values (first 5 non-empty) to diagnose date format
+    const sampleColA = rows.map(r => r[0]).filter(Boolean).slice(0, 5);
+    diagnostics.push({ key, spreadsheetId, restaurant, rawRowCount: rows.length, parsedRows: 0, firstRawRow: rows[0], sampleColA } as typeof diagnostics[0] & { sampleColA: string[] });
     const diagEntry = diagnostics[diagnostics.length - 1];
 
     for (let i = 0; i < rows.length; i++) {
