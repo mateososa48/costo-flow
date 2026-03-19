@@ -5,6 +5,20 @@ import type { ExtractedInvoice, DuplicateMatch } from "@/types";
 
 const SHEET_TAB = "Informe de Gastos";
 const AUDIT_TAB = "Audit Log";
+const SPANISH_MONTH_ABBREVIATIONS = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
+] as const;
 
 function getAuth() {
   return new google.auth.JWT({
@@ -33,11 +47,38 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
 }
 
 /**
- * Format a yyyy-mm-dd date as dd/mm/yyyy (Spanish locale for Sheets).
+ * Format a yyyy-mm-dd date as d-mmm-yy for the main invoice sheet.
  */
 export function formatDateForSheet(isoDate: string): string {
   const [year, month, day] = isoDate.split("-");
-  return `${day}/${month}/${year}`;
+  const monthIndex = Number(month) - 1;
+  const monthName = SPANISH_MONTH_ABBREVIATIONS[monthIndex];
+  if (!monthName) return isoDate;
+
+  return `${Number(day)}-${monthName}-${year.slice(-2)}`;
+}
+
+function parseSheetDateParts(sheetDate: string): { year: string; month: string } | null {
+  const slashParts = sheetDate.split("/");
+  if (slashParts.length === 3) {
+    const [, month, year] = slashParts;
+    if (!/^\d{2}$/.test(month) || !/^\d{4}$/.test(year)) return null;
+    return { year, month };
+  }
+
+  const dashParts = sheetDate.toLowerCase().split("-");
+  if (dashParts.length === 3) {
+    const [, monthName, shortYear] = dashParts;
+    const monthIndex = SPANISH_MONTH_ABBREVIATIONS.indexOf(monthName as typeof SPANISH_MONTH_ABBREVIATIONS[number]);
+    if (monthIndex === -1 || !/^\d{2}$/.test(shortYear)) return null;
+
+    return {
+      year: `20${shortYear}`,
+      month: String(monthIndex + 1).padStart(2, "0"),
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -142,10 +183,9 @@ export async function checkDuplicates(
     // Skip header rows or malformed rows
     if (!row[0] || !row[1]) continue;
 
-    // Parse date from dd/mm/yyyy format
-    const dateParts = row[0].split("/");
-    if (dateParts.length !== 3) continue;
-    const [, rowMonth, rowYear] = dateParts;
+    const dateParts = parseSheetDateParts(row[0]);
+    if (!dateParts) continue;
+    const { month: rowMonth, year: rowYear } = dateParts;
 
     // Must be same month
     if (rowYear !== invoiceYear || rowMonth !== invoiceMonth) continue;

@@ -7,7 +7,8 @@
 
 function formatDateForSheet(isoDate: string): string {
   const [year, month, day] = isoDate.split("-");
-  return `${day}/${month}/${year}`;
+  const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return `${Number(day)}-${monthNames[Number(month) - 1]}-${year.slice(-2)}`;
 }
 
 type TestInvoice = {
@@ -49,16 +50,16 @@ const SAMPLE_INVOICE: TestInvoice = {
 };
 
 describe("formatDateForSheet", () => {
-  test("converts yyyy-mm-dd to dd/mm/yyyy", () => {
-    expect(formatDateForSheet("2025-01-15")).toBe("15/01/2025");
+  test("converts yyyy-mm-dd to d-mmm-yy", () => {
+    expect(formatDateForSheet("2025-01-15")).toBe("15-ene-25");
   });
 
   test("handles end-of-year date", () => {
-    expect(formatDateForSheet("2025-12-31")).toBe("31/12/2025");
+    expect(formatDateForSheet("2025-12-31")).toBe("31-dic-25");
   });
 
-  test("preserves leading zeros", () => {
-    expect(formatDateForSheet("2025-01-05")).toBe("05/01/2025");
+  test("drops the leading zero in the day", () => {
+    expect(formatDateForSheet("2025-01-05")).toBe("5-ene-25");
   });
 });
 
@@ -68,9 +69,9 @@ describe("invoiceToSheetRow", () => {
     expect(row).toHaveLength(9);
   });
 
-  test("column A (index 0) is date in dd/mm/yyyy", () => {
+  test("column A (index 0) is date in d-mmm-yy", () => {
     const row = invoiceToSheetRow(SAMPLE_INVOICE);
-    expect(row[0]).toBe("15/01/2025");
+    expect(row[0]).toBe("15-ene-25");
   });
 
   test("column B (index 1) is supplier name", () => {
