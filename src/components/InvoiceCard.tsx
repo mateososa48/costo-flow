@@ -73,15 +73,25 @@ export default function InvoiceCard({
         }}
       >
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[15px] font-semibold truncate" style={{ color: "var(--text)" }}>
+          {/* Line 1: supplier + price */}
+          <div className="flex items-center justify-between gap-2 overflow-hidden">
+            <span className="text-[15px] font-semibold truncate flex-1 min-w-0" style={{ color: "var(--text)" }}>
               {invoice.supplier || "Proveedor desconocido"}
             </span>
+            <span className="text-sm font-bold flex-shrink-0" style={{ color: "var(--blue)" }}>
+              {formatCurrency(invoice.total)}
+            </span>
+          </div>
+          {/* Line 2: invoice# · date · confidence · warning */}
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             {invoice.invoiceNumber && (
               <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>
                 #{invoice.invoiceNumber}
               </span>
             )}
+            {invoice.invoiceNumber && <span style={{ color: "var(--text-dim)", opacity: 0.4, fontSize: 10 }}>·</span>}
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>{invoice.invoiceDate}</span>
+            <ConfidenceBadge confidence={invoice.extractionConfidence} />
             {hasRequiredGaps && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
                 style={{ color: "var(--warning)", background: "var(--warning-dim)", border: "1px solid rgba(217,119,6,0.2)" }}>
@@ -91,13 +101,6 @@ export default function InvoiceCard({
                 Requiere selección
               </span>
             )}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap mt-0.5">
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>{invoice.invoiceDate}</span>
-            <span className="text-sm font-bold" style={{ color: "var(--blue)" }}>
-              {formatCurrency(invoice.total)}
-            </span>
-            <ConfidenceBadge confidence={invoice.extractionConfidence} />
           </div>
         </div>
 

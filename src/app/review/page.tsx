@@ -225,7 +225,7 @@ export default function ReviewPage() {
           <select
             value={restaurant}
             onChange={(e) => updateRestaurant(e.target.value as Restaurant)}
-            className="flex-shrink-0 text-xs font-semibold px-2 py-1 rounded-[var(--radius-sm)] border appearance-none cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2 max-w-[120px]"
+            className="flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-[var(--radius-sm)] border appearance-none cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2 max-w-[110px]"
             style={{
               background: "var(--blue-light)",
               borderColor: "var(--blue-light)",

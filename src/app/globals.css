@@ -155,11 +155,19 @@ input[type="number"]::-webkit-outer-spin-button {
   }
 }
 
-/* ─── Date input — prevent iOS overflow + normalize appearance ───────── */
-input[type="date"] {
+/* ─── Date + select inputs — normalize iOS rendering ─────────────────── */
+input[type="date"],
+input[type="date"]::-webkit-date-and-time-value {
   min-width: 0;
   text-align: left;
   -webkit-text-align: left;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Prevent iOS from inflating input/select font size */
+input, select, textarea {
+  font-size: max(13px, 1em);
 }
 
 /* ─── Animations ─────────────────────────────────────────────────────── */

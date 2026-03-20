@@ -476,8 +476,8 @@ export default function GastosPage() {
                             )}
                             <div className="flex-1 min-w-0">
                               {/* Line 1: supplier + price */}
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{inv.supplier}</span>
+                              <div className="flex items-center justify-between gap-2 overflow-hidden">
+                                <span className="text-sm font-medium truncate flex-1 min-w-0" style={{ color: "var(--text)" }}>{inv.supplier}</span>
                                 <span className="font-bold text-sm flex-shrink-0" style={{ color: "var(--blue)" }}>{fmt(inv.total)}</span>
                               </div>
                               {/* Line 2: invoice# · date · items */}
