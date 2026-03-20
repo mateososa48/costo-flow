@@ -99,8 +99,8 @@ export default function InvoicesView({
     <>
       <div className="space-y-2">
         {/* Search + sort bar */}
-        <div className="flex flex-wrap items-center gap-2 mb-2">
-          <div className="relative flex-1 min-w-[180px]">
+        <div className="flex flex-col gap-2 mb-2">
+          <div className="relative w-full">
             <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: "var(--text-muted)" }}>
               <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
               <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -123,43 +123,45 @@ export default function InvoicesView({
               </button>
             )}
           </div>
-          <div className="flex items-center gap-1 p-0.5 rounded-[var(--radius-sm)]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border-subtle)" }}>
-            {([["recent", "Recientes"], ["date", "Por fecha"], ["alpha", "A–Z"]] as [typeof invoiceSortMode, string][]).map(([mode, label]) => (
-              <button key={mode} type="button"
-                className="text-[11px] px-2.5 py-1 rounded transition-colors"
-                style={{
-                  background: invoiceSortMode === mode ? "var(--surface)" : "transparent",
-                  color: invoiceSortMode === mode ? "var(--text)" : "var(--text-muted)",
-                  fontWeight: invoiceSortMode === mode ? 600 : 400,
-                  boxShadow: invoiceSortMode === mode ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
-                }}
-                onClick={() => setInvoiceSortMode(mode)}>
-                {label}
-              </button>
-            ))}
-          </div>
-          {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
-            <button type="button"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
-              style={{ background: "var(--danger-dim, #fee2e2)", color: "var(--danger, #ef4444)", border: "1px solid var(--danger-border, #fca5a5)" }}
-              onClick={() => setConfirmDeleteInvoices(true)}
-            >
-              <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
-                <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Eliminar ({selectedInvoiceIds.size})
-            </button>
-          )}
-          <button type="button"
-            className="px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
-            style={{ background: invoiceSelectMode ? "var(--surface)" : "var(--blue-glow)", color: invoiceSelectMode ? "var(--text-muted)" : "var(--blue)", border: "1px solid", borderColor: invoiceSelectMode ? "var(--border)" : "color-mix(in srgb, var(--blue) 25%, transparent)" }}
-            onClick={() => { setInvoiceSelectMode((m) => !m); setSelectedInvoiceIds(new Set()); }}
-          >
-            {invoiceSelectMode ? "Cancelar" : "Seleccionar"}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 p-0.5 rounded-[var(--radius-sm)]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border-subtle)" }}>
+              {([["recent", "Recientes"], ["date", "Por fecha"], ["alpha", "A–Z"]] as [typeof invoiceSortMode, string][]).map(([mode, label]) => (
+                <button key={mode} type="button"
+                  className="text-[11px] px-2.5 py-1 rounded transition-colors"
+                  style={{
+                    background: invoiceSortMode === mode ? "var(--surface)" : "transparent",
+                    color: invoiceSortMode === mode ? "var(--text)" : "var(--text-muted)",
+                    fontWeight: invoiceSortMode === mode ? 600 : 400,
+                    boxShadow: invoiceSortMode === mode ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                  }}
+                  onClick={() => setInvoiceSortMode(mode)}>
+                  {label}
+                </button>
+              ))}
+            </div>
             {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
-              <span className="ml-1">({selectedInvoiceIds.size})</span>
+              <button type="button"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+                style={{ background: "var(--danger-dim, #fee2e2)", color: "var(--danger, #ef4444)", border: "1px solid var(--danger-border, #fca5a5)" }}
+                onClick={() => setConfirmDeleteInvoices(true)}
+              >
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                  <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Eliminar ({selectedInvoiceIds.size})
+              </button>
             )}
-          </button>
+            <button type="button"
+              className="ml-auto px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+              style={{ background: invoiceSelectMode ? "var(--surface)" : "var(--blue-glow)", color: invoiceSelectMode ? "var(--text-muted)" : "var(--blue)", border: "1px solid", borderColor: invoiceSelectMode ? "var(--border)" : "color-mix(in srgb, var(--blue) 25%, transparent)" }}
+              onClick={() => { setInvoiceSelectMode((m) => !m); setSelectedInvoiceIds(new Set()); }}
+            >
+              {invoiceSelectMode ? "Cancelar" : "Seleccionar"}
+              {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
+                <span className="ml-1">({selectedInvoiceIds.size})</span>
+              )}
+            </button>
+          </div>
         </div>
 
         {filtered.map((inv) => {
@@ -215,19 +217,24 @@ export default function InvoicesView({
                     </svg>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    {/* Line 1: supplier + price */}
+                    <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{inv.supplier}</span>
-                      {inv.invoice_number && (
-                        <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>#{inv.invoice_number}</span>
-                      )}
+                      <span className="text-sm font-semibold flex-shrink-0" style={{ color: "var(--blue)" }}>{formatCurrency(inv.total)}</span>
+                    </div>
+                    {/* Line 2: invoice# · date · items */}
+                    <div className="flex items-center gap-1.5 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                      {inv.invoice_number && <span className="font-mono">#{inv.invoice_number}</span>}
+                      {inv.invoice_number && <span style={{ opacity: 0.4 }}>·</span>}
+                      <span>{formatDate(inv.invoice_date)}</span>
+                      <span style={{ opacity: 0.4 }}>·</span>
+                      <span>{inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}</span>
+                    </div>
+                    {/* Line 3: tags */}
+                    <div className="flex items-center gap-1.5 mt-1">
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--pink-glow)", color: "var(--pink-dark)" }}>
                         {restaurantLabel(inv.restaurant)}
                       </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
-                      <span>{formatDate(inv.invoice_date)}</span>
-                      <span className="font-semibold" style={{ color: "var(--blue)" }}>{formatCurrency(inv.total)}</span>
-                      <span>{inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}</span>
                       {inv.cuenta_pnl && !invoiceSelectMode && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full"
                           style={{ background: "var(--surface-raised)", color: "var(--text-dim)", border: "1px solid var(--border-subtle)" }}>

@@ -111,9 +111,9 @@ export default function NormalizeView({
         return (
           <>
             {/* Toolbar */}
-            <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:flex-wrap sm:items-center">
               {/* Search */}
-              <div className="relative flex-1 min-w-[180px]">
+              <div className="relative w-full sm:flex-1 sm:min-w-[180px]">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ color: "var(--text-muted)" }}>
                   <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                 </svg>
@@ -391,12 +391,12 @@ export default function NormalizeView({
               </div>
             )}
 
-            {/* 50/50 split */}
-            <div className="grid grid-cols-2 gap-3" style={{ height: "calc(100vh - 280px)", minHeight: 400 }}>
+            {/* 50/50 split — stacked on mobile, side-by-side on md+ */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3" style={{ minHeight: 400 }}>
 
               {/* Left: unidentified */}
               <div className="rounded-[var(--radius)] border overflow-hidden flex flex-col"
-                style={{ borderColor: "var(--border)" }}>
+                style={{ borderColor: "var(--border)", height: "clamp(320px, 50vh, 480px)" }}>
                 <div className="px-4 py-3 border-b flex items-center justify-between flex-shrink-0"
                   style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
                   <div className="flex items-center gap-2">
@@ -539,7 +539,7 @@ export default function NormalizeView({
 
               {/* Right: ingredients reference */}
               <div className="rounded-[var(--radius)] border overflow-hidden flex flex-col"
-                style={{ borderColor: "var(--border)" }}>
+                style={{ borderColor: "var(--border)", height: "clamp(320px, 50vh, 480px)" }}>
                 <div className="px-4 py-3 border-b flex-shrink-0"
                   style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
                   <div className="relative">

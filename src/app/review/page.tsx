@@ -225,7 +225,7 @@ export default function ReviewPage() {
           <select
             value={restaurant}
             onChange={(e) => updateRestaurant(e.target.value as Restaurant)}
-            className="flex-shrink-0 text-xs font-semibold px-2.5 py-1.5 rounded-[var(--radius-sm)] border appearance-none cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2"
+            className="flex-shrink-0 text-xs font-semibold px-2 py-1 rounded-[var(--radius-sm)] border appearance-none cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2 max-w-[120px]"
             style={{
               background: "var(--blue-light)",
               borderColor: "var(--blue-light)",
@@ -291,7 +291,7 @@ export default function ReviewPage() {
               <line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" strokeWidth="1.8"/>
               <line x1="9" y1="9" x2="9" y2="21" stroke="currentColor" strokeWidth="1.8"/>
             </svg>
-            Enviar {invoices.length} factura{invoices.length !== 1 ? "s" : ""} a Google Sheets — {RESTAURANT_LABELS[restaurant]}
+            Enviar {invoices.length} factura{invoices.length !== 1 ? "s" : ""} a Google Sheets<span className="hidden sm:inline"> — {RESTAURANT_LABELS[restaurant]}</span>
           </Button>
         </div>
       </div>

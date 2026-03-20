@@ -147,8 +147,8 @@ export default function HistoryPage() {
               ))}
             </div>
             {/* Search + date range */}
-            <div className="flex flex-wrap gap-2">
-              <div className="relative flex-1 min-w-[180px]">
+            <div className="flex flex-col gap-2">
+              <div className="relative w-full">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                   strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                   style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}>
@@ -164,31 +164,33 @@ export default function HistoryPage() {
                   style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
                 />
               </div>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="px-3 py-2 rounded-[var(--radius-sm)] border text-sm"
-                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
-                title="Desde"
-              />
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="px-3 py-2 rounded-[var(--radius-sm)] border text-sm"
-                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
-                title="Hasta"
-              />
-              {hasActiveFilters && (
-                <button
-                  onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); }}
-                  className="px-3 py-2 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
-                  style={{ color: "var(--blue)", background: "var(--blue-glow)" }}
-                >
-                  Limpiar
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                  title="Desde"
+                />
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-[var(--radius-sm)] border text-sm"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                  title="Hasta"
+                />
+                {hasActiveFilters && (
+                  <button
+                    onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); }}
+                    className="flex-shrink-0 px-3 py-2 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+                    style={{ color: "var(--blue)", background: "var(--blue-glow)" }}
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -272,7 +274,7 @@ export default function HistoryPage() {
                           )}
                         </div>
                         {/* Row 2: Badges */}
-                        <div className="flex items-center gap-1.5 mt-1">
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold"
                             style={{ background: colors.bg, color: colors.text }}>
                             {actionLabel(entry.action)}
@@ -282,9 +284,11 @@ export default function HistoryPage() {
                             {RESTAURANT_LABELS[entry.restaurant as Restaurant] ?? entry.restaurant}
                           </span>
                           {entry.details && entry.action === "invoice_reclassified" && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded"
+                            <span className="text-[11px] px-2 py-0.5 rounded"
                               style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
-                              {entry.details.from} → {entry.details.to}
+                              {entry.details.from}
+                              <span style={{ color: "var(--blue)", margin: "0 4px" }}>→</span>
+                              {entry.details.to}
                             </span>
                           )}
                         </div>

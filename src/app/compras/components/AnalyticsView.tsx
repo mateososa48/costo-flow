@@ -104,9 +104,9 @@ export default function AnalyticsView({
             )}
 
             {/* Category + Supplier Row */}
-            <div className="grid md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Category breakdown */}
-              <div className="md:col-span-3 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+              <div className="md:col-span-3 rounded-[var(--radius)] border p-4 overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                 <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Por categoría</p>
                 {d.categoryBreakdown.length === 0 ? (
                   <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
@@ -135,7 +135,7 @@ export default function AnalyticsView({
               </div>
 
               {/* Top Suppliers */}
-              <div className="md:col-span-2 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+              <div className="md:col-span-2 rounded-[var(--radius)] border p-4 overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                 <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Top proveedores</p>
                 {d.spendBySupplier.length === 0 ? (
                   <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
@@ -190,13 +190,13 @@ export default function AnalyticsView({
                           style={{ color: "var(--text-dim)", minWidth: "40px", textAlign: "center" }}>
                           ×{item.count}
                         </span>
-                        <div className="flex items-center gap-2 flex-shrink-0" style={{ minWidth: "140px" }}>
-                          <div className="flex-1 h-1 rounded-full" style={{ background: "var(--border)" }}>
+                        <div className="flex items-center gap-2 flex-shrink-0" style={{ minWidth: "80px", maxWidth: "140px", flex: "0 1 140px" }}>
+                          <div className="flex-1 h-1 rounded-full hidden sm:block" style={{ background: "var(--border)" }}>
                             <div className="h-full rounded-full"
                               style={{ width: `${barWidth}%`, background: "var(--pink-dark)", opacity: 0.75 }} />
                           </div>
-                          <span className="text-xs font-semibold tabular-nums"
-                            style={{ color: "var(--text)", minWidth: "72px", textAlign: "right" }}>
+                          <span className="text-xs font-semibold tabular-nums flex-shrink-0"
+                            style={{ color: "var(--text)" }}>
                             {formatCurrency(item.totalSpend)}
                           </span>
                         </div>

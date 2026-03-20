@@ -155,9 +155,11 @@ input[type="number"]::-webkit-outer-spin-button {
   }
 }
 
-/* ─── Date input — prevent iOS overflow ─────────────────────────────── */
+/* ─── Date input — prevent iOS overflow + normalize appearance ───────── */
 input[type="date"] {
   min-width: 0;
+  text-align: left;
+  -webkit-text-align: left;
 }
 
 /* ─── Animations ─────────────────────────────────────────────────────── */

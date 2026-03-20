@@ -32,7 +32,7 @@ export default function Input({
       <input
         id={inputId}
         className={[
-          "w-full px-3 py-2 rounded-[var(--radius-sm)] text-sm",
+          "w-full px-3 py-1.5 rounded-[var(--radius-sm)] text-sm",
           "bg-[var(--surface)] border",
           "placeholder:text-[var(--text-dim)]",
           "transition-colors duration-150",

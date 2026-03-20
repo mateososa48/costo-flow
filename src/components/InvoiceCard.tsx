@@ -155,15 +155,15 @@ export default function InvoiceCard({
 
       {/* Body */}
       {expanded && (
-        <div className="px-4 pb-4 space-y-4 border-t" style={{ borderColor: "var(--border-subtle)" }}>
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+          <div className="pt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
             <Input
               label="Fecha de factura"
               type="date"
               value={invoice.invoiceDate}
               onChange={(e) => update({ invoiceDate: e.target.value })}
             />
-            <div className="sm:col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <Input
                 label="Proveedor"
                 type="text"
@@ -174,7 +174,7 @@ export default function InvoiceCard({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <Input
               label="Nº de factura"
               type="text"
@@ -190,14 +190,16 @@ export default function InvoiceCard({
               step="0.01"
               onChange={(e) => update({ importe: parseFloat(e.target.value) || 0 })}
             />
-            <Input
-              label="IVA"
-              type="number"
-              value={invoice.iva}
-              min={0}
-              step="0.01"
-              onChange={(e) => update({ iva: parseFloat(e.target.value) || 0 })}
-            />
+            <div className="col-span-2 sm:col-span-1">
+              <Input
+                label="IVA"
+                type="number"
+                value={invoice.iva}
+                min={0}
+                step="0.01"
+                onChange={(e) => update({ iva: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
           </div>
 
           {invoice.mathWarning && (
@@ -212,15 +214,17 @@ export default function InvoiceCard({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Input
-              label="Total"
-              type="number"
-              value={invoice.total}
-              min={0}
-              step="0.01"
-              onChange={(e) => update({ total: parseFloat(e.target.value) || 0 })}
-            />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="col-span-2 sm:col-span-1">
+              <Input
+                label="Total"
+                type="number"
+                value={invoice.total}
+                min={0}
+                step="0.01"
+                onChange={(e) => update({ total: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
             <Select
               label="Concepto"
               value={invoice.concepto}
@@ -341,13 +345,13 @@ function LineItemsSection({
               className="grid grid-cols-[1fr_auto] gap-2 p-2.5 rounded-[var(--radius-sm)] border"
               style={{ background: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 items-center">
+              <div className="grid grid-cols-2 sm:grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 items-center">
                 <input
                   type="text"
                   value={item.description}
                   placeholder="Descripción"
-                  className="w-full px-2 py-1.5 rounded border text-xs focus:outline-none focus:ring-1"
-                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)", focusRingColor: "var(--blue)" } as React.CSSProperties}
+                  className="col-span-2 sm:col-span-1 w-full px-2 py-1.5 rounded border text-xs focus:outline-none focus:ring-1"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
                   onChange={(e) => updateItem(idx, { description: e.target.value })}
                 />
                 <input

@@ -98,8 +98,8 @@ export default function GastosAnalytics({ analytics }: { analytics: AnalyticsDat
       )}
 
       {/* Category + Supplier Row */}
-      <div className="grid md:grid-cols-5 gap-4">
-        <div className="md:col-span-3 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="md:col-span-3 rounded-[var(--radius)] border p-4 overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
           <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Por categoría</p>
           {analytics.breakdown.length === 0 ? (
             <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>
@@ -127,7 +127,7 @@ export default function GastosAnalytics({ analytics }: { analytics: AnalyticsDat
           )}
         </div>
 
-        <div className="md:col-span-2 rounded-[var(--radius)] border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+        <div className="md:col-span-2 rounded-[var(--radius)] border p-4 overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
           <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Top proveedores</p>
           {analytics.topSuppliers.length === 0 ? (
             <p className="text-sm py-6 text-center" style={{ color: "var(--text-dim)" }}>Sin datos</p>

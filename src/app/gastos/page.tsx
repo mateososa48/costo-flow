@@ -246,46 +246,50 @@ export default function GastosPage() {
               );
             })}
           </div>
-          <div className="flex flex-wrap items-center gap-1.5 py-2">
-            {/* Period presets */}
-            {[
-              { key: "thisMonth", label: "Este mes" },
-              { key: "lastMonth", label: "Mes pasado" },
-              { key: "last30", label: "Últ. 30d" },
-              { key: "ytd", label: "YTD" },
-            ].map(({ key, label }) => (
-              <button key={key} type="button" onClick={() => applyPreset(key)}
-                className="text-xs px-2 py-1.5 rounded border transition-colors duration-150"
-                style={{
-                  background: activePreset === key ? "var(--blue)" : "var(--surface)",
-                  color: activePreset === key ? "#fff" : "var(--text-muted)",
-                  borderColor: activePreset === key ? "var(--blue)" : "var(--border)",
-                }}>
-                {label}
-              </button>
-            ))}
-            <span className="w-px h-4 mx-0.5" style={{ background: "var(--border)" }} />
-            <select value={restaurant} onChange={(e) => setRestaurant(e.target.value)}
-              className="text-xs px-2 py-1.5 rounded border appearance-none"
-              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}>
-              <option value="">Todos los restaurantes</option>
-              {Object.entries(RESTAURANT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-            <input type="date" value={dateFrom}
-              onChange={(e) => { setDateFrom(e.target.value); setActivePreset(""); }}
-              className="text-xs px-2 py-1.5 rounded border"
-              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }} />
-            <input type="date" value={dateTo}
-              onChange={(e) => { setDateTo(e.target.value); setActivePreset(""); }}
-              className="text-xs px-2 py-1.5 rounded border"
-              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }} />
-            {hasFilters && (
-              <button onClick={() => { setRestaurant(""); setDateFrom(""); setDateTo(""); setActivePreset(""); }}
-                className="text-xs px-2 py-1.5 rounded border"
-                style={{ color: "var(--text-muted)", borderColor: "var(--border)" }}>
-                Limpiar
-              </button>
-            )}
+          <div className="flex flex-col gap-2 py-2">
+            {/* Row 1: Period presets */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { key: "thisMonth", label: "Este mes" },
+                { key: "lastMonth", label: "Mes pasado" },
+                { key: "last30", label: "Últ. 30d" },
+                { key: "ytd", label: "YTD" },
+              ].map(({ key, label }) => (
+                <button key={key} type="button" onClick={() => applyPreset(key)}
+                  className="text-xs px-2 py-1.5 rounded border transition-colors duration-150"
+                  style={{
+                    background: activePreset === key ? "var(--blue)" : "var(--surface)",
+                    color: activePreset === key ? "#fff" : "var(--text-muted)",
+                    borderColor: activePreset === key ? "var(--blue)" : "var(--border)",
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* Row 2: Restaurant + dates + clear */}
+            <div className="flex items-center gap-2">
+              <select value={restaurant} onChange={(e) => setRestaurant(e.target.value)}
+                className="flex-1 text-xs px-2 py-1.5 rounded border appearance-none min-w-0"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}>
+                <option value="">Todos los restaurantes</option>
+                {Object.entries(RESTAURANT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <input type="date" value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setActivePreset(""); }}
+                className="flex-1 text-xs px-2 py-1.5 rounded border min-w-0"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }} />
+              <input type="date" value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setActivePreset(""); }}
+                className="flex-1 text-xs px-2 py-1.5 rounded border min-w-0"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }} />
+              {hasFilters && (
+                <button onClick={() => { setRestaurant(""); setDateFrom(""); setDateTo(""); setActivePreset(""); }}
+                  className="flex-shrink-0 text-xs px-2 py-1.5 rounded border"
+                  style={{ color: "var(--text-muted)", borderColor: "var(--border)" }}>
+                  Limpiar
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -346,8 +350,8 @@ export default function GastosPage() {
           return (
             <div className="space-y-2">
               {/* Search + sort bar */}
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <div className="relative flex-1 min-w-[180px]">
+              <div className="flex flex-col gap-2 mb-2">
+                <div className="relative w-full">
                   <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: "var(--text-muted)" }}>
                     <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
                     <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -370,43 +374,45 @@ export default function GastosPage() {
                     </button>
                   )}
                 </div>
-                <div className="flex items-center gap-1 p-0.5 rounded-[var(--radius-sm)]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border-subtle)" }}>
-                  {([["recent", "Recientes"], ["date", "Por fecha"], ["alpha", "A–Z"]] as [typeof invoiceSortMode, string][]).map(([mode, label]) => (
-                    <button key={mode} type="button"
-                      className="text-[11px] px-2.5 py-1 rounded transition-colors"
-                      style={{
-                        background: invoiceSortMode === mode ? "var(--surface)" : "transparent",
-                        color: invoiceSortMode === mode ? "var(--text)" : "var(--text-muted)",
-                        fontWeight: invoiceSortMode === mode ? 600 : 400,
-                        boxShadow: invoiceSortMode === mode ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
-                      }}
-                      onClick={() => setInvoiceSortMode(mode)}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
-                  <button type="button"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
-                    style={{ background: "var(--danger-dim, #fee2e2)", color: "var(--danger, #ef4444)", border: "1px solid var(--danger-border, #fca5a5)" }}
-                    onClick={() => setConfirmDeleteInvoices(true)}
-                  >
-                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
-                      <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    Eliminar ({selectedInvoiceIds.size})
-                  </button>
-                )}
-                <button type="button"
-                  className="px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
-                  style={{ background: invoiceSelectMode ? "var(--surface)" : "var(--blue-glow)", color: invoiceSelectMode ? "var(--text-muted)" : "var(--blue)", border: "1px solid", borderColor: invoiceSelectMode ? "var(--border)" : "color-mix(in srgb, var(--blue) 25%, transparent)" }}
-                  onClick={() => { setInvoiceSelectMode((m) => !m); setSelectedInvoiceIds(new Set()); }}
-                >
-                  {invoiceSelectMode ? "Cancelar" : "Seleccionar"}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 p-0.5 rounded-[var(--radius-sm)]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border-subtle)" }}>
+                    {([["recent", "Recientes"], ["date", "Por fecha"], ["alpha", "A–Z"]] as [typeof invoiceSortMode, string][]).map(([mode, label]) => (
+                      <button key={mode} type="button"
+                        className="text-[11px] px-2.5 py-1 rounded transition-colors"
+                        style={{
+                          background: invoiceSortMode === mode ? "var(--surface)" : "transparent",
+                          color: invoiceSortMode === mode ? "var(--text)" : "var(--text-muted)",
+                          fontWeight: invoiceSortMode === mode ? 600 : 400,
+                          boxShadow: invoiceSortMode === mode ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                        }}
+                        onClick={() => setInvoiceSortMode(mode)}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                   {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
-                    <span className="ml-1">({selectedInvoiceIds.size})</span>
+                    <button type="button"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+                      style={{ background: "var(--danger-dim, #fee2e2)", color: "var(--danger, #ef4444)", border: "1px solid var(--danger-border, #fca5a5)" }}
+                      onClick={() => setConfirmDeleteInvoices(true)}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                        <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Eliminar ({selectedInvoiceIds.size})
+                    </button>
                   )}
-                </button>
+                  <button type="button"
+                    className="ml-auto px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors"
+                    style={{ background: invoiceSelectMode ? "var(--surface)" : "var(--blue-glow)", color: invoiceSelectMode ? "var(--text-muted)" : "var(--blue)", border: "1px solid", borderColor: invoiceSelectMode ? "var(--border)" : "color-mix(in srgb, var(--blue) 25%, transparent)" }}
+                    onClick={() => { setInvoiceSelectMode((m) => !m); setSelectedInvoiceIds(new Set()); }}
+                  >
+                    {invoiceSelectMode ? "Cancelar" : "Seleccionar"}
+                    {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
+                      <span className="ml-1">({selectedInvoiceIds.size})</span>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {groupKeys.map((groupKey) => (
@@ -469,21 +475,27 @@ export default function GastosPage() {
                               </svg>
                             )}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
+                              {/* Line 1: supplier + price */}
+                              <div className="flex items-center justify-between gap-2">
                                 <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{inv.supplier}</span>
-                                {inv.invoice_number && (
-                                  <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>#{inv.invoice_number}</span>
-                                )}
-                                <span className="text-xs px-1.5 py-0.5 rounded"
+                                <span className="font-bold text-sm flex-shrink-0" style={{ color: "var(--blue)" }}>{fmt(inv.total)}</span>
+                              </div>
+                              {/* Line 2: invoice# · date · items */}
+                              <div className="flex items-center gap-1.5 mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                                {inv.invoice_number && <span className="font-mono">#{inv.invoice_number}</span>}
+                                {inv.invoice_number && <span style={{ opacity: 0.4 }}>·</span>}
+                                <span>{fmtDate(inv.invoice_date)}</span>
+                                <span style={{ opacity: 0.4 }}>·</span>
+                                <span>{inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}</span>
+                              </div>
+                              {/* Line 3: restaurant tag */}
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded"
                                   style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
                                   {RESTAURANT_LABELS[inv.restaurant as Restaurant] ?? inv.restaurant}
                                 </span>
                               </div>
-                              <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                                {fmtDate(inv.invoice_date)} · {inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}
-                              </div>
                             </div>
-                            <span className="font-bold text-sm flex-shrink-0" style={{ color: "var(--blue)" }}>{fmt(inv.total)}</span>
                           </button>
                         </div>
                         {isExpanded && !invoiceSelectMode && (
@@ -596,9 +608,9 @@ export default function GastosPage() {
           return (
             <div className="space-y-4">
               {/* Controls row */}
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-col gap-2">
                 {/* Search */}
-                <div className="relative flex-1 min-w-[180px]">
+                <div className="relative w-full">
                   <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: "var(--text-muted)" }}>
                     <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
                     <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
