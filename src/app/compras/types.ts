@@ -33,6 +33,7 @@ export type Ingredient = {
 export type UnmatchedGroup = {
   description: string;
   count: number;
+  suppliers: string[];
 };
 
 export type AnalyticsData = {

@@ -180,20 +180,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (view === "normalize") {
     // Only unmatched food/beverage items need ingredient assignment
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let query: any = supabase.from("line_items").select("description").is("ingredient_id", null);
+    let query: any = supabase.from("line_items").select("description, supplier").is("ingredient_id", null);
     query = query.or(foodFilter);
     if (restaurant) query = query.eq("restaurant", restaurant);
 
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    const grouped: Record<string, number> = {};
+    const grouped: Record<string, { count: number; suppliers: Set<string> }> = {};
     for (const item of data ?? []) {
       const desc = item.description as string;
-      grouped[desc] = (grouped[desc] ?? 0) + 1;
+      if (!grouped[desc]) grouped[desc] = { count: 0, suppliers: new Set() };
+      grouped[desc].count++;
+      if (item.supplier) grouped[desc].suppliers.add(item.supplier as string);
     }
     const unmatched = Object.entries(grouped)
-      .map(([description, count]) => ({ description, count }))
+      .map(([description, { count, suppliers }]) => ({ description, count, suppliers: Array.from(suppliers) }))
       .sort((a, b) => b.count - a.count);
 
     return NextResponse.json({ unmatched, pagination: { page: 1, pageSize: unmatched.length, total: unmatched.length, totalPages: 1 } });

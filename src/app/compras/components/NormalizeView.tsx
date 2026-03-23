@@ -514,7 +514,20 @@ export default function NormalizeView({
                           style={{ transition: "background 0.1s ease" }}>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm truncate" style={{ color: "var(--text)" }}>{u.description}</p>
-                            <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{u.count} artículo{u.count !== 1 ? "s" : ""}</p>
+                            <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                              <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{u.count} artículo{u.count !== 1 ? "s" : ""}</p>
+                              {(u.suppliers ?? []).slice(0, 2).map((s) => (
+                                <span key={s} className="text-[9px] px-1.5 py-px rounded"
+                                  style={{ background: "var(--surface-raised)", color: "var(--text-dim)", border: "1px solid var(--border-subtle)" }}>
+                                  {s}
+                                </span>
+                              ))}
+                              {(u.suppliers ?? []).length > 2 && (
+                                <span className="text-[9px] px-1 py-px" style={{ color: "var(--text-dim)" }}>
+                                  +{u.suppliers.length - 2}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex gap-1.5 flex-shrink-0">
                             <button type="button"
