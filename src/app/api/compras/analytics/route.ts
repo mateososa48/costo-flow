@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
+import { readSupplierAliases, resolveDisplayName } from "@/lib/supplier-aliases";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const session = await getSession();
@@ -94,11 +95,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
-  // ── Top suppliers ─────────────────────────────────────────────────────
+  // ── Top suppliers (apply display-name aliases) ────────────────────────
+  const aliases = await readSupplierAliases(supabase);
   const supplierMap: Record<string, number> = {};
   for (const item of items) {
-    const s = item.supplier as string;
-    supplierMap[s] = (supplierMap[s] ?? 0) + Number(item.total ?? 0);
+    const displayName = resolveDisplayName(item.supplier as string, aliases);
+    supplierMap[displayName] = (supplierMap[displayName] ?? 0) + Number(item.total ?? 0);
   }
   const spendBySupplier = Object.entries(supplierMap)
     .map(([supplier, total]) => ({ supplier, total }))

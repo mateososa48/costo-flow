@@ -66,7 +66,8 @@ export type DbInvoice = {
 };
 
 export type SupplierGroup = {
-  supplier: string;
+  supplier: string;          // display name
+  canonicalNames: string[];  // raw names in the DB that map to this display name
   totalSpend: number;
   itemCount: number;
   items: DbLineItem[];

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
 import { belongsInGastos, readSupplierTags } from "@/lib/supplier-classification";
+import { readSupplierAliases, resolveDisplayName } from "@/lib/supplier-aliases";
 
 const filtersSchema = z.object({
   view: z.enum(["invoices", "suppliers", "analytics"]).default("invoices"),
@@ -92,15 +93,30 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     type InvRow = { id: string; supplier: string; total: number; invoice_date: string; restaurant: string; cuenta_pnl: string | null; concepto: string | null; invoice_number: string | null };
-    const grouped: Record<string, { supplier: string; totalSpend: number; invoiceCount: number; invoices: InvRow[] }> = {};
+
+    // Group by raw supplier name first
+    const rawGrouped: Record<string, { totalSpend: number; invoiceCount: number; invoices: InvRow[] }> = {};
     for (const inv of (data ?? []) as InvRow[]) {
       if (!belongsInGastos(supplierTags[inv.supplier], isFoodCuentaPnl(inv.cuenta_pnl))) continue;
       const s = inv.supplier;
-      if (!grouped[s]) grouped[s] = { supplier: s, totalSpend: 0, invoiceCount: 0, invoices: [] };
-      grouped[s].totalSpend += Number(inv.total) || 0;
-      grouped[s].invoiceCount++;
-      grouped[s].invoices.push(inv);
+      if (!rawGrouped[s]) rawGrouped[s] = { totalSpend: 0, invoiceCount: 0, invoices: [] };
+      rawGrouped[s].totalSpend += Number(inv.total) || 0;
+      rawGrouped[s].invoiceCount++;
+      rawGrouped[s].invoices.push(inv);
     }
+
+    // Apply display-name aliases to merge groups
+    const aliases = await readSupplierAliases(supabase);
+    const grouped: Record<string, { supplier: string; canonicalNames: string[]; totalSpend: number; invoiceCount: number; invoices: InvRow[] }> = {};
+    for (const [rawName, g] of Object.entries(rawGrouped)) {
+      const displayName = resolveDisplayName(rawName, aliases);
+      if (!grouped[displayName]) grouped[displayName] = { supplier: displayName, canonicalNames: [], totalSpend: 0, invoiceCount: 0, invoices: [] };
+      grouped[displayName].canonicalNames.push(rawName);
+      grouped[displayName].totalSpend += g.totalSpend;
+      grouped[displayName].invoiceCount += g.invoiceCount;
+      grouped[displayName].invoices.push(...g.invoices);
+    }
+
     const suppliers = Object.values(grouped).sort((a, b) =>
       sortDir === "desc" ? b.totalSpend - a.totalSpend : a.totalSpend - b.totalSpend
     );
@@ -158,10 +174,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
-    // Top suppliers
+    // Top suppliers (apply display-name aliases)
+    const aliases = await readSupplierAliases(supabase);
     const supplierMap: Record<string, number> = {};
     for (const item of items) {
-      supplierMap[item.supplier] = (supplierMap[item.supplier] ?? 0) + Number(item.total ?? 0);
+      const displayName = resolveDisplayName(item.supplier, aliases);
+      supplierMap[displayName] = (supplierMap[displayName] ?? 0) + Number(item.total ?? 0);
     }
     const topSuppliers = Object.entries(supplierMap)
       .map(([supplier, total]) => ({ supplier, total }))

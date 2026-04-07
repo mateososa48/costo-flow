@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
+import SupplierEditModal from "./SupplierEditModal";
 import { DbLineItem, SupplierGroup, formatCurrency, formatDate } from "../types";
 import dropdownOptions from "../../../../data/dropdown_options.json";
 
@@ -27,14 +28,7 @@ export default function SuppliersView({
   const [supplierSortMode, setSupplierSortMode] = useState<"spend" | "count" | "alpha">("alpha");
   const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
   const [editingSupplierTag, setEditingSupplierTag] = useState<string | null>(null);
-
-  // Merge modal state
-  const [mergeFor, setMergeFor] = useState<string | null>(null);
-  const [mergeQuery, setMergeQuery] = useState("");
-  const [mergeTarget, setMergeTarget] = useState("");
-  const [mergeDropdownOpen, setMergeDropdownOpen] = useState(false);
-  const [merging, setMerging] = useState(false);
-  const [mergeError, setMergeError] = useState("");
+  const [editingSupplier, setEditingSupplier] = useState<SupplierGroup | null>(null);
 
   const q = supplierSearch.trim().toLowerCase();
   const filtered = suppliers
@@ -48,7 +42,11 @@ export default function SuppliersView({
 
   const renderCard = (group: SupplierGroup) => {
     const isExpanded = expandedSuppliers.has(group.supplier);
-    const currentTag = supplierTags[group.supplier] ?? "";
+    // Check display name first, then fall back to any canonical name that has a tag
+    const currentTag =
+      supplierTags[group.supplier] ??
+      group.canonicalNames.map((n) => supplierTags[n]).find(Boolean) ??
+      "";
     const isEditingTag = editingSupplierTag === group.supplier;
     return (
       <div key={group.supplier}
@@ -59,29 +57,8 @@ export default function SuppliersView({
             <span className="text-base font-semibold leading-tight truncate" style={{ color: "var(--text)" }} title={group.supplier}>
               {group.supplier}
             </span>
-            <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-              {/* Merge icon button */}
-              <button
-                type="button"
-                title="Fusionar con otro proveedor"
-                className="p-1 rounded transition-colors cursor-pointer"
-                style={{ color: "var(--text-dim)", background: "transparent" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text)"; (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-raised)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-                onClick={() => {
-                  setMergeFor(group.supplier);
-                  setMergeQuery("");
-                  setMergeTarget("");
-                  setMergeDropdownOpen(false);
-                  setMergeError("");
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <path d="M1 3h4l2 3.5L9 3h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M6.5 6.5V12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                </svg>
-              </button>
-              {/* Classify tag */}
+            {/* Right column: classify + editar stacked */}
+            <div className="flex-shrink-0 flex flex-col items-end gap-1" onClick={(e) => e.stopPropagation()}>
               {isEditingTag ? (
                 <select
                   autoFocus
@@ -120,6 +97,26 @@ export default function SuppliersView({
                   {currentTag || "Clasificar ✎"}
                 </button>
               )}
+              <button
+                type="button"
+                className="text-[10px] px-2 py-0.5 rounded-full transition-colors cursor-pointer"
+                style={{
+                  background: "var(--surface-raised)",
+                  color: "var(--text-dim)",
+                  border: "1px solid var(--border-subtle)",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.color = "var(--text)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.color = "var(--text-dim)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-subtle)";
+                }}
+                onClick={() => setEditingSupplier(group)}
+              >
+                Editar
+              </button>
             </div>
           </div>
           <p className="text-lg font-bold mb-1"
@@ -166,33 +163,6 @@ export default function SuppliersView({
       </div>
     );
   };
-
-  async function handleMerge() {
-    if (!mergeFor || !mergeTarget) return;
-    setMerging(true);
-    setMergeError("");
-    try {
-      const res = await fetch("/api/compras/suppliers/merge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ from: mergeFor, into: mergeTarget }),
-      });
-      if (!res.ok) { setMergeError("Error al fusionar"); return; }
-      setSupplierTags((prev) => {
-        const next = { ...prev };
-        if (next[mergeFor] && !next[mergeTarget]) next[mergeTarget] = next[mergeFor];
-        delete next[mergeFor];
-        return next;
-      });
-      setMergeFor(null);
-      fetchData();
-    } catch { setMergeError("Error de conexión"); }
-    finally { setMerging(false); }
-  }
-
-  const mergeOptions = suppliers
-    .map((g) => g.supplier)
-    .filter((s) => s !== mergeFor && (!mergeQuery || s.toLowerCase().includes(mergeQuery.toLowerCase())));
 
   return (
     <div className="space-y-4">
@@ -260,7 +230,6 @@ export default function SuppliersView({
 
       {/* Two independent columns */}
       <>
-        {/* Desktop: two truly independent columns */}
         <div className="hidden md:flex gap-3 items-start w-full">
           <div className="flex-1 min-w-0 flex flex-col gap-3">
             {filtered.filter((_, i) => i % 2 === 0).map(renderCard)}
@@ -269,7 +238,6 @@ export default function SuppliersView({
             {filtered.filter((_, i) => i % 2 !== 0).map(renderCard)}
           </div>
         </div>
-        {/* Mobile: single column */}
         <div className="flex flex-col gap-3 md:hidden">
           {filtered.map(renderCard)}
         </div>
@@ -285,44 +253,16 @@ export default function SuppliersView({
         }}
       />
 
-      {/* Merge supplier modal */}
-      <Modal open={!!mergeFor} onClose={() => setMergeFor(null)} title={`Fusionar "${mergeFor}"`} maxWidth="max-w-sm">
-        <div className="space-y-3">
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            Elige el proveedor canónico. Todos los registros de <span className="font-medium" style={{ color: "var(--text)" }}>{mergeFor}</span> pasarán al proveedor seleccionado.
-          </p>
-          <div className="relative">
-            <input
-              type="text"
-              value={mergeTarget || mergeQuery}
-              placeholder="Buscar proveedor..."
-              className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
-              style={{ background: "var(--surface)", borderColor: mergeDropdownOpen ? "var(--blue)" : "var(--border)", color: "var(--text)" }}
-              onFocus={() => { setMergeDropdownOpen(true); setMergeTarget(""); }}
-              onChange={(e) => { setMergeQuery(e.target.value); setMergeTarget(""); setMergeDropdownOpen(true); }}
-            />
-            {mergeDropdownOpen && mergeOptions.length > 0 && (
-              <div className="absolute z-50 left-0 right-0 mt-1 rounded-[var(--radius-sm)] border overflow-y-auto"
-                style={{ background: "var(--surface)", borderColor: "var(--border)", maxHeight: "180px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
-                {mergeOptions.map((name) => (
-                  <button key={name} type="button"
-                    className="w-full text-left px-3 py-2 text-sm transition-colors"
-                    style={{ color: "var(--text)" }}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { setMergeTarget(name); setMergeQuery(""); setMergeDropdownOpen(false); }}>
-                    {name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {mergeError && <p className="text-xs" style={{ color: "var(--danger)" }}>{mergeError}</p>}
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="secondary" size="sm" onClick={() => setMergeFor(null)}>Cancelar</Button>
-            <Button size="sm" loading={merging} disabled={!mergeTarget} onClick={handleMerge}>Fusionar</Button>
-          </div>
-        </div>
-      </Modal>
+      <SupplierEditModal
+        open={!!editingSupplier}
+        displayName={editingSupplier?.supplier ?? ""}
+        canonicalNames={editingSupplier?.canonicalNames ?? []}
+        otherGroups={suppliers
+          .filter((g) => g.supplier !== editingSupplier?.supplier)
+          .map((g) => ({ displayName: g.supplier, canonicalNames: g.canonicalNames }))}
+        onClose={() => setEditingSupplier(null)}
+        onSaved={() => { setEditingSupplier(null); fetchData(); }}
+      />
     </div>
   );
 }

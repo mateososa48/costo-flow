@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
 import { belongsInCompras, readSupplierTags } from "@/lib/supplier-classification";
+import { readSupplierAliases, resolveDisplayName } from "@/lib/supplier-aliases";
 
 const filtersSchema = z.object({
   view: z.enum(["items", "invoices", "suppliers", "normalize"]).default("items"),
@@ -151,16 +152,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Group by supplier — exclude any supplier whose tag marks them as operational
-    const grouped: Record<string, { supplier: string; totalSpend: number; itemCount: number; items: unknown[] }> = {};
+    // Group by raw supplier name first
+    const rawGrouped: Record<string, { totalSpend: number; itemCount: number; items: unknown[] }> = {};
     for (const item of data ?? []) {
       const s = item.supplier as string;
       // Items already passed foodFilter (food invoices), but supplier tag can override
       if (!belongsInCompras(supplierTags[s], true)) continue;
-      if (!grouped[s]) grouped[s] = { supplier: s, totalSpend: 0, itemCount: 0, items: [] };
-      grouped[s].totalSpend += Number(item.total) || 0;
-      grouped[s].itemCount++;
-      grouped[s].items.push(item);
+      if (!rawGrouped[s]) rawGrouped[s] = { totalSpend: 0, itemCount: 0, items: [] };
+      rawGrouped[s].totalSpend += Number(item.total) || 0;
+      rawGrouped[s].itemCount++;
+      rawGrouped[s].items.push(item);
+    }
+
+    // Apply display-name aliases to merge groups
+    const aliases = await readSupplierAliases(supabase);
+    const grouped: Record<string, { supplier: string; canonicalNames: string[]; totalSpend: number; itemCount: number; items: unknown[] }> = {};
+    for (const [rawName, g] of Object.entries(rawGrouped)) {
+      const displayName = resolveDisplayName(rawName, aliases);
+      if (!grouped[displayName]) grouped[displayName] = { supplier: displayName, canonicalNames: [], totalSpend: 0, itemCount: 0, items: [] };
+      grouped[displayName].canonicalNames.push(rawName);
+      grouped[displayName].totalSpend += g.totalSpend;
+      grouped[displayName].itemCount += g.itemCount;
+      grouped[displayName].items.push(...g.items);
     }
 
     const suppliers = Object.values(grouped).sort((a, b) =>
