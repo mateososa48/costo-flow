@@ -156,8 +156,9 @@ export default function InvoiceCard({
         </div>
       </div>
 
-      {/* Body */}
-      {expanded && (
+      {/* Body — grid-template-rows trick for smooth slide */}
+      <div style={{ display: "grid", gridTemplateRows: expanded ? "1fr" : "0fr", transition: "grid-template-rows 0.28s cubic-bezier(0.4,0,0.2,1)" }}>
+        <div style={{ overflow: "hidden", minHeight: 0 }}>
         <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "var(--border-subtle)" }}>
           <div className="pt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
             <Input
@@ -270,7 +271,8 @@ export default function InvoiceCard({
             onChange={(items) => update({ lineItems: items })}
           />
         </div>
-      )}
+        </div>
+      </div>
     </div>
   );
 }
