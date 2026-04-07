@@ -54,7 +54,7 @@ export default function InvoiceCard({
 
   return (
     <div
-      className="rounded-[var(--radius)] border transition-all duration-200"
+      className="rounded-[var(--radius)] border overflow-hidden transition-all duration-200"
       style={{
         background: "var(--surface)",
         borderColor: hasRequiredGaps ? "var(--warning)" : "var(--border)",
@@ -73,15 +73,10 @@ export default function InvoiceCard({
         }}
       >
         <div className="flex-1 min-w-0">
-          {/* Line 1: supplier + price */}
-          <div className="flex items-center justify-between gap-2 overflow-hidden">
-            <span className="text-[15px] font-semibold truncate flex-1 min-w-0" style={{ color: "var(--text)" }}>
-              {invoice.supplier || "Proveedor desconocido"}
-            </span>
-            <span className="text-sm font-bold flex-shrink-0" style={{ color: "var(--blue)" }}>
-              {formatCurrency(invoice.total)}
-            </span>
-          </div>
+          {/* Line 1: supplier name */}
+          <span className="text-[15px] font-semibold truncate block" style={{ color: "var(--text)" }}>
+            {invoice.supplier || "Proveedor desconocido"}
+          </span>
           {/* Line 2: invoice# · date · confidence · warning */}
           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             {invoice.invoiceNumber && (
@@ -103,6 +98,11 @@ export default function InvoiceCard({
             )}
           </div>
         </div>
+
+        {/* Price — separate column so it vertically centers with the full header height */}
+        <span className="text-sm font-bold flex-shrink-0" style={{ color: "var(--blue)" }}>
+          {formatCurrency(invoice.total)}
+        </span>
 
         <div className="flex items-center gap-1 flex-shrink-0">
           {onRemove && !confirmingRemove && (
