@@ -59,7 +59,29 @@ export default function SuppliersView({
             <span className="text-base font-semibold leading-tight truncate" style={{ color: "var(--text)" }} title={group.supplier}>
               {group.supplier}
             </span>
-            <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+              {/* Merge icon button */}
+              <button
+                type="button"
+                title="Fusionar con otro proveedor"
+                className="p-1 rounded transition-colors cursor-pointer"
+                style={{ color: "var(--text-dim)", background: "transparent" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text)"; (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-raised)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-dim)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                onClick={() => {
+                  setMergeFor(group.supplier);
+                  setMergeQuery("");
+                  setMergeTarget("");
+                  setMergeDropdownOpen(false);
+                  setMergeError("");
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M1 3h4l2 3.5L9 3h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M6.5 6.5V12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+              </button>
+              {/* Classify tag */}
               {isEditingTag ? (
                 <select
                   autoFocus
@@ -104,31 +126,9 @@ export default function SuppliersView({
             style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.02em" }}>
             {formatCurrency(group.totalSpend)}
           </p>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-              {group.itemCount} artículo{group.itemCount !== 1 ? "s" : ""}
-            </p>
-            <button
-              type="button"
-              title="Fusionar con otro proveedor"
-              className="text-[10px] px-2 py-0.5 rounded-full transition-colors cursor-pointer"
-              style={{
-                background: "var(--surface-raised)",
-                color: "var(--text-dim)",
-                border: "1px solid var(--border-subtle)",
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setMergeFor(group.supplier);
-                setMergeQuery("");
-                setMergeTarget("");
-                setMergeDropdownOpen(false);
-                setMergeError("");
-              }}
-            >
-              Fusionar
-            </button>
-          </div>
+          <p className="text-[11px] mb-3" style={{ color: "var(--text-muted)" }}>
+            {group.itemCount} artículo{group.itemCount !== 1 ? "s" : ""}
+          </p>
           <button
             type="button"
             className="flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer"
