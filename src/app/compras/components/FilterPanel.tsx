@@ -27,6 +27,54 @@ interface FilterPanelProps {
   onResetFilters: () => void;
 }
 
+function ChevronDown() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+      <path d="M2 4l3.5 3.5L9 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+      <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <rect x="1" y="2" width="10" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M1 5h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M4 1v2M8 1v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BuildingIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <rect x="1.5" y="2" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M4.5 11V7.5h3V11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.5 4.5h1M7.5 4.5h1M3.5 6.5h1M7.5 6.5h1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TruckIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path d="M1 3h7v5.5H1z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M8 4.5h1.5L11 6.5V8.5H8V4.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <circle cx="3" cy="9.5" r="1" stroke="currentColor" strokeWidth="1.2" />
+      <circle cx="9.5" cy="9.5" r="1" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
 export default function FilterPanel({
   showFilters,
   search,
@@ -36,121 +84,133 @@ export default function FilterPanel({
   supplier,
   setSupplier,
   supplierList,
-  dateFrom,
-  setDateFrom,
-  dateTo,
-  setDateTo,
   selectedMonth,
   selectedWeek,
-  activePreset,
   hasFilters,
   onMonthSelect,
   onWeekSelect,
-  onApplyPreset,
   onResetFilters,
 }: FilterPanelProps) {
+  const inputBase = "w-full h-9 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--blue)_30%,transparent)] transition-colors";
+  const iconColor = "var(--text-muted)";
+
   return (
-    <div className={`flex flex-col gap-2 pt-3 ${showFilters ? "" : "hidden"}`}>
-      {/* Row 1: search + restaurant + supplier */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-        <div className="sm:col-span-2 md:col-span-2">
+    <div className={`pt-3 ${showFilters ? "" : "hidden"}`}>
+      <div className="flex flex-wrap gap-2 items-center">
+
+        {/* Search */}
+        <div className="relative flex-[2] min-w-[180px]">
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: iconColor }}>
+            <SearchIcon />
+          </span>
           <input
             type="text"
             value={search}
             placeholder="Buscar artículo..."
-            className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
-            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+            className={`${inputBase} pl-8 pr-3`}
+            style={{ background: "var(--surface)", borderColor: search ? "var(--blue)" : "var(--border)", color: "var(--text)" }}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button type="button" onClick={() => setSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded"
+              style={{ color: iconColor }}>
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+                <path d="M1 1l7 7M8 1L1 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
         </div>
-        <select
-          value={restaurant}
-          className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
-          style={{ background: "var(--surface)", borderColor: "var(--border)", color: restaurant ? "var(--text)" : "var(--text-dim)" }}
-          onChange={(e) => setRestaurant(e.target.value)}
-        >
-          <option value="">Todos los restaurantes</option>
-          <option value="motin_juarez">Motín Juárez</option>
-          <option value="motin_roma">Motín Roma</option>
-          <option value="queseria">Quesería</option>
-        </select>
-        <select
-          value={supplier}
-          className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
-          style={{ background: "var(--surface)", borderColor: "var(--border)", color: supplier ? "var(--text)" : "var(--text-dim)" }}
-          onChange={(e) => setSupplier(e.target.value)}
-        >
-          <option value="">Todos los proveedores</option>
-          {supplierList.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-      </div>
 
-      {/* Row 2: period presets + month + week + desde/hasta + limpiar */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Presets */}
-        {[
-          { key: "thisMonth", label: "Este mes" },
-          { key: "lastMonth", label: "Mes pasado" },
-          { key: "last30", label: "Últ. 30d" },
-          { key: "ytd", label: "YTD" },
-        ].map(({ key, label }) => (
-          <button key={key} type="button" onClick={() => onApplyPreset(key)}
-            className="px-2.5 py-1.5 rounded-[var(--radius-sm)] border text-xs font-medium transition-colors duration-150"
-            style={{
-              background: activePreset === key ? "var(--blue)" : "var(--surface)",
-              color: activePreset === key ? "#fff" : "var(--text-muted)",
-              borderColor: activePreset === key ? "var(--blue)" : "var(--border)",
-            }}>
-            {label}
-          </button>
-        ))}
-        <span className="w-px h-4" style={{ background: "var(--border)" }} />
-        <select
-          value={selectedMonth}
-          className="w-full sm:w-auto sm:min-w-[160px] px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
-          style={{ background: "var(--surface)", borderColor: selectedMonth ? "var(--blue)" : "var(--border)", color: selectedMonth ? "var(--text)" : "var(--text-dim)" }}
-          onChange={(e) => onMonthSelect(e.target.value)}
-        >
-          <option value="">Mes</option>
-          {getMonthOptions().map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        <select
-          value={selectedWeek}
-          className="w-full sm:w-auto sm:min-w-[160px] px-3 py-2 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
-          style={{ background: "var(--surface)", borderColor: selectedWeek ? "var(--blue)" : "var(--border)", color: selectedWeek ? "var(--text)" : "var(--text-dim)" }}
-          onChange={(e) => onWeekSelect(e.target.value)}
-        >
-          <option value="">Semana</option>
-          {getWeekOptions().map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        <div className="flex items-center gap-1 w-full sm:w-auto">
-          <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: "var(--text-muted)" }}>Desde</span>
-          <input
-            type="date"
-            value={dateFrom}
-            className="px-2 py-1 rounded-[var(--radius-sm)] border text-xs focus:outline-none focus:ring-2"
-            style={{ background: "var(--surface)", borderColor: "var(--border)", color: dateFrom ? "var(--text)" : "var(--text-dim)" }}
-            onChange={(e) => { setDateFrom(e.target.value); }}
-          />
-          <span className="text-[10px] uppercase tracking-wider font-medium ml-1" style={{ color: "var(--text-muted)" }}>Hasta</span>
-          <input
-            type="date"
-            value={dateTo}
-            className="px-2 py-1 rounded-[var(--radius-sm)] border text-xs focus:outline-none focus:ring-2"
-            style={{ background: "var(--surface)", borderColor: "var(--border)", color: dateTo ? "var(--text)" : "var(--text-dim)" }}
-            onChange={(e) => { setDateTo(e.target.value); }}
-          />
+        {/* Restaurant */}
+        <div className="relative flex-1 min-w-[160px]">
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: iconColor }}>
+            <BuildingIcon />
+          </span>
+          <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: iconColor }}>
+            <ChevronDown />
+          </span>
+          <select
+            value={restaurant}
+            className={`${inputBase} appearance-none pl-8 pr-7 cursor-pointer`}
+            style={{ background: "var(--surface)", borderColor: restaurant ? "var(--blue)" : "var(--border)", color: restaurant ? "var(--text)" : "var(--text-dim)" }}
+            onChange={(e) => setRestaurant(e.target.value)}
+          >
+            <option value="">Todos los restaurantes</option>
+            <option value="motin_juarez">Motín Juárez</option>
+            <option value="motin_roma">Motín Roma</option>
+            <option value="queseria">Quesería</option>
+          </select>
         </div>
+
+        {/* Supplier */}
+        <div className="relative flex-1 min-w-[160px]">
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: iconColor }}>
+            <TruckIcon />
+          </span>
+          <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: iconColor }}>
+            <ChevronDown />
+          </span>
+          <select
+            value={supplier}
+            className={`${inputBase} appearance-none pl-8 pr-7 cursor-pointer`}
+            style={{ background: "var(--surface)", borderColor: supplier ? "var(--blue)" : "var(--border)", color: supplier ? "var(--text)" : "var(--text-dim)" }}
+            onChange={(e) => setSupplier(e.target.value)}
+          >
+            <option value="">Todos los proveedores</option>
+            {supplierList.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Month */}
+        <div className="relative min-w-[130px]">
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: iconColor }}>
+            <CalendarIcon />
+          </span>
+          <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: iconColor }}>
+            <ChevronDown />
+          </span>
+          <select
+            value={selectedMonth}
+            className={`${inputBase} appearance-none pl-8 pr-7 cursor-pointer`}
+            style={{ background: "var(--surface)", borderColor: selectedMonth ? "var(--blue)" : "var(--border)", color: selectedMonth ? "var(--text)" : "var(--text-dim)" }}
+            onChange={(e) => onMonthSelect(e.target.value)}
+          >
+            <option value="">Mes</option>
+            {getMonthOptions().map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Week */}
+        <div className="relative min-w-[130px]">
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: iconColor }}>
+            <CalendarIcon />
+          </span>
+          <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: iconColor }}>
+            <ChevronDown />
+          </span>
+          <select
+            value={selectedWeek}
+            className={`${inputBase} appearance-none pl-8 pr-7 cursor-pointer`}
+            style={{ background: "var(--surface)", borderColor: selectedWeek ? "var(--blue)" : "var(--border)", color: selectedWeek ? "var(--text)" : "var(--text-dim)" }}
+            onChange={(e) => onWeekSelect(e.target.value)}
+          >
+            <option value="">Semana</option>
+            {getWeekOptions().map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Clear */}
         {hasFilters && (
           <Button variant="ghost" size="sm" onClick={onResetFilters}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <path d="M1 1l9 9M10 1L1 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
             Limpiar
           </Button>
