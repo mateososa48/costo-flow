@@ -95,6 +95,14 @@ export default function GastosPage() {
   const [supplierTags, setSupplierTags] = useState<Record<string, string>>({});
   const [editingSupplierTag, setEditingSupplierTag] = useState<string | null>(null);
 
+  // Merge supplier state
+  const [mergeFor, setMergeFor] = useState<string | null>(null);
+  const [mergeQuery, setMergeQuery] = useState("");
+  const [mergeTarget, setMergeTarget] = useState("");
+  const [mergeDropdownOpen, setMergeDropdownOpen] = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [mergeError, setMergeError] = useState("");
+
   // Analytics state
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
 
@@ -150,6 +158,38 @@ export default function GastosPage() {
       setDeletingInvoice(false);
       setConfirmDeleteInvoices(false);
     }
+  }
+
+  async function fetchSuppliers() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/gastos?${buildParams({ sortDir: "desc" })}`);
+      const d = await res.json();
+      setSuppliers(d.suppliers ?? []);
+    } finally { setLoading(false); }
+  }
+
+  async function handleMerge() {
+    if (!mergeFor || !mergeTarget) return;
+    setMerging(true);
+    setMergeError("");
+    try {
+      const res = await fetch("/api/compras/suppliers/merge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from: mergeFor, into: mergeTarget }),
+      });
+      if (!res.ok) { setMergeError("Error al fusionar"); return; }
+      setSupplierTags((prev) => {
+        const next = { ...prev };
+        if (next[mergeFor] && !next[mergeTarget]) next[mergeTarget] = next[mergeFor];
+        delete next[mergeFor];
+        return next;
+      });
+      setMergeFor(null);
+      fetchSuppliers();
+    } catch { setMergeError("Error de conexión"); }
+    finally { setMerging(false); }
   }
 
   useEffect(() => {
@@ -734,14 +774,36 @@ export default function GastosPage() {
                           style={{ fontFamily: "var(--font-display)", color: "var(--blue)", letterSpacing: "-0.02em" }}>
                           {fmt(group.totalSpend)}
                         </p>
-                        <div className="flex items-center gap-2.5 mb-3 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                          <span>{group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}</span>
-                          {firstDate && (
-                            <>
-                              <span style={{ color: "var(--border)" }}>·</span>
-                              <span>{firstDate === lastDate ? fmtDate(firstDate) : `${fmtDate(firstDate)} – ${fmtDate(lastDate)}`}</span>
-                            </>
-                          )}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2.5 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                            <span>{group.invoiceCount} factura{group.invoiceCount !== 1 ? "s" : ""}</span>
+                            {firstDate && (
+                              <>
+                                <span style={{ color: "var(--border)" }}>·</span>
+                                <span>{firstDate === lastDate ? fmtDate(firstDate) : `${fmtDate(firstDate)} – ${fmtDate(lastDate)}`}</span>
+                              </>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            title="Fusionar con otro proveedor"
+                            className="text-[10px] px-2 py-0.5 rounded-full transition-colors cursor-pointer"
+                            style={{
+                              background: "var(--surface-raised)",
+                              color: "var(--text-dim)",
+                              border: "1px solid var(--border-subtle)",
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMergeFor(group.supplier);
+                              setMergeQuery("");
+                              setMergeTarget("");
+                              setMergeDropdownOpen(false);
+                              setMergeError("");
+                            }}
+                          >
+                            Fusionar
+                          </button>
                         </div>
                         <button
                           type="button"
@@ -833,6 +895,47 @@ export default function GastosPage() {
             <Button variant="danger" size="sm" loading={deletingInvoice} onClick={deleteSelectedInvoices}>
               Eliminar
             </Button>
+          </div>
+        </div>
+      </Modal>
+      {/* Merge supplier modal */}
+      <Modal open={!!mergeFor} onClose={() => setMergeFor(null)} title={`Fusionar "${mergeFor}"`} maxWidth="max-w-sm">
+        <div className="space-y-3">
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            Elige el proveedor canónico. Todos los registros de <span className="font-medium" style={{ color: "var(--text)" }}>{mergeFor}</span> pasarán al proveedor seleccionado.
+          </p>
+          <div className="relative">
+            <input
+              type="text"
+              value={mergeTarget || mergeQuery}
+              placeholder="Buscar proveedor..."
+              className="w-full px-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none focus:ring-2"
+              style={{ background: "var(--surface)", borderColor: mergeDropdownOpen ? "var(--blue)" : "var(--border)", color: "var(--text)" }}
+              onFocus={() => { setMergeDropdownOpen(true); setMergeTarget(""); }}
+              onChange={(e) => { setMergeQuery(e.target.value); setMergeTarget(""); setMergeDropdownOpen(true); }}
+            />
+            {mergeDropdownOpen && (
+              <div className="absolute z-50 left-0 right-0 mt-1 rounded-[var(--radius-sm)] border overflow-y-auto"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", maxHeight: "180px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
+                {suppliers
+                  .map((g) => g.supplier)
+                  .filter((s) => s !== mergeFor && (!mergeQuery || s.toLowerCase().includes(mergeQuery.toLowerCase())))
+                  .map((name) => (
+                    <button key={name} type="button"
+                      className="w-full text-left px-3 py-2 text-sm transition-colors"
+                      style={{ color: "var(--text)" }}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => { setMergeTarget(name); setMergeQuery(""); setMergeDropdownOpen(false); }}>
+                      {name}
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+          {mergeError && <p className="text-xs" style={{ color: "var(--danger)" }}>{mergeError}</p>}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="secondary" size="sm" onClick={() => setMergeFor(null)}>Cancelar</Button>
+            <Button size="sm" loading={merging} disabled={!mergeTarget} onClick={handleMerge}>Fusionar</Button>
           </div>
         </div>
       </Modal>
