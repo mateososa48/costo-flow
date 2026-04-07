@@ -68,7 +68,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       if (pdfResult.mode === "text") {
         extraction = await extractInvoiceFromText(pdfResult.text);
       } else {
-        extraction = await extractInvoiceFromImage(pdfResult.base64, pdfResult.mimeType);
+        extraction = await extractInvoiceFromImage(pdfResult.pages, pdfResult.mimeType);
       }
     } else {
       // Server-side compression: resize any image > 1.5 MB to max 1600px JPEG.

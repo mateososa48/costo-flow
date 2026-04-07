@@ -110,13 +110,20 @@ const RESPONSE_SCHEMA = {
 };
 
 /**
- * Extract invoice data from a base64-encoded image (vision path).
+ * Extract invoice data from one or more base64-encoded images (vision path).
+ * Pass an array for multi-page PDFs — all pages are sent in a single request.
  */
 export async function extractInvoiceFromImage(
-  base64: string,
+  base64: string | string[],
   mimeType: string
 ): Promise<LLMExtraction> {
   const client = getClient();
+  const pages = Array.isArray(base64) ? base64 : [base64];
+
+  const imageContent = pages.map((b64) => ({
+    type: "image_url" as const,
+    image_url: { url: `data:${mimeType};base64,${b64}`, detail: "high" as const },
+  }));
 
   const response = await client.beta.chat.completions.parse({
     model: config.openai.model,
@@ -133,11 +140,8 @@ export async function extractInvoiceFromImage(
       {
         role: "user",
         content: [
-          {
-            type: "image_url",
-            image_url: { url: `data:${mimeType};base64,${base64}`, detail: "high" },
-          },
-          { type: "text", text: "Extract all invoice fields from this image." },
+          ...imageContent,
+          { type: "text" as const, text: pages.length > 1 ? `Extract all invoice fields from this ${pages.length}-page invoice. All pages belong to the same invoice.` : "Extract all invoice fields from this image." },
         ],
       },
     ],

@@ -10,7 +10,7 @@
 
 type PdfResult =
   | { mode: "text"; text: string }
-  | { mode: "image"; base64: string; mimeType: "image/png" };
+  | { mode: "image"; pages: string[]; mimeType: "image/png" };
 
 const MIN_TEXT_LENGTH = 300;
 const MIN_SPACE_RATIO = 0.08; // at least 8% spaces → real words, not garbled concat
@@ -35,31 +35,42 @@ export async function extractFromPdf(buffer: Buffer): Promise<PdfResult> {
 
   const data = new Uint8Array(buffer);
   const pdfDoc = await pdfjsLib.getDocument({ data, useSystemFonts: true }).promise;
-  const page = await pdfDoc.getPage(1);
+  const numPages = pdfDoc.numPages;
 
-  // --- Attempt text extraction first (cheaper) ---
-  const textContent = await page.getTextContent();
-  const text = textContent.items
-    .map((item) => ("str" in item ? item.str : ""))
-    .join(" ")
-    .trim();
+  // --- Attempt text extraction first (cheaper) — collect all pages ---
+  const pageTexts: string[] = [];
+  for (let i = 1; i <= numPages; i++) {
+    const page = await pdfDoc.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ")
+      .trim();
+    pageTexts.push(pageText);
+  }
+  const fullText = pageTexts.join("\n\n").trim();
 
-  if (isCleanText(text)) {
-    return { mode: "text", text };
+  if (isCleanText(fullText)) {
+    return { mode: "text", text: fullText };
   }
 
   // --- Fall back to image rendering (scanned / handwritten / garbled text) ---
   const { createCanvas } = await import("@napi-rs/canvas");
 
-  const viewport = page.getViewport({ scale: 3.0 }); // 3x scale for high-quality OCR
-  const canvas = createCanvas(viewport.width, viewport.height);
-  const context = canvas.getContext("2d");
+  const pages: string[] = [];
+  for (let i = 1; i <= numPages; i++) {
+    const page = await pdfDoc.getPage(i);
+    const viewport = page.getViewport({ scale: 3.0 }); // 3x scale for high-quality OCR
+    const canvas = createCanvas(viewport.width, viewport.height);
+    const context = canvas.getContext("2d");
 
-  await page.render({
-    canvasContext: context as unknown as CanvasRenderingContext2D,
-    viewport,
-  }).promise;
+    await page.render({
+      canvasContext: context as unknown as CanvasRenderingContext2D,
+      viewport,
+    }).promise;
 
-  const base64 = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
-  return { mode: "image", base64, mimeType: "image/png" };
+    pages.push(canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, ""));
+  }
+
+  return { mode: "image", pages, mimeType: "image/png" };
 }
