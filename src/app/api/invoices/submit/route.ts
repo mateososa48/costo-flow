@@ -7,6 +7,7 @@ import dropdownOptions from "../../../../../data/dropdown_options.json";
 import type { ExtractedInvoice, SubmitApiResponse, SubmitResult } from "@/types";
 import getSupabase, { saveInvoiceWithItems, checkDuplicatesViaSupabase } from "@/lib/supabase";
 import { appendAuditEntries } from "@/lib/audit-log";
+import { getTenantRestaurantSlugs } from "@/lib/tenant";
 import log from "@/lib/logger";
 
 const validConceptos = new Set<string>(dropdownOptions.concepto as string[]);
@@ -33,9 +34,10 @@ function friendlySheetError(raw: string): string {
   return raw;
 }
 
+// Restaurant is validated dynamically per tenant below; using string here.
 const invoiceSchema = z.object({
   id: z.string(),
-  restaurant: z.enum(["motin_juarez", "motin_roma", "queseria"]),
+  restaurant: z.string().min(1),
   invoiceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((val) => {
     const d = new Date(val);
     return !isNaN(d.getTime()) && d.toISOString().startsWith(val);
@@ -87,8 +89,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const { invoices, bypassDuplicates } = parsed.data;
   const user = session.user;
+  const tenantId = session.tenantId;
   const results: SubmitResult[] = [];
   let appended = 0;
+
+  // Validate restaurant slugs against the tenant's registered locations
+  if (tenantId) {
+    const validSlugs = await getTenantRestaurantSlugs(tenantId);
+    if (validSlugs.length > 0) {
+      for (const invoice of invoices) {
+        if (!validSlugs.includes(invoice.restaurant)) {
+          return NextResponse.json(
+            { error: `Restaurante inválido: "${invoice.restaurant}"` },
+            { status: 422 }
+          );
+        }
+      }
+    }
+  }
 
   for (const invoice of invoices as ExtractedInvoice[]) {
     try {
@@ -149,7 +167,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       // Save invoice + line items to Supabase (awaited for data integrity)
       try {
-        await saveInvoiceWithItems(invoice, spreadsheetUrl, user);
+        await saveInvoiceWithItems(invoice, spreadsheetUrl, user, tenantId);
       } catch (sbErr) {
         log.error({ ctx: "submit", msg: "Supabase save failed", data: { invoiceId: invoice.id }, err: sbErr });
         // Don't fail the request — Sheets write already succeeded
@@ -162,6 +180,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           await appendAuditEntries(supabase, [{
             action: bypassDuplicates ? "duplicate_bypassed" : "submitted",
             user,
+            tenantId,
             restaurant: invoice.restaurant,
             supplier: invoice.supplier,
             invoiceId: invoice.id,

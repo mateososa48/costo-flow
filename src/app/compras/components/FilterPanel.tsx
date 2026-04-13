@@ -10,6 +10,7 @@ interface FilterPanelProps {
   setSearch: (v: string) => void;
   restaurant: string;
   setRestaurant: (v: string) => void;
+  restaurantOptions?: Array<{ value: string; label: string }>;
   supplier: string;
   setSupplier: (v: string) => void;
   supplierList: string[];
@@ -81,6 +82,7 @@ export default function FilterPanel({
   setSearch,
   restaurant,
   setRestaurant,
+  restaurantOptions = [],
   supplier,
   setSupplier,
   supplierList,
@@ -137,9 +139,9 @@ export default function FilterPanel({
             onChange={(e) => setRestaurant(e.target.value)}
           >
             <option value="">Todos los restaurantes</option>
-            <option value="motin_juarez">Motín Juárez</option>
-            <option value="motin_roma">Motín Roma</option>
-            <option value="queseria">Quesería</option>
+            {restaurantOptions.map(({ value: v, label: l }) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
           </select>
         </div>
 

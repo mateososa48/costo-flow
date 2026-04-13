@@ -1,10 +1,10 @@
-export type Restaurant = "motin_juarez" | "motin_roma" | "queseria";
+// Restaurant is now a dynamic string slug (loaded from the DB per tenant).
+// The old hardcoded union type is replaced so the app isn't locked to one tenant's locations.
+export type Restaurant = string;
 
-export const RESTAURANT_LABELS: Record<Restaurant, string> = {
-  motin_juarez: "Motín Juárez",
-  motin_roma: "Motín Roma",
-  queseria: "Quesería",
-};
+// Kept for backwards-compat with pages that still reference it as a label lookup.
+// Returns empty object so callers fall back to the raw slug string via `?? r`.
+export const RESTAURANT_LABELS: Record<string, string> = {};
 
 export type LineItem = {
   description: string;
@@ -40,6 +40,7 @@ export type ExtractedInvoice = {
 
 export type SessionData = {
   user?: string;
+  tenantId?: string;
   isLoggedIn: boolean;
 };
 

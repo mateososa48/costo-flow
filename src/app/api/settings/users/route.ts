@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await writeOverride({ adminNames: parsed.data.names });
+    await writeOverride({ adminNames: parsed.data.names }, session.tenantId);
   } catch (err) {
     log.error({ ctx: "settings", msg: "writeOverride failed (users)", err });
     return NextResponse.json({ error: "No se pudo guardar. Intenta de nuevo." }, { status: 500 });

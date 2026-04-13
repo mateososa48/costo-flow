@@ -25,7 +25,8 @@ export default getSupabase;
 export async function saveInvoiceWithItems(
   invoice: ExtractedInvoice,
   spreadsheetUrl: string,
-  submittedBy: string
+  submittedBy: string,
+  tenantId?: string
 ): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) return;
@@ -34,6 +35,7 @@ export async function saveInvoiceWithItems(
   const { error: invoiceError } = await supabase.from("invoices").upsert(
     {
       id: invoice.id,
+      ...(tenantId ? { tenant_id: tenantId } : {}),
       restaurant: invoice.restaurant,
       supplier: invoice.supplier,
       invoice_number: invoice.invoiceNumber || null,
@@ -76,6 +78,7 @@ export async function saveInvoiceWithItems(
     const { error: itemsError } = await supabase.from("line_items").insert(
       invoice.lineItems.map((item) => ({
         invoice_id: invoice.id,
+        ...(tenantId ? { tenant_id: tenantId } : {}),
         restaurant: invoice.restaurant,
         supplier: invoice.supplier,
         invoice_date: invoice.invoiceDate,

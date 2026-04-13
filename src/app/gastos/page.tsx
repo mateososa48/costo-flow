@@ -7,7 +7,6 @@ import Button from "@/components/ui/Button";
 import { SkeletonAnalytics, SkeletonTable } from "@/components/ui/Skeleton";
 import FilterChips from "@/components/ui/FilterChips";
 import ExportButton from "@/components/ui/ExportButton";
-import { RESTAURANT_LABELS } from "@/types";
 import type { Restaurant } from "@/types";
 import dropdownOptions from "../../../data/dropdown_options.json";
 
@@ -73,6 +72,7 @@ function fmtDate(iso: string) {
 export default function GastosPage() {
   const [view, setView] = useState<ViewMode>("invoices");
   const [restaurant, setRestaurant] = useState<string>("");
+  const [restaurantOptions, setRestaurantOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -169,6 +169,11 @@ export default function GastosPage() {
   useEffect(() => {
     document.title = "Gastos Operativos — Aventura Gourmet";
     fetchStats();
+    // Fetch tenant restaurants for filter dropdown
+    fetch("/api/config/dropdowns")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.restaurants) setRestaurantOptions(d.restaurants); })
+      .catch(() => {});
   }, [restaurant, dateFrom, dateTo]);
 
   useEffect(() => {
@@ -286,7 +291,7 @@ export default function GastosPage() {
                 className="flex-1 text-xs px-2 py-1.5 rounded border appearance-none min-w-0"
                 style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}>
                 <option value="">Todos los restaurantes</option>
-                {Object.entries(RESTAURANT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                {restaurantOptions.map(({ value: v, label: l }) => <option key={v} value={v}>{l}</option>)}
               </select>
               <input type="date" value={dateFrom}
                 onChange={(e) => { setDateFrom(e.target.value); setActivePreset(""); }}
@@ -312,7 +317,7 @@ export default function GastosPage() {
           <div className="mb-4">
             <FilterChips
               chips={[
-                ...(restaurant ? [{ label: RESTAURANT_LABELS[restaurant as Restaurant] ?? restaurant, onRemove: () => setRestaurant("") }] : []),
+                ...(restaurant ? [{ label: restaurantOptions.find((r) => r.value === restaurant)?.label ?? restaurant, onRemove: () => setRestaurant("") }] : []),
                 ...(activePreset ? [{ label: activePreset === "thisMonth" ? "Este mes" : activePreset === "lastMonth" ? "Mes pasado" : activePreset === "last30" ? "Últ. 30d" : "YTD", onRemove: () => { setActivePreset(""); setDateFrom(""); setDateTo(""); } }] : []),
                 ...(!activePreset && dateFrom ? [{ label: `Desde ${dateFrom}`, onRemove: () => setDateFrom("") }] : []),
                 ...(!activePreset && dateTo ? [{ label: `Hasta ${dateTo}`, onRemove: () => setDateTo("") }] : []),
@@ -506,7 +511,7 @@ export default function GastosPage() {
                               <div className="flex items-center gap-1.5 mt-1">
                                 <span className="text-[10px] px-1.5 py-0.5 rounded"
                                   style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>
-                                  {RESTAURANT_LABELS[inv.restaurant as Restaurant] ?? inv.restaurant}
+                                  {restaurantOptions.find((r) => r.value === inv.restaurant)?.label ?? inv.restaurant}
                                 </span>
                               </div>
                             </div>

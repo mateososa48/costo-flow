@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const hashedNew = await hashPassword(newPassword);
-    await writeOverride({ sharedPassword: hashedNew });
+    await writeOverride({ sharedPassword: hashedNew }, session.tenantId);
   } catch (err) {
     log.error({ ctx: "settings", msg: "writeOverride failed (password)", err });
     return NextResponse.json({ error: "No se pudo guardar. Intenta de nuevo." }, { status: 500 });

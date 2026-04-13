@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { getSession } from "@/lib/session";
 import { getDropdownOptions } from "@/lib/dropdowns";
 import log from "@/lib/logger";
 
 export async function GET() {
   try {
-    const options = await getDropdownOptions();
+    const session = await getSession();
+    const options = await getDropdownOptions(session.tenantId);
     return NextResponse.json(options);
   } catch (err) {
     log.error({ ctx: "dropdowns", msg: "Failed to load dropdown options", err });

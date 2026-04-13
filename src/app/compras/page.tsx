@@ -23,6 +23,7 @@ export default function ComprasPage() {
   const [view, setView] = useState<ViewMode>("items");
   const [search, setSearch] = useState("");
   const [restaurant, setRestaurant] = useState("");
+  const [restaurantOptions, setRestaurantOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [supplier, setSupplier] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -125,7 +126,13 @@ export default function ComprasPage() {
   }, [view, page, sortBy, sortDir, search, restaurant, supplier, dateFrom, dateTo]);
 
   // ── Effects ───────────────────────────────────────────────────────
-  useEffect(() => { document.title = "Gastos de Alimentos — Aventura Gourmet"; }, []);
+  useEffect(() => {
+    document.title = "Gastos de Alimentos — Aventura Gourmet";
+    fetch("/api/config/dropdowns")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.restaurants) setRestaurantOptions(d.restaurants); })
+      .catch(() => {});
+  }, []);
   useEffect(() => { if (view !== "analytics" && view !== "normalize") fetchData(); }, [fetchData, view]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, dateFrom, dateTo]);
@@ -273,6 +280,7 @@ export default function ComprasPage() {
           showFilters={showFilters}
           search={search} setSearch={setSearch}
           restaurant={restaurant} setRestaurant={setRestaurant}
+          restaurantOptions={restaurantOptions}
           supplier={supplier} setSupplier={setSupplier}
           supplierList={stats.supplierList}
           dateFrom={dateFrom} setDateFrom={(v) => { setDateFrom(v); setSelectedMonth(""); setSelectedWeek(""); }}
@@ -293,7 +301,7 @@ export default function ComprasPage() {
             <FilterChips
               chips={[
                 ...(search ? [{ label: `"${search}"`, onRemove: () => setSearch("") }] : []),
-                ...(restaurant ? [{ label: restaurant === "motin_juarez" ? "Motín Juárez" : restaurant === "motin_roma" ? "Motín Roma" : "Quesería", onRemove: () => setRestaurant("") }] : []),
+                ...(restaurant ? [{ label: restaurantOptions.find((r) => r.value === restaurant)?.label ?? restaurant, onRemove: () => setRestaurant("") }] : []),
                 ...(supplier ? [{ label: supplier, onRemove: () => setSupplier("") }] : []),
                 ...(activePreset ? [{ label: activePreset === "thisMonth" ? "Este mes" : activePreset === "lastMonth" ? "Mes pasado" : activePreset === "last30" ? "Últ. 30d" : "YTD", onRemove: () => { setActivePreset(""); setDateFrom(""); setDateTo(""); } }] : []),
                 ...(!activePreset && selectedMonth ? [{ label: selectedMonth, onRemove: () => { setSelectedMonth(""); setDateFrom(""); setDateTo(""); } }] : []),

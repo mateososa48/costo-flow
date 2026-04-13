@@ -1,4 +1,3 @@
-import { RESTAURANT_LABELS } from "@/types";
 import type { Restaurant } from "@/types";
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -88,10 +87,12 @@ export type Stats = {
 };
 
 export type AISuggestion = {
-  canonicalName: string;
-  aliases: string[];
+  action: "create" | "merge";
+  canonicalName: string;  // for "create": new name; for "merge": existing ingredient's canonical name
+  aliases: string[];      // raw descriptions being mapped
   category: string | null;
   matchCount: number;
+  existingId?: string;    // for "merge" only — id of the existing ingredient to add aliases to
 };
 
 // ─── Constants ──────────────────────────────────────────────────────
@@ -146,7 +147,7 @@ export function formatDate(d: string): string {
 }
 
 export function restaurantLabel(r: string): string {
-  return RESTAURANT_LABELS[r as Restaurant] ?? r;
+  return r;
 }
 
 export function getMonthOptions() {

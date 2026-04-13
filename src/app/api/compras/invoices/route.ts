@@ -32,10 +32,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!parsed.success) return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 422 });
 
   const { restaurant, supplier, invoiceNumber, invoiceDate, importe, iva, total, concepto, cuentaPnl, comments } = parsed.data;
+  const tenantId = session.tenantId;
 
   const { data, error } = await supabase
     .from("invoices")
     .insert({
+      ...(tenantId ? { tenant_id: tenantId } : {}),
       restaurant,
       supplier,
       invoice_number: invoiceNumber || null,
@@ -57,6 +59,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   appendAuditEntries(supabase, [{
     action: "invoice_added_manually",
     user: session.user ?? "Sistema",
+    tenantId,
     restaurant,
     supplier,
     invoiceId: data.id as string,

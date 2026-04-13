@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { Ingredient, UnmatchedGroup, AISuggestion, NORMALIZED_UNITS_LIST } from "../types";
@@ -392,11 +392,11 @@ export default function NormalizeView({
             )}
 
             {/* 50/50 split — stacked on mobile, side-by-side on md+ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3" style={{ minHeight: 400 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3" style={{ minHeight: 500 }}>
 
               {/* Left: unidentified */}
               <div className="rounded-[var(--radius)] border overflow-hidden flex flex-col"
-                style={{ borderColor: "var(--border)", height: "clamp(320px, 50vh, 480px)" }}>
+                style={{ borderColor: "var(--border)", height: "clamp(480px, 70vh, 900px)" }}>
                 <div className="px-4 py-3 border-b flex items-center justify-between flex-shrink-0"
                   style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
                   <div className="flex items-center gap-2">
@@ -421,7 +421,7 @@ export default function NormalizeView({
                         try {
                           const res = await fetch("/api/compras/ingredients/suggest-batch", {
                             method: "POST", headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ items: unmatched }),
+                            body: JSON.stringify({ items: unmatched, existingIngredients: ingredients }),
                           });
                           let data: { suggestions?: AISuggestion[]; error?: string };
                           try { data = await res.json(); } catch { alert("Error: respuesta no válida"); return; }
@@ -454,55 +454,120 @@ export default function NormalizeView({
 
                 <div className="overflow-y-auto flex-1" style={{ background: "var(--surface)" }}>
                   {aiSuggestions ? (
-                    <>
-                      <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
-                        {aiSuggestions.map((s, i) => {
-                          const checked = aiChecked.has(i);
-                          return (
-                            <div key={i}
-                              className="px-4 py-2.5 cursor-pointer transition-colors duration-100"
-                              style={{ background: checked ? "var(--blue-glow)" : undefined }}
-                              onClick={() => setAiChecked(prev => {
-                                const next = new Set(prev);
-                                checked ? next.delete(i) : next.add(i); return next;
-                              })}>
-                              <div className="flex items-start gap-2">
-                                <input type="checkbox" readOnly checked={checked} className="mt-0.5 flex-shrink-0 accent-[#0450A9]" />
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{s.canonicalName}</p>
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
-                                      style={{ background: "var(--surface-raised)", color: "var(--text-muted)" }}>{s.matchCount} art.</span>
-                                  </div>
-                                  {s.category && <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{s.category}</p>}
-                                  <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--text-dim)" }}>{s.aliases.join(" · ")}</p>
+                    (() => {
+                      const merges = aiSuggestions.filter(s => s.action === "merge");
+                      const creates = aiSuggestions.filter(s => s.action === "create");
+                      return (
+                        <>
+                          <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
+                            {/* Merge section */}
+                            {merges.length > 0 && (
+                              <>
+                                <div className="px-4 py-2 flex-shrink-0" style={{ background: "var(--surface-raised)" }}>
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                                    Unir con existentes ({merges.length})
+                                  </span>
                                 </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="sticky bottom-0 px-4 py-3 border-t flex items-center justify-between gap-3"
-                        style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
-                        <span className="text-xs" style={{ color: "var(--text-muted)" }}>{aiChecked.size} / {aiSuggestions.length}</span>
-                        <Button size="sm" loading={aiConfirming} disabled={aiChecked.size === 0}
-                          onClick={async () => {
-                            setAiConfirming(true);
-                            try {
-                              const selected = aiSuggestions.filter((_, i) => aiChecked.has(i));
-                              for (const s of selected) {
-                                await fetch("/api/compras/ingredients", {
-                                  method: "POST", headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ canonicalName: s.canonicalName, aliases: s.aliases, category: s.category || null }),
-                                });
-                              }
-                              setAiSuggestions(null); setAiChecked(new Set()); fetchNormalize();
-                            } finally { setAiConfirming(false); }
-                          }}>
-                          Confirmar ({aiChecked.size})
-                        </Button>
-                      </div>
-                    </>
+                                {merges.map((s, i) => {
+                                  const idx = aiSuggestions.indexOf(s);
+                                  const checked = aiChecked.has(idx);
+                                  return (
+                                    <div key={i}
+                                      className="px-4 py-2.5 cursor-pointer transition-colors duration-100"
+                                      style={{ background: checked ? "color-mix(in srgb, var(--blue) 8%, transparent)" : undefined }}
+                                      onClick={() => setAiChecked(prev => {
+                                        const next = new Set(prev);
+                                        checked ? next.delete(idx) : next.add(idx); return next;
+                                      })}>
+                                      <div className="flex items-start gap-2">
+                                        <input type="checkbox" readOnly checked={checked} className="mt-0.5 flex-shrink-0 accent-[#0450A9]" />
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="text-[10px] px-1.5 py-px rounded font-medium flex-shrink-0"
+                                              style={{ background: "color-mix(in srgb, var(--blue) 12%, transparent)", color: "var(--blue)" }}>→ {s.canonicalName}</span>
+                                            <span className="text-[10px] flex-shrink-0" style={{ color: "var(--text-dim)" }}>{s.matchCount} art.</span>
+                                          </div>
+                                          <p className="text-xs mt-1 truncate" style={{ color: "var(--text-muted)" }}>{s.aliases.join(" · ")}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+                            {/* Create section */}
+                            {creates.length > 0 && (
+                              <>
+                                <div className="px-4 py-2 flex-shrink-0" style={{ background: "var(--surface-raised)" }}>
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                                    Crear nuevos ({creates.length})
+                                  </span>
+                                </div>
+                                {creates.map((s, i) => {
+                                  const idx = aiSuggestions.indexOf(s);
+                                  const checked = aiChecked.has(idx);
+                                  return (
+                                    <div key={i}
+                                      className="px-4 py-2.5 cursor-pointer transition-colors duration-100"
+                                      style={{ background: checked ? "var(--blue-glow)" : undefined }}
+                                      onClick={() => setAiChecked(prev => {
+                                        const next = new Set(prev);
+                                        checked ? next.delete(idx) : next.add(idx); return next;
+                                      })}>
+                                      <div className="flex items-start gap-2">
+                                        <input type="checkbox" readOnly checked={checked} className="mt-0.5 flex-shrink-0 accent-[#0450A9]" />
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{s.canonicalName}</p>
+                                            <span className="text-[10px] flex-shrink-0" style={{ color: "var(--text-dim)" }}>{s.matchCount} art.</span>
+                                          </div>
+                                          {s.category && <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{s.category}</p>}
+                                          <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--text-dim)" }}>{s.aliases.join(" · ")}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+                          </div>
+                          <div className="sticky bottom-0 px-4 py-3 border-t flex items-center justify-between gap-3"
+                            style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
+                            <span className="text-xs" style={{ color: "var(--text-muted)" }}>{aiChecked.size} / {aiSuggestions.length}</span>
+                            <Button size="sm" loading={aiConfirming} disabled={aiChecked.size === 0}
+                              onClick={async () => {
+                                setAiConfirming(true);
+                                try {
+                                  const selected = aiSuggestions.filter((_, i) => aiChecked.has(i));
+                                  for (const s of selected) {
+                                    if (s.action === "merge" && s.existingId) {
+                                      // Add each alias to the existing ingredient (and propagate to line_items)
+                                      const existing = ingredients.find(ing => ing.id === s.existingId);
+                                      const existingAliasSet = new Set(existing?.aliases ?? []);
+                                      for (const alias of s.aliases) {
+                                        if (!existingAliasSet.has(alias)) {
+                                          await fetch(`/api/compras/ingredients/${s.existingId}`, {
+                                            method: "PUT", headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ addAlias: alias }),
+                                          });
+                                        }
+                                      }
+                                    } else if (s.action === "create") {
+                                      await fetch("/api/compras/ingredients", {
+                                        method: "POST", headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ canonicalName: s.canonicalName, aliases: s.aliases, category: s.category || null }),
+                                      });
+                                    }
+                                  }
+                                  setAiSuggestions(null); setAiChecked(new Set()); fetchNormalize();
+                                } finally { setAiConfirming(false); }
+                              }}>
+                              Confirmar ({aiChecked.size})
+                            </Button>
+                          </div>
+                        </>
+                      );
+                    })()
                   ) : unmatched.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
                       <p className="text-sm" style={{ color: "var(--text-dim)" }}>Todo identificado ✓</p>
@@ -552,7 +617,7 @@ export default function NormalizeView({
 
               {/* Right: ingredients reference */}
               <div className="rounded-[var(--radius)] border overflow-hidden flex flex-col"
-                style={{ borderColor: "var(--border)", height: "clamp(320px, 50vh, 480px)" }}>
+                style={{ borderColor: "var(--border)", height: "clamp(480px, 70vh, 900px)" }}>
                 <div className="px-4 py-3 border-b flex-shrink-0"
                   style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
                   <div className="relative">
@@ -846,6 +911,7 @@ function IngredientEditRow({
   const [defaultUnit, setDefaultUnit] = useState(ingredient.default_unit ?? "");
   const [aliases, setAliases] = useState<string[]>(ingredient.aliases);
   const [newAlias, setNewAlias] = useState("");
+  const aliasInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -983,7 +1049,7 @@ function IngredientEditRow({
         <div
           className="flex flex-wrap gap-1.5 p-2 rounded-[var(--radius-sm)] border min-h-[44px] cursor-text"
           style={{ background: "var(--surface-raised)", borderColor: "var(--border)" }}
-          onClick={() => (document.getElementById("ing-alias-input") as HTMLInputElement)?.focus()}
+          onClick={() => aliasInputRef.current?.focus()}
         >
           {aliases.map((a) => (
             <span key={a} className="flex items-center gap-1 text-xs px-2 py-1 rounded-md flex-shrink-0"
@@ -999,7 +1065,7 @@ function IngredientEditRow({
             </span>
           ))}
           <input
-            id="ing-alias-input"
+            ref={aliasInputRef}
             type="text"
             value={newAlias}
             placeholder={aliases.length === 0 ? "Escribe y presiona Enter…" : "Agregar…"}

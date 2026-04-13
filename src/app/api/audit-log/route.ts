@@ -15,7 +15,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
 
   try {
-    const entries = await readAuditEntries(supabase, { limit, offset });
+    const entries = await readAuditEntries(supabase, { limit, offset, tenantId: session.tenantId });
     return NextResponse.json({ entries, limit, offset });
   } catch {
     return NextResponse.json({ entries: [], total: 0 });

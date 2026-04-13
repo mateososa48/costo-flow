@@ -50,16 +50,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const { view, search, restaurant, supplier, dateFrom, dateTo, sortBy, sortDir, page, pageSize } = parsed.data;
+  const tenantId = session.tenantId;
 
   const FOOD_BEV_CUENTAPNL = ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"];
-  const supplierTags = await readSupplierTags(supabase);
+  const supplierTags = await readSupplierTags(supabase, tenantId);
 
   // Get food/bev invoice IDs — primary filter anchored to invoice cuenta_pnl.
   // Avoids relying on cost_type which defaults to 'food' for all rows until backfill runs.
-  const { data: foodInvoices } = await supabase
-    .from("invoices")
-    .select("id")
-    .in("cuenta_pnl", FOOD_BEV_CUENTAPNL);
+  let foodInvoiceQuery = supabase.from("invoices").select("id").in("cuenta_pnl", FOOD_BEV_CUENTAPNL);
+  if (tenantId) foodInvoiceQuery = foodInvoiceQuery.eq("tenant_id", tenantId);
+  const { data: foodInvoices } = await foodInvoiceQuery;
   const foodInvoiceIds = (foodInvoices ?? []).map((i) => i.id as string);
   // Filter string: items linked to food/bev invoices, OR manually-added (no invoice) with food cost_type
   const foodFilter = foodInvoiceIds.length > 0
@@ -71,6 +71,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     let query: any = supabase.from("line_items").select("id, invoice_id, restaurant, supplier, invoice_date, description, quantity, unit, unit_normalized, unit_price, total, category, ingredient_id, created_at, updated_at", { count: "exact" });
 
     query = query.or(foodFilter);
+    if (tenantId) query = query.eq("tenant_id", tenantId);
 
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
@@ -96,6 +97,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Only show food/beverage invoices in Compras tab
     invoiceQuery = invoiceQuery.in("cuenta_pnl", ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"]);
+    if (tenantId) invoiceQuery = invoiceQuery.eq("tenant_id", tenantId);
 
     if (restaurant) invoiceQuery = invoiceQuery.eq("restaurant", restaurant);
     if (supplier) invoiceQuery = invoiceQuery.ilike("supplier", `%${supplier}%`);
@@ -141,6 +143,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query: any = supabase.from("line_items").select("supplier, total, invoice_date, description, id, restaurant, quantity, unit, unit_normalized, unit_price, category, ingredient_id, invoice_id, created_at, updated_at");
     query = query.or(foodFilter);
+    if (tenantId) query = query.eq("tenant_id", tenantId);
 
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
@@ -165,7 +168,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Apply display-name aliases to merge groups
-    const aliases = await readSupplierAliases(supabase);
+    const aliases = await readSupplierAliases(supabase, tenantId);
     const grouped: Record<string, { supplier: string; canonicalNames: string[]; totalSpend: number; itemCount: number; items: unknown[] }> = {};
     for (const [rawName, g] of Object.entries(rawGrouped)) {
       const displayName = resolveDisplayName(rawName, aliases);
@@ -195,6 +198,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query: any = supabase.from("line_items").select("description, supplier").is("ingredient_id", null);
     query = query.or(foodFilter);
+    if (tenantId) query = query.eq("tenant_id", tenantId);
     if (restaurant) query = query.eq("restaurant", restaurant);
 
     const { data, error } = await query;
@@ -241,11 +245,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const { description, quantity, unit, unitNormalized, unitPrice, total, category, restaurant, supplier, invoiceDate, invoiceId } = parsed.data;
+  const tenantId = session.tenantId;
 
   const { data, error } = await supabase
     .from("line_items")
     .insert({
       invoice_id: invoiceId,
+      ...(tenantId ? { tenant_id: tenantId } : {}),
       restaurant,
       supplier,
       invoice_date: invoiceDate,

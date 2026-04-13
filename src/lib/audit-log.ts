@@ -12,6 +12,7 @@ export type AuditEntry = {
   id: string;
   action: AuditAction;
   user: string;
+  tenantId?: string;
   restaurant: string;
   supplier: string;
   invoiceId: string;
@@ -78,16 +79,20 @@ async function readLegacy(supabase: SupabaseClient): Promise<AuditEntry[]> {
 // ─── Table-based read ───────────────────────────────────────────
 export async function readAuditEntries(
   supabase: SupabaseClient,
-  options?: { limit?: number; offset?: number }
+  options?: { limit?: number; offset?: number; tenantId?: string }
 ): Promise<AuditEntry[]> {
   const limit = options?.limit ?? 500;
   const offset = options?.offset ?? 0;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("audit_log")
     .select("*")
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
+
+  if (options?.tenantId) query = query.eq("tenant_id", options.tenantId);
+
+  const { data, error } = await query;
 
   if (error) {
     // Table doesn't exist yet — fall back to legacy JSONB
@@ -112,6 +117,7 @@ export async function appendAuditEntries(
     id: crypto.randomUUID(),
     action: input.action,
     user_name: input.user,
+    ...(input.tenantId ? { tenant_id: input.tenantId } : {}),
     restaurant: input.restaurant,
     supplier: input.supplier,
     invoice_id: input.invoiceId,

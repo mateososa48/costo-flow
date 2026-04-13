@@ -26,24 +26,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const { from, into } = parsed.data;
   if (from === into) return NextResponse.json({ error: "Cannot merge a supplier into itself" }, { status: 422 });
 
-  // Update invoices table
-  await supabase
-    .from("invoices")
-    .update({ supplier: into })
-    .eq("supplier", from);
+  const tenantId = session.tenantId;
 
-  // Update line_items table
-  await supabase
-    .from("line_items")
-    .update({ supplier: into })
-    .eq("supplier", from);
+  // Update invoices table (scoped to tenant)
+  let invQ = supabase.from("invoices").update({ supplier: into }).eq("supplier", from);
+  if (tenantId) invQ = invQ.eq("tenant_id", tenantId);
+  await invQ;
+
+  // Update line_items table (scoped to tenant)
+  let liQ = supabase.from("line_items").update({ supplier: into }).eq("supplier", from);
+  if (tenantId) liQ = liQ.eq("tenant_id", tenantId);
+  await liQ;
 
   // Transfer supplier tag if applicable
-  const { data: existing } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", SETTINGS_KEY)
-    .single();
+  let tagsQ = supabase.from("app_settings").select("value").eq("key", SETTINGS_KEY);
+  if (tenantId) tagsQ = tagsQ.eq("tenant_id", tenantId);
+  const { data: existing } = await tagsQ.limit(1).single();
 
   const tags = (existing?.value as Record<string, string>) ?? {};
   if (tags[from] && !tags[into]) {
@@ -53,7 +51,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   await supabase
     .from("app_settings")
-    .upsert({ key: SETTINGS_KEY, value: tags }, { onConflict: "key" });
+    .upsert(
+      {
+        key: SETTINGS_KEY,
+        value: tags,
+        ...(tenantId ? { tenant_id: tenantId } : {}),
+      },
+      { onConflict: "tenant_id,key" }
+    );
 
   return NextResponse.json({ ok: true });
 }

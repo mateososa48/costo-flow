@@ -17,11 +17,10 @@ export async function GET(): Promise<NextResponse> {
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
 
-  const { data } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", SUPPLIER_ALIASES_KEY)
-    .single();
+  const tenantId = session.tenantId;
+  let query = supabase.from("app_settings").select("value").eq("key", SUPPLIER_ALIASES_KEY);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { data } = await query.limit(1).single();
 
   return NextResponse.json((data?.value as Record<string, string>) ?? {});
 }
@@ -40,12 +39,11 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
   if (!parsed.success) return NextResponse.json({ error: "Validation failed" }, { status: 422 });
 
   const { displayName, canonicalNames, oldDisplayName } = parsed.data;
+  const tenantId = session.tenantId;
 
-  const { data: existing } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", SUPPLIER_ALIASES_KEY)
-    .single();
+  let readQuery = supabase.from("app_settings").select("value").eq("key", SUPPLIER_ALIASES_KEY);
+  if (tenantId) readQuery = readQuery.eq("tenant_id", tenantId);
+  const { data: existing } = await readQuery.limit(1).single();
 
   const aliases = (existing?.value as Record<string, string>) ?? {};
 
@@ -56,14 +54,12 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         delete aliases[rawName];
       }
     }
-    // Also clean up: if oldDisplayName itself was a canonical pointing somewhere, clear it
     if (aliases[oldDisplayName] === oldDisplayName) delete aliases[oldDisplayName];
   }
 
   // Set the new mapping
   for (const rawName of canonicalNames) {
     if (rawName === displayName) {
-      // No self-alias needed — raw name IS the display name
       delete aliases[rawName];
     } else {
       aliases[rawName] = displayName;
@@ -72,7 +68,14 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
   await supabase
     .from("app_settings")
-    .upsert({ key: SUPPLIER_ALIASES_KEY, value: aliases }, { onConflict: "key" });
+    .upsert(
+      {
+        key: SUPPLIER_ALIASES_KEY,
+        value: aliases,
+        ...(tenantId ? { tenant_id: tenantId } : {}),
+      },
+      { onConflict: "tenant_id,key" }
+    );
 
   return NextResponse.json({ ok: true });
 }

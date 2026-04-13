@@ -29,12 +29,13 @@ export function belongsInGastos(tag: string | null | undefined, fallbackIsFood: 
   return !fallbackIsFood;
 }
 
-export async function readSupplierTags(supabase: SupabaseClient): Promise<SupplierTagMap> {
-  const { data } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", SETTINGS_KEY)
-    .single();
+export async function readSupplierTags(
+  supabase: SupabaseClient,
+  tenantId?: string
+): Promise<SupplierTagMap> {
+  let query = supabase.from("app_settings").select("value").eq("key", SETTINGS_KEY);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
 
+  const { data } = await query.limit(1).single();
   return (data?.value as SupplierTagMap) ?? {};
 }

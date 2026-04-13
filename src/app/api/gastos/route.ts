@@ -33,11 +33,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!parsed.success) return NextResponse.json({ error: "Invalid parameters" }, { status: 422 });
 
   const { view, restaurant, supplier, dateFrom, dateTo, sortDir, page, pageSize } = parsed.data;
-  const supplierTags = await readSupplierTags(supabase);
+  const tenantId = session.tenantId;
+  const supplierTags = await readSupplierTags(supabase, tenantId);
 
   if (view === "invoices") {
     // Fetch all invoices (no cuenta_pnl filter — supplier tag overrides it)
     let query = supabase.from("invoices").select("*");
+    if (tenantId) query = query.eq("tenant_id", tenantId);
 
     if (restaurant) query = query.eq("restaurant", restaurant);
     if (supplier) query = query.ilike("supplier", `%${supplier}%`);
@@ -83,6 +85,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (view === "suppliers") {
     let query = supabase.from("invoices").select("id, supplier, total, invoice_date, restaurant, cuenta_pnl, concepto, invoice_number");
+    if (tenantId) query = query.eq("tenant_id", tenantId);
 
     if (restaurant) query = query.eq("restaurant", restaurant);
     if (dateFrom) query = query.gte("invoice_date", dateFrom);
@@ -106,7 +109,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Apply display-name aliases to merge groups
-    const aliases = await readSupplierAliases(supabase);
+    const aliases = await readSupplierAliases(supabase, tenantId);
     const grouped: Record<string, { supplier: string; canonicalNames: string[]; totalSpend: number; invoiceCount: number; invoices: InvRow[] }> = {};
     for (const [rawName, g] of Object.entries(rawGrouped)) {
       const displayName = resolveDisplayName(rawName, aliases);
@@ -129,6 +132,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (view === "analytics") {
     let query = supabase.from("invoices").select("invoice_date, total, cuenta_pnl, concepto, supplier, restaurant");
+    if (tenantId) query = query.eq("tenant_id", tenantId);
 
     if (restaurant) query = query.eq("restaurant", restaurant);
     if (dateFrom) query = query.gte("invoice_date", dateFrom);
@@ -175,7 +179,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .sort((a, b) => b.value - a.value);
 
     // Top suppliers (apply display-name aliases)
-    const aliases = await readSupplierAliases(supabase);
+    const aliases = await readSupplierAliases(supabase, tenantId);
     const supplierMap: Record<string, number> = {};
     for (const item of items) {
       const displayName = resolveDisplayName(item.supplier, aliases);

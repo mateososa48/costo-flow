@@ -14,12 +14,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const restaurant = searchParams.get("restaurant");
   const dateFrom = searchParams.get("dateFrom");
   const dateTo = searchParams.get("dateTo");
+  const tenantId = session.tenantId;
 
   // Get food/bev invoice IDs — primary filter, avoids relying on cost_type default
-  const { data: foodInvoices } = await supabase
+  let foodInvQ = supabase
     .from("invoices")
     .select("id")
     .in("cuenta_pnl", ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"]);
+  if (tenantId) foodInvQ = foodInvQ.eq("tenant_id", tenantId);
+  const { data: foodInvoices } = await foodInvQ;
   const foodInvoiceIds = (foodInvoices ?? []).map((i) => i.id as string);
   const foodFilter = foodInvoiceIds.length > 0
     ? `invoice_id.in.(${foodInvoiceIds.join(",")}),and(invoice_id.is.null,cost_type.in.(food,beverage))`
@@ -30,6 +33,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .from("line_items")
     .select("invoice_date, category, total, description, ingredient_id, restaurant, supplier, invoice_id");
   query = query.or(foodFilter);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
 
   if (restaurant) query = query.eq("restaurant", restaurant);
   if (dateFrom) query = query.gte("invoice_date", dateFrom);
@@ -96,7 +100,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .sort((a, b) => b.value - a.value);
 
   // ── Top suppliers (apply display-name aliases) ────────────────────────
-  const aliases = await readSupplierAliases(supabase);
+  const aliases = await readSupplierAliases(supabase, tenantId ?? undefined);
   const supplierMap: Record<string, number> = {};
   for (const item of items) {
     const displayName = resolveDisplayName(item.supplier as string, aliases);
