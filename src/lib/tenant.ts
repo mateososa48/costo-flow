@@ -7,6 +7,7 @@
 
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
+export { getParrotConfig } from "@/lib/parrot";
 
 /** Returns the tenantId stored in the current session, or null if not present. */
 export async function getTenantId(): Promise<string | null> {

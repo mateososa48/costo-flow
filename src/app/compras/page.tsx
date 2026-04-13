@@ -15,6 +15,7 @@ import ItemsView from "./components/ItemsView";
 import InvoicesView from "./components/InvoicesView";
 import SuppliersView from "./components/SuppliersView";
 const AnalyticsView = lazy(() => import("./components/AnalyticsView"));
+const VentasView = lazy(() => import("./components/VentasView"));
 import NormalizeView from "./components/NormalizeView";
 
 // ─── Main Page ──────────────────────────────────────────────────────
@@ -235,6 +236,7 @@ export default function ComprasPage() {
               { key: "invoices", label: "Facturas" },
               { key: "suppliers", label: "Proveedores" },
               { key: "analytics", label: "Análisis" },
+              { key: "ventas", label: "Ventas" },
               { key: "normalize", label: "Ingredientes" },
             ] as const).map(({ key, label }) => (
               <button
@@ -324,10 +326,10 @@ export default function ComprasPage() {
         )}
 
         {/* Loading */}
-        {loading && view !== "analytics" && view !== "normalize" && <SkeletonTable rows={6} />}
+        {loading && view !== "analytics" && view !== "normalize" && view !== "ventas" && <SkeletonTable rows={6} />}
 
         {/* Empty state */}
-        {!loading && !error && pagination.total === 0 && view !== "analytics" && view !== "normalize" && (
+        {!loading && !error && pagination.total === 0 && view !== "analytics" && view !== "normalize" && view !== "ventas" && (
           <div className="text-center py-16 space-y-4">
             <div className="w-14 h-14 mx-auto rounded-full flex items-center justify-center"
               style={{ background: "var(--surface-raised)" }}>
@@ -384,7 +386,7 @@ export default function ComprasPage() {
         )}
 
         {/* Pagination */}
-        {!loading && pagination.totalPages > 1 && view !== "normalize" && view !== "analytics" && (
+        {!loading && pagination.totalPages > 1 && view !== "normalize" && view !== "analytics" && view !== "ventas" && (
           <div className="flex items-center justify-between gap-4 pt-2">
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
               Página {pagination.page} de {pagination.totalPages} ({pagination.total} resultado{pagination.total !== 1 ? "s" : ""})
@@ -415,6 +417,12 @@ export default function ComprasPage() {
         {view === "analytics" && (
           <Suspense fallback={<div className="py-8 text-center"><div className="w-5 h-5 mx-auto border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} /></div>}>
             <AnalyticsView analyticsData={analyticsData} analyticsLoading={analyticsLoading} />
+          </Suspense>
+        )}
+
+        {view === "ventas" && (
+          <Suspense fallback={<div className="py-8 text-center"><div className="w-5 h-5 mx-auto border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} /></div>}>
+            <VentasView />
           </Suspense>
         )}
 

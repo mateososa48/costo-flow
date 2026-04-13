@@ -1,7 +1,7 @@
 import type { Restaurant } from "@/types";
 
 // ─── Types ──────────────────────────────────────────────────────────
-export type ViewMode = "items" | "invoices" | "suppliers" | "analytics" | "normalize";
+export type ViewMode = "items" | "invoices" | "suppliers" | "analytics" | "normalize" | "ventas";
 
 export type DbLineItem = {
   id: string;
