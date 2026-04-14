@@ -4,10 +4,11 @@
  * Architecture: On-demand sync-to-Supabase. UI queries Supabase; this lib
  * pulls from Parrot and upserts. Never proxy Parrot live to the UI.
  *
- * Constraints:
- * - Rate limit: 15 req/min
- * - Max date window per query: 48h (we use 47h to be safe)
- * - Pagination: page=0-based, max 100/page
+ * Key params:
+ * - Date range:  startTimestamp + endTimestamp  (ISO strings, max 48h apart)
+ * - Pagination:  page=0 (0-based), size=100 max
+ * - Store filter: storeUUID
+ * - Rate limit:  15 req/min → x-rate-limit-remaining header
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -21,10 +22,12 @@ export type ParrotConfig = {
 };
 
 type PaginationMeta = {
-  page: number;
-  size: number;
-  total: number;
+  page?: number;
   next: number | null;
+  previous: number | null;
+  count?: number;
+  current?: number;
+  pageSize?: number;
 };
 
 type ParrotResponse<T> = {
@@ -40,9 +43,9 @@ type ParrotOrder = {
   status?: string;
   orderType?: string;
   provider?: string;
-  total?: number;
-  totalDiscounts?: number;
-  totalTaxes?: number;
+  total?: string | number;      // API returns string ("451.00")
+  totalDiscounts?: string | number;
+  totalTaxes?: string | number;
   customersCount?: number;
 };
 
@@ -64,11 +67,11 @@ type ParrotOrderItem = {
 
 type ParrotCashierSession = {
   uuid: string;
-  sessionNumber?: string;
+  sessionNumber?: number;
   state?: string;
   startedAt?: string;
   finishedAt?: string;
-  totalSales?: number;
+  sales?: { totalSales?: number };
   [key: string]: unknown;
 };
 
@@ -141,6 +144,7 @@ async function fetchAllPages<T>(
     const items = resp.data ?? [];
     results.push(...items);
 
+    // pagination.next is the next page number (int) or null when done
     if (resp.pagination?.next == null || items.length === 0) break;
     page++;
   }
@@ -191,8 +195,8 @@ export async function syncOrders(
     for (const [from, to] of chunks) {
       const orders = await fetchAllPages<ParrotOrder>(apiKey, "/v1/orders", {
         storeUUID,
-        dateOrderCreatedInitial: from,
-        dateOrderCreatedEnd: to,
+        startTimestamp: from,
+        endTimestamp: to,
       });
 
       if (orders.length === 0) continue;
@@ -206,9 +210,9 @@ export async function syncOrders(
         status: o.status ?? null,
         order_type: o.orderType ?? null,
         provider: o.provider ?? null,
-        total: o.total ?? null,
-        total_discounts: o.totalDiscounts ?? null,
-        total_taxes: o.totalTaxes ?? null,
+        total: o.total != null ? parseFloat(String(o.total)) : null,
+        total_discounts: o.totalDiscounts != null ? parseFloat(String(o.totalDiscounts)) : null,
+        total_taxes: o.totalTaxes != null ? parseFloat(String(o.totalTaxes)) : null,
         customers_count: o.customersCount ?? null,
       }));
 
@@ -240,8 +244,8 @@ export async function syncOrderItems(
     for (const [from, to] of chunks) {
       const items = await fetchAllPages<ParrotOrderItem>(apiKey, "/v2/order-items", {
         storeUUID,
-        dateOrderCreatedInitial: from,
-        dateOrderCreatedEnd: to,
+        startTimestamp: from,
+        endTimestamp: to,
       });
 
       if (items.length === 0) continue;
@@ -292,8 +296,8 @@ export async function syncCashierSessions(
     for (const [from, to] of chunks) {
       const sessions = await fetchAllPages<ParrotCashierSession>(apiKey, "/v1/cashier-sessions", {
         storeUUID,
-        dateSessionCreatedInitial: from,
-        dateSessionCreatedEnd: to,
+        startTimestamp: from,
+        endTimestamp: to,
       });
 
       if (sessions.length === 0) continue;
@@ -302,11 +306,11 @@ export async function syncCashierSessions(
         uuid: s.uuid,
         tenant_id: tenantId,
         store_uuid: storeUUID,
-        session_number: (s.sessionNumber as string) ?? null,
-        state: (s.state as string) ?? null,
-        started_at: (s.startedAt as string) ?? null,
-        finished_at: (s.finishedAt as string) ?? null,
-        total_sales: (s.totalSales as number) ?? null,
+        session_number: s.sessionNumber != null ? String(s.sessionNumber) : null,
+        state: s.state ?? null,
+        started_at: s.startedAt ?? null,
+        finished_at: s.finishedAt ?? null,
+        total_sales: s.sales?.totalSales ?? null,
         raw_data: s,
       }));
 

@@ -59,7 +59,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .lte("created_at", toTs)
     .neq("status", "CANCELLED");
 
-  if (ordersError) return NextResponse.json({ error: ordersError.message }, { status: 500 });
+  // If the POS tables don't exist yet (migration not applied), return empty data
+  if (ordersError) {
+    const isTableMissing = ordersError.message.includes("does not exist") || ordersError.message.includes("schema cache");
+    if (isTableMissing) return NextResponse.json({
+      totalRevenue: 0, totalOrders: 0, avgTicket: 0,
+      dailyRevenue: [], providerBreakdown: [], topItems: [], cashierSessions: [], lastSyncedAt: null,
+    } satisfies SalesData);
+    return NextResponse.json({ error: ordersError.message }, { status: 500 });
+  }
 
   // ── Order Items ─────────────────────────────────────────────────────────────
   const { data: items, error: itemsError } = await supabase
