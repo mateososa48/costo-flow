@@ -15,7 +15,6 @@
     "@vercel/analytics": "^1.6.1",
     "bcryptjs": "^3.0.3",
     "googleapis": "^144.0.0",
-    "iron-session": "^8.0.4",
     "next": "^15.2.0",
     "openai": "^4.85.0",
     "pdfjs-dist": "^4.10.38",
