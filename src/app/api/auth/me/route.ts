@@ -3,8 +3,13 @@ import { getSession } from "@/lib/session";
 
 export async function GET() {
   const session = await getSession();
-  if (!session.isLoggedIn || !session.user) {
+  if (!session.isLoggedIn) {
     return NextResponse.json({ user: null }, { status: 401 });
   }
-  return NextResponse.json({ user: session.user, tenantId: session.tenantId ?? null });
+  return NextResponse.json({
+    user: session.name,
+    email: session.email,
+    tenantId: session.tenantId,
+    role: session.role,
+  });
 }
