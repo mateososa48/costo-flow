@@ -1,6 +1,8 @@
 /**
  * config.ts — Lazy environment variable getters.
  * Values are validated only when accessed, not at import time (Vercel-safe).
+ * Auth is now handled by Supabase Auth (Google OAuth). ADMIN_NAMES, SHARED_PASSWORD,
+ * and SESSION_PASSWORD env vars are kept in .env files but no longer read by the app.
  */
 
 function required(key: string): string {
@@ -18,14 +20,6 @@ function parseSheetRegistry(raw: string): Record<string, string> {
 }
 
 export const config = {
-  get auth() {
-    return {
-      adminNames: required("ADMIN_NAMES").split(",").map((n) => n.trim()).filter(Boolean),
-      sharedPassword: required("SHARED_PASSWORD"),
-      sessionPassword: required("SESSION_PASSWORD"),
-    };
-  },
-
   get openai() {
     return {
       apiKey: required("OPENAI_API_KEY"),

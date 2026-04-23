@@ -39,9 +39,12 @@ export type ExtractedInvoice = {
 };
 
 export type SessionData = {
-  user?: string;
-  tenantId?: string;
   isLoggedIn: boolean;
+  userId?: string;
+  tenantId?: string;
+  email?: string;
+  name?: string;     // display name from Google (user.user_metadata.full_name)
+  role?: "admin" | "member" | "readonly";
 };
 
 export type SupplierEntry = {
@@ -53,7 +56,6 @@ export type DropdownsResponse = {
   concepto: string[];
   cuentaPnl: string[];
   restaurants: Array<{ value: Restaurant; label: string }>;
-  adminNames: string[];
   sheetRegistry: Record<string, string>;
 };
 
