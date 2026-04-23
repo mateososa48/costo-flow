@@ -53,7 +53,7 @@ export async function PUT(
   if (existing) {
     appendAuditEntries(supabase, [{
       action: "invoice_reclassified",
-      user: session.user ?? "Sistema",
+      user: session.email ?? "Sistema",
       tenantId,
       restaurant: existing.restaurant as string,
       supplier: existing.supplier as string,
@@ -101,7 +101,7 @@ export async function DELETE(
   if (existing) {
     appendAuditEntries(supabase, [{
       action: "invoice_deleted",
-      user: session.user ?? "Sistema",
+      user: session.email ?? "Sistema",
       tenantId,
       restaurant: existing.restaurant as string,
       supplier: existing.supplier as string,

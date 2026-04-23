@@ -28,7 +28,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   // Rate limiting: max 20 parse requests per 5 minutes per user
-  const rateLimitKey = `parse:${session.user ?? "anonymous"}`;
+  const rateLimitKey = `parse:${session.email ?? "anonymous"}`;
   const rateResult = checkRateLimit(rateLimitKey, { maxRequests: 20, windowMs: 5 * 60 * 1000 });
   if (!rateResult.allowed) {
     const retryAfter = Math.ceil((rateResult.resetAt - Date.now()) / 1000);

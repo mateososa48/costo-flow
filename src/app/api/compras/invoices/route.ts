@@ -48,7 +48,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       concepto: concepto || null,
       cuenta_pnl: cuentaPnl || null,
       comments: comments || null,
-      submitted_by: session.user ?? "Sistema",
+      submitted_by: session.email ?? "Sistema",
       submitted_at: new Date().toISOString(),
     })
     .select()
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   appendAuditEntries(supabase, [{
     action: "invoice_added_manually",
-    user: session.user ?? "Sistema",
+    user: session.email ?? "Sistema",
     tenantId,
     restaurant,
     supplier,

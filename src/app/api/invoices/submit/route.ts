@@ -68,7 +68,7 @@ const submitSchema = z.object({
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const session = await getSession();
-  if (!session.isLoggedIn || !session.user) {
+  if (!session.isLoggedIn) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const { invoices, bypassDuplicates } = parsed.data;
-  const user = session.user;
+  const user = session.email ?? "";
   const tenantId = session.tenantId;
   const results: SubmitResult[] = [];
   let appended = 0;
