@@ -89,18 +89,16 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const cached = sessionStorage.getItem("user");
+    const cached = sessionStorage.getItem("boh_user_name");
     if (cached) {
       setUser(cached);
       return;
     }
-    // Session cookie is still valid but sessionStorage was cleared (tab closed / direct URL).
-    // Fetch the username from the server session so the display name isn't "?".
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.user) {
-          sessionStorage.setItem("user", data.user);
+          sessionStorage.setItem("boh_user_name", data.user);
           setUser(data.user);
         }
       })
@@ -109,7 +107,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("boh_user_name");
     router.push("/login");
   }
 
