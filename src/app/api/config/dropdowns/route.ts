@@ -6,6 +6,9 @@ import log from "@/lib/logger";
 export async function GET() {
   try {
     const session = await getSession();
+    if (!session.isLoggedIn) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const options = await getDropdownOptions(session.tenantId);
     return NextResponse.json(options);
   } catch (err) {
