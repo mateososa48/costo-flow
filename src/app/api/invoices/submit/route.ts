@@ -7,7 +7,7 @@ import dropdownOptions from "../../../../../data/dropdown_options.json";
 import type { ExtractedInvoice, SubmitApiResponse, SubmitResult } from "@/types";
 import getSupabase, { saveInvoiceWithItems, checkDuplicatesViaSupabase } from "@/lib/supabase";
 import { appendAuditEntries } from "@/lib/audit-log";
-import { getTenantRestaurantSlugs } from "@/lib/tenant";
+import { getTenantRestaurantSlugs, getTenantSettings } from "@/lib/tenant";
 import log from "@/lib/logger";
 
 const validConceptos = new Set<string>(dropdownOptions.concepto as string[]);
@@ -26,7 +26,7 @@ function friendlySheetError(raw: string): string {
     return "No se encontró la pestaña 'Informe de Gastos' en la hoja. Verifica que exista con ese nombre exacto.";
   }
   if (msg.includes("spreadsheet not found") || msg.includes("404") || msg.includes("no spreadsheet registered")) {
-    return "No hay hoja registrada para este restaurante y mes. Agrega el ID en la variable SHEET_REGISTRY en Vercel.";
+    return "No hay hoja registrada para este restaurante y mes. Agrégala en Configuración → Hojas de cálculo.";
   }
   if (msg.includes("quota") || msg.includes("rate limit") || msg.includes("429")) {
     return "Se alcanzó el límite de solicitudes de Google Sheets. Espera unos segundos e intenta de nuevo.";
@@ -93,6 +93,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const results: SubmitResult[] = [];
   let appended = 0;
 
+  // Load this tenant's sheet registry from the DB (never from the global env var)
+  const tenantSettings = tenantId ? await getTenantSettings(tenantId) : null;
+  const tenantRegistry = (tenantSettings?.sheetRegistry as Record<string, string>) ?? {};
+
   // Validate restaurant slugs against the tenant's registered locations
   if (tenantId) {
     const validSlugs = await getTenantRestaurantSlugs(tenantId);
@@ -114,14 +118,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const year = parseInt(yearStr, 10);
       const month = parseInt(monthStr, 10);
 
-      let spreadsheetId: string;
-      try {
-        spreadsheetId = config.sheets.getSpreadsheetId(invoice.restaurant, year, month);
-      } catch (err) {
+      const sheetKey = `${invoice.restaurant}_${year}_${String(month).padStart(2, "0")}`;
+      const spreadsheetId = tenantRegistry[sheetKey];
+      if (!spreadsheetId) {
         results.push({
           invoiceId: invoice.id,
           status: "error",
-          error: err instanceof Error ? err.message : "Sheet not registered",
+          error: `No hay hoja registrada para "${sheetKey}". Agrégala en Configuración → Hojas de cálculo.`,
         });
         continue;
       }

@@ -364,6 +364,7 @@ export default function ComprasPage() {
             fetchStats={fetchStats}
             addModalOpen={addModalOpen} setAddModalOpen={setAddModalOpen}
             supplierList={stats.supplierList} fetchData={fetchData}
+            restaurantOptions={restaurantOptions}
           />
         )}
 
@@ -373,6 +374,7 @@ export default function ComprasPage() {
             fetchStats={fetchStats}
             addModalOpen={addModalOpen} setAddModalOpen={setAddModalOpen}
             fetchData={fetchData}
+            restaurantOptions={restaurantOptions}
           />
         )}
 

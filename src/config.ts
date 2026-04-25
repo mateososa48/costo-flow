@@ -37,7 +37,8 @@ export const config = {
   },
 
   get sheets() {
-    const registry = parseSheetRegistry(required("SHEET_REGISTRY"));
+    const rawRegistry = process.env.SHEET_REGISTRY;
+    const registry = rawRegistry ? parseSheetRegistry(rawRegistry) : {};
     const auditLogId = required("AUDIT_LOG_SPREADSHEET_ID");
 
     return {

@@ -13,6 +13,7 @@ interface InvoicesViewProps {
   addModalOpen: boolean;
   setAddModalOpen: (open: boolean) => void;
   fetchData: () => void;
+  restaurantOptions: Array<{ value: string; label: string }>;
 }
 
 export default function InvoicesView({
@@ -22,6 +23,7 @@ export default function InvoicesView({
   addModalOpen,
   setAddModalOpen,
   fetchData,
+  restaurantOptions,
 }: InvoicesViewProps) {
   const [invoiceSelectMode, setInvoiceSelectMode] = useState(false);
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set());
@@ -414,6 +416,7 @@ export default function InvoicesView({
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onAdded={() => { setAddModalOpen(false); fetchData(); }}
+        restaurantOptions={restaurantOptions}
       />
     </>
   );
@@ -424,12 +427,14 @@ function AddInvoiceModal({
   open,
   onClose,
   onAdded,
+  restaurantOptions,
 }: {
   open: boolean;
   onClose: () => void;
   onAdded: () => void;
+  restaurantOptions: Array<{ value: string; label: string }>;
 }) {
-  const [restaurant, setRestaurant] = useState("motin_juarez");
+  const [restaurant, setRestaurant] = useState("");
   const [supplier, setSupplier] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10));
@@ -492,9 +497,9 @@ function AddInvoiceModal({
                 className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
                 style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
                 onChange={(e) => setRestaurant(e.target.value)}>
-                <option value="motin_juarez">Motín Juárez</option>
-                <option value="motin_roma">Motín Roma</option>
-                <option value="queseria">Quesería</option>
+                {restaurantOptions.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
               </select>
               <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
                 <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

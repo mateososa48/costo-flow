@@ -16,17 +16,6 @@ import type {
   Restaurant,
 } from "@/types";
 
-const RESTAURANT_OPTIONS: Array<{ value: Restaurant; label: string }> = [
-  { value: "motin_juarez", label: "Motín Juárez" },
-  { value: "motin_roma",   label: "Motín Roma" },
-  { value: "queseria",     label: "Quesería" },
-];
-
-const RESTAURANT_LABELS: Record<string, string> = {
-  motin_juarez: "Motín Juárez",
-  motin_roma:   "Motín Roma",
-  queseria:     "Quesería",
-};
 
 interface DuplicateWarning {
   invoiceId: string;
@@ -73,7 +62,7 @@ export default function ReviewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [duplicateWarnings, setDuplicateWarnings] = useState<DuplicateWarning[]>([]);
-  const [restaurant, setRestaurant] = useState<Restaurant>("motin_juarez");
+  const [restaurant, setRestaurant] = useState<Restaurant>("");
 
   function updateRestaurant(r: Restaurant) {
     setRestaurant(r);
@@ -81,7 +70,7 @@ export default function ReviewPage() {
   }
 
   useEffect(() => {
-    document.title = "Revisar facturas — Aventura Gourmet";
+    document.title = "Revisar facturas — BOH";
     const raw = sessionStorage.getItem("invoices");
     if (!raw) { router.push("/upload"); return; }
     try {
@@ -93,7 +82,10 @@ export default function ReviewPage() {
     }
     fetch("/api/config/dropdowns")
       .then((r) => r.json())
-      .then((data: DropdownsResponse) => setDropdowns(data))
+      .then((data: DropdownsResponse) => {
+        setDropdowns(data);
+        setRestaurant((prev) => prev || data.restaurants?.[0]?.value || "");
+      })
       .catch(() => {});
   }, [router]);
 
@@ -232,7 +224,7 @@ export default function ReviewPage() {
               color: "var(--blue)",
             }}
           >
-            {RESTAURANT_OPTIONS.map((opt) => (
+            {(dropdowns?.restaurants ?? []).map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
@@ -291,7 +283,8 @@ export default function ReviewPage() {
               <line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" strokeWidth="1.8"/>
               <line x1="9" y1="9" x2="9" y2="21" stroke="currentColor" strokeWidth="1.8"/>
             </svg>
-            Enviar {invoices.length} factura{invoices.length !== 1 ? "s" : ""} a Google Sheets<span className="hidden sm:inline"> — {RESTAURANT_LABELS[restaurant]}</span>
+            Enviar {invoices.length} factura{invoices.length !== 1 ? "s" : ""} a Google Sheets
+            {restaurant && <span className="hidden sm:inline"> — {dropdowns?.restaurants?.find((r) => r.value === restaurant)?.label ?? restaurant}</span>}
           </Button>
         </div>
       </div>

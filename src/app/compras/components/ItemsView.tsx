@@ -17,6 +17,7 @@ interface ItemsViewProps {
   setAddModalOpen: (v: boolean) => void;
   supplierList: string[];
   fetchData: () => void;
+  restaurantOptions: Array<{ value: string; label: string }>;
 }
 
 export default function ItemsView({
@@ -30,6 +31,7 @@ export default function ItemsView({
   setAddModalOpen,
   supplierList,
   fetchData,
+  restaurantOptions,
 }: ItemsViewProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editField, setEditField] = useState("");
@@ -253,6 +255,7 @@ export default function ItemsView({
         onClose={() => setAddModalOpen(false)}
         onAdded={() => { setAddModalOpen(false); fetchData(); fetchStats(); }}
         supplierList={supplierList}
+        restaurantOptions={restaurantOptions}
       />
 
       {/* Delete confirmation modal */}
@@ -532,18 +535,20 @@ function AddItemModal({
   onClose,
   onAdded,
   supplierList = [],
+  restaurantOptions,
 }: {
   open: boolean;
   onClose: () => void;
   onAdded: () => void;
   supplierList?: string[];
+  restaurantOptions: Array<{ value: string; label: string }>;
 }) {
   const [description, setDescription] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
   const [total, setTotal] = useState("");
-  const [addRestaurant, setAddRestaurant] = useState("motin_juarez");
+  const [addRestaurant, setAddRestaurant] = useState("");
   const [addSupplier, setAddSupplier] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
@@ -604,9 +609,9 @@ function AddItemModal({
                 className="w-full px-3 py-2 pr-8 rounded-[var(--radius-sm)] border text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2"
                 style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
                 onChange={(e) => setAddRestaurant(e.target.value)}>
-                <option value="motin_juarez">Motín Juárez</option>
-                <option value="motin_roma">Motín Roma</option>
-                <option value="queseria">Quesería</option>
+                {restaurantOptions.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
               </select>
               <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
                 <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

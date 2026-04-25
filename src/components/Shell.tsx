@@ -100,6 +100,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         if (data?.user) {
           sessionStorage.setItem("boh_user_name", data.user);
           setUser(data.user);
+        } else {
+          router.push("/login");
         }
       })
       .catch(() => {});
@@ -124,7 +126,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         {/* Wordmark */}
         <div className="px-5 py-5 border-b" style={{ borderColor: "var(--border)" }}>
           <p className="font-display text-lg font-bold" style={{ fontFamily: "var(--font-display)", color: "var(--text)", letterSpacing: "-0.03em" }}>
-            Aventura Gourmet
+            BOH
           </p>
           <div className="flex items-center gap-1.5 mt-1.5">
             <span className="badge-ai">⚡ AI</span>
@@ -236,7 +238,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       <header className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 h-14"
         style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
         <p className="font-display text-base font-bold" style={{ fontFamily: "var(--font-display)", color: "var(--text)", letterSpacing: "-0.03em" }}>
-          Aventura Gourmet
+          BOH
         </p>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white"

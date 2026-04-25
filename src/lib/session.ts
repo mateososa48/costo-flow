@@ -4,6 +4,30 @@ import getSupabase from "@/lib/supabase";
 import type { SessionData } from "@/types";
 
 /**
+ * Returns the raw Supabase Auth user from the JWT cookie, without checking
+ * tenant_users. Use this in routes that must work before a tenant is assigned
+ * (e.g. /api/onboard). Returns null if unauthenticated.
+ */
+export async function getAuthUser() {
+  const cookieStore = await cookies();
+  const authClient = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll(cookiesToSet) {
+          try { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)); } catch {}
+        },
+      },
+    }
+  );
+  const { data: { user }, error } = await authClient.auth.getUser();
+  if (error || !user) return null;
+  return user;
+}
+
+/**
  * Returns the current user's application session by reading the Supabase Auth
  * session cookie and looking up their tenant membership in tenant_users.
  *

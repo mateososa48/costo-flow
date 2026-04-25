@@ -6,7 +6,7 @@ import Shell from "@/components/Shell";
 import UploadZone from "@/components/UploadZone";
 import StepIndicator from "@/components/StepIndicator";
 import Button from "@/components/ui/Button";
-import type { Restaurant, ParseApiResponse, ExtractedInvoice } from "@/types";
+import type { Restaurant, ParseApiResponse, ExtractedInvoice, DropdownsResponse } from "@/types";
 
 interface UploadFile {
   file: File;
@@ -19,21 +19,11 @@ interface InvoiceDraft {
   savedAt: string;
 }
 
-const RESTAURANT_OPTIONS: Array<{ value: Restaurant; label: string }> = [
-  { value: "motin_juarez", label: "Motín Juárez" },
-  { value: "motin_roma",   label: "Motín Roma"   },
-  { value: "queseria",     label: "Quesería"     },
-];
-
-const RESTAURANT_LABELS: Record<string, string> = {
-  motin_juarez: "Motín Juárez",
-  motin_roma:   "Motín Roma",
-  queseria:     "Quesería",
-};
 
 export default function UploadPage() {
   const router = useRouter();
-  const [restaurant, setRestaurant] = useState<Restaurant>("motin_juarez");
+  const [restaurantOptions, setRestaurantOptions] = useState<Array<{ value: Restaurant; label: string }>>([]);
+  const [restaurant, setRestaurant] = useState<Restaurant>("");
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,11 +31,20 @@ export default function UploadPage() {
   const [drafts, setDrafts] = useState<InvoiceDraft[]>([]);
 
   useEffect(() => {
-    document.title = "Subir facturas — Aventura Gourmet";
+    document.title = "Subir facturas — BOH";
     try {
       const raw = localStorage.getItem("invoiceDrafts");
       if (raw) setDrafts(JSON.parse(raw));
     } catch { /* ignore */ }
+    fetch("/api/config/dropdowns")
+      .then((r) => r.json())
+      .then((d: DropdownsResponse) => {
+        if (d.restaurants?.length) {
+          setRestaurantOptions(d.restaurants);
+          setRestaurant(d.restaurants[0].value);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   function resumeDraft(draft: InvoiceDraft) {
@@ -115,7 +114,7 @@ export default function UploadPage() {
             Restaurante
           </p>
           <div className="flex flex-wrap gap-2">
-            {RESTAURANT_OPTIONS.map((opt) => (
+            {restaurantOptions.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
@@ -185,7 +184,9 @@ export default function UploadPage() {
             </p>
             {drafts.map((draft) => {
               const restaurantKey = draft.invoices[0]?.restaurant;
-              const restaurantLabel = restaurantKey ? (RESTAURANT_LABELS[restaurantKey] ?? restaurantKey) : "—";
+              const restaurantLabel = restaurantKey
+                ? (restaurantOptions.find((r) => r.value === restaurantKey)?.label ?? restaurantKey)
+                : "—";
               const date = new Date(draft.savedAt).toLocaleDateString("es-MX", {
                 day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
               });
