@@ -89,22 +89,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // ── Pass 1: duplicate checks (no writes) ───────────────────────────
+  // All checks must pass before any invoice is committed. This prevents
+  // partial saves: if invoice[0] is saved and invoice[1] is a duplicate,
+  // re-submitting [0] would incorrectly flag it as a duplicate of itself.
+  if (!bypassDuplicates) {
+    const warnings: SubmitResult[] = [];
+    for (const invoice of invoices as ExtractedInvoice[]) {
+      const duplicates = await checkDuplicatesViaSupabase(invoice);
+      if (duplicates && duplicates.length > 0) {
+        warnings.push({
+          invoiceId: invoice.id,
+          status: "duplicate_warning",
+          duplicateMatches: duplicates,
+        });
+      }
+    }
+    if (warnings.length > 0) {
+      return NextResponse.json({ results: warnings, saved: 0 });
+    }
+  }
+
+  // ── Pass 2: save all (only reached when no duplicates / bypass=true) ─
   for (const invoice of invoices as ExtractedInvoice[]) {
     try {
-      // ── 1. Duplicate check (Supabase only — it's now the record of truth) ──
-      if (!bypassDuplicates) {
-        const duplicates = await checkDuplicatesViaSupabase(invoice);
-        if (duplicates && duplicates.length > 0) {
-          results.push({
-            invoiceId: invoice.id,
-            status: "duplicate_warning",
-            duplicateMatches: duplicates,
-          });
-          continue;
-        }
-      }
-
-      // ── 2. Optional Sheets sync (non-blocking — never fails the submission) ──
+      // ── Sheet sync (non-blocking — never fails the submission) ──
       const [yearStr, monthStr] = invoice.invoiceDate.split("-");
       const sheetKey = `${invoice.restaurant}_${yearStr}_${monthStr.padStart(2, "0")}`;
       const spreadsheetId = tenantRegistry[sheetKey];
@@ -122,10 +131,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
       }
 
-      // ── 3. Save to Supabase (primary write — this must succeed) ──
+      // ── Save to Supabase (primary write) ──
       await saveInvoiceWithItems(invoice, user, tenantId, sheetSync);
 
-      // ── 4. Audit log (non-blocking) ──
+      // ── Audit log (non-blocking) ──
       try {
         const supabase = getSupabase();
         if (supabase) {
