@@ -61,12 +61,10 @@ export async function PUT(
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from("line_items")
-    .update(updates)
-    .eq("id", id)
-    .select()
-    .single();
+  const tenantId = session.tenantId;
+  let updateQ = supabase.from("line_items").update(updates).eq("id", id);
+  if (tenantId) updateQ = updateQ.eq("tenant_id", tenantId);
+  const { data, error } = await updateQ.select().single();
 
   if (error) {
     if (error.code === "PGRST116") {
@@ -93,11 +91,11 @@ export async function DELETE(
   }
 
   const { id } = await params;
+  const tenantId = session.tenantId;
 
-  const { error } = await supabase
-    .from("line_items")
-    .delete()
-    .eq("id", id);
+  let delQ = supabase.from("line_items").delete().eq("id", id);
+  if (tenantId) delQ = delQ.eq("tenant_id", tenantId);
+  const { error } = await delQ;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

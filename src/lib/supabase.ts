@@ -71,10 +71,13 @@ export async function saveInvoiceWithItems(
 
   if (!invoice.lineItems || invoice.lineItems.length === 0) return;
 
-  // Fetch existing ingredients for auto-matching
-  const { data: ingredients } = await supabase
+  // Fetch this tenant's ingredients only — never match cross-tenant
+  const ingredientQuery = supabase
     .from("ingredients")
     .select("id, canonical_name, aliases");
+  const { data: ingredients } = tenantId
+    ? await ingredientQuery.eq("tenant_id", tenantId)
+    : await ingredientQuery.is("tenant_id", null);
 
   function matchIngredient(description: string): string | null {
     if (!ingredients) return null;
@@ -122,7 +125,8 @@ export async function saveInvoiceWithItems(
  * Returns null if Supabase is unavailable or has no data (caller should fall back to Sheets).
  */
 export async function checkDuplicatesViaSupabase(
-  invoice: ExtractedInvoice
+  invoice: ExtractedInvoice,
+  tenantId?: string
 ): Promise<DuplicateMatch[] | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
@@ -133,12 +137,16 @@ export async function checkDuplicatesViaSupabase(
     ? `${Number(yearStr) + 1}-01-01`
     : `${yearStr}-${String(Number(monthStr) + 1).padStart(2, "0")}-01`;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("invoices")
     .select("supplier, invoice_number, total, invoice_date")
     .ilike("supplier", invoice.supplier.trim())
     .gte("invoice_date", monthStart)
     .lt("invoice_date", nextMonth);
+
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+
+  const { data, error } = await query;
 
   // If table doesn't exist or query fails, signal caller to use Sheets fallback
   if (error) return null;

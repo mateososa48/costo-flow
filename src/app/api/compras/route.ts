@@ -114,11 +114,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const invoiceIds = (invoices ?? []).map((inv) => inv.id);
     let items: Record<string, unknown[]> = {};
     if (invoiceIds.length > 0) {
-      const { data: lineItems } = await supabase
+      let lineItemsQ = supabase
         .from("line_items")
         .select("*")
         .in("invoice_id", invoiceIds)
         .order("created_at", { ascending: true });
+      if (tenantId) lineItemsQ = lineItemsQ.eq("tenant_id", tenantId);
+      const { data: lineItems } = await lineItemsQ;
 
       for (const item of lineItems ?? []) {
         const key = item.invoice_id as string;

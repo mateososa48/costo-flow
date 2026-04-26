@@ -13,20 +13,19 @@ export async function POST(): Promise<NextResponse> {
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
 
-  // Fetch all invoices with their cuenta_pnl
-  const { data: invoices, error: invError } = await supabase
-    .from("invoices")
-    .select("id, cuenta_pnl");
+  // Fetch all invoices with their cuenta_pnl (scoped to tenant)
+  let invQuery = supabase.from("invoices").select("id, cuenta_pnl");
+  if (session.tenantId) invQuery = invQuery.eq("tenant_id", session.tenantId);
+  const { data: invoices, error: invError } = await invQuery;
 
   if (invError) return NextResponse.json({ error: invError.message }, { status: 500 });
 
   let updated = 0;
   for (const inv of invoices ?? []) {
     const costType = getCostType((inv.cuenta_pnl as string) ?? "");
-    await supabase
-      .from("line_items")
-      .update({ cost_type: costType })
-      .eq("invoice_id", inv.id);
+    let updateQuery = supabase.from("line_items").update({ cost_type: costType }).eq("invoice_id", inv.id);
+    if (session.tenantId) updateQuery = updateQuery.eq("tenant_id", session.tenantId);
+    await updateQuery;
     updated++;
   }
 

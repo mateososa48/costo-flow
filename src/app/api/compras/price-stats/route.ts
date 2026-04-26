@@ -22,7 +22,7 @@ export async function GET(): Promise<NextResponse> {
   cutoff.setDate(cutoff.getDate() - 90);
   const dateStr = cutoff.toISOString().slice(0, 10);
 
-  const { data } = await supabase
+  let priceQuery = supabase
     .from("line_items")
     .select("description, unit_price")
     .not("unit_price", "is", null)
@@ -30,6 +30,8 @@ export async function GET(): Promise<NextResponse> {
     .gte("invoice_date", dateStr)
     .eq("cost_type", "food")
     .limit(5000);
+  if (session.tenantId) priceQuery = priceQuery.eq("tenant_id", session.tenantId);
+  const { data } = await priceQuery;
 
   // Group by normalised description key
   const groups = new Map<string, number[]>();

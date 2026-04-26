@@ -96,7 +96,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!bypassDuplicates) {
     const warnings: SubmitResult[] = [];
     for (const invoice of invoices as ExtractedInvoice[]) {
-      const duplicates = await checkDuplicatesViaSupabase(invoice);
+      const duplicates = await checkDuplicatesViaSupabase(invoice, tenantId);
       if (duplicates && duplicates.length > 0) {
         warnings.push({
           invoiceId: invoice.id,

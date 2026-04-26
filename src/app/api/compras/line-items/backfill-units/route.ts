@@ -13,20 +13,19 @@ export async function POST(): Promise<NextResponse> {
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
 
-  // Fetch all line items with their raw unit
-  const { data: items, error } = await supabase
-    .from("line_items")
-    .select("id, unit");
+  // Fetch all line items with their raw unit (scoped to tenant)
+  let itemsQuery = supabase.from("line_items").select("id, unit");
+  if (session.tenantId) itemsQuery = itemsQuery.eq("tenant_id", session.tenantId);
+  const { data: items, error } = await itemsQuery;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   let updated = 0;
   for (const item of items ?? []) {
     const normalized = normalizeUnit(item.unit as string | null);
-    await supabase
-      .from("line_items")
-      .update({ unit_normalized: normalized })
-      .eq("id", item.id);
+    let updateQuery = supabase.from("line_items").update({ unit_normalized: normalized }).eq("id", item.id);
+    if (session.tenantId) updateQuery = updateQuery.eq("tenant_id", session.tenantId);
+    await updateQuery;
     updated++;
   }
 

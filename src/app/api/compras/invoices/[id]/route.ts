@@ -46,8 +46,10 @@ export async function PUT(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Cascade cost_type to all linked line items
-  await supabase.from("line_items").update({ cost_type: costType }).eq("invoice_id", id);
+  // Cascade cost_type to all linked line items (tenant-scoped for safety)
+  let cascadeQ = supabase.from("line_items").update({ cost_type: costType }).eq("invoice_id", id);
+  if (tenantId) cascadeQ = cascadeQ.eq("tenant_id", tenantId);
+  await cascadeQ;
 
   // Fire-and-forget audit log
   if (existing) {
@@ -90,7 +92,9 @@ export async function DELETE(
   const { data: existing } = await existingQ2.single();
 
   // Delete line items first (in case there's no cascade)
-  await supabase.from("line_items").delete().eq("invoice_id", id);
+  let deleteItemsQ = supabase.from("line_items").delete().eq("invoice_id", id);
+  if (tenantId) deleteItemsQ = deleteItemsQ.eq("tenant_id", tenantId);
+  await deleteItemsQ;
 
   let deleteQ = supabase.from("invoices").delete().eq("id", id);
   if (tenantId) deleteQ = deleteQ.eq("tenant_id", tenantId);
