@@ -91,12 +91,13 @@ export async function DELETE(
   if (tenantId) existingQ2 = existingQ2.eq("tenant_id", tenantId);
   const { data: existing } = await existingQ2.single();
 
-  // Delete line items first (in case there's no cascade)
-  let deleteItemsQ = supabase.from("line_items").delete().eq("invoice_id", id);
+  // Soft delete — sets deleted_at on invoice and all linked line items
+  const now = new Date().toISOString();
+  let deleteItemsQ = supabase.from("line_items").update({ deleted_at: now }).eq("invoice_id", id);
   if (tenantId) deleteItemsQ = deleteItemsQ.eq("tenant_id", tenantId);
   await deleteItemsQ;
 
-  let deleteQ = supabase.from("invoices").delete().eq("id", id);
+  let deleteQ = supabase.from("invoices").update({ deleted_at: now, deleted_by: session.email ?? "Sistema" }).eq("id", id);
   if (tenantId) deleteQ = deleteQ.eq("tenant_id", tenantId);
   const { error } = await deleteQ;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

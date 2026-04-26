@@ -20,7 +20,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   let foodInvQ = supabase
     .from("invoices")
     .select("id")
-    .in("cuenta_pnl", ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"]);
+    .in("cuenta_pnl", ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"])
+    .is("deleted_at", null);
   if (tenantId) foodInvQ = foodInvQ.eq("tenant_id", tenantId);
   const { data: foodInvoices } = await foodInvQ;
   const foodInvoiceIds = (foodInvoices ?? []).map((i) => i.id as string);
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .select("invoice_date, category, total, description, ingredient_id, restaurant, supplier, invoice_id");
   query = query.or(foodFilter);
   if (tenantId) query = query.eq("tenant_id", tenantId);
+  query = query.is("deleted_at", null);
 
   if (restaurant) query = query.eq("restaurant", restaurant);
   if (dateFrom) query = query.gte("invoice_date", dateFrom);

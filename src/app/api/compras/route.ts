@@ -16,6 +16,7 @@ const filtersSchema = z.object({
   sortDir: z.enum(["asc", "desc"]).default("desc"),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(50),
+  showDeleted: z.coerce.boolean().optional().default(false),
 });
 
 const createItemSchema = z.object({
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid parameters", details: parsed.error.flatten() }, { status: 422 });
   }
 
-  const { view, search, restaurant, supplier, dateFrom, dateTo, sortBy, sortDir, page, pageSize } = parsed.data;
+  const { view, search, restaurant, supplier, dateFrom, dateTo, sortBy, sortDir, page, pageSize, showDeleted } = parsed.data;
   const tenantId = session.tenantId;
 
   const FOOD_BEV_CUENTAPNL = ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"];
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   // Get food/bev invoice IDs — primary filter anchored to invoice cuenta_pnl.
   // Avoids relying on cost_type which defaults to 'food' for all rows until backfill runs.
-  let foodInvoiceQuery = supabase.from("invoices").select("id").in("cuenta_pnl", FOOD_BEV_CUENTAPNL);
+  let foodInvoiceQuery = supabase.from("invoices").select("id").in("cuenta_pnl", FOOD_BEV_CUENTAPNL).is("deleted_at", null);
   if (tenantId) foodInvoiceQuery = foodInvoiceQuery.eq("tenant_id", tenantId);
   const { data: foodInvoices } = await foodInvoiceQuery;
   const foodInvoiceIds = (foodInvoices ?? []).map((i) => i.id as string);
@@ -72,6 +73,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     query = query.or(foodFilter);
     if (tenantId) query = query.eq("tenant_id", tenantId);
+    query = query.is("deleted_at", null);
 
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
@@ -98,6 +100,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Only show food/beverage invoices in Compras tab
     invoiceQuery = invoiceQuery.in("cuenta_pnl", ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"]);
     if (tenantId) invoiceQuery = invoiceQuery.eq("tenant_id", tenantId);
+    // showDeleted=true → Papelera (deleted only); default → active only
+    if (showDeleted) {
+      invoiceQuery = invoiceQuery.not("deleted_at", "is", null);
+    } else {
+      invoiceQuery = invoiceQuery.is("deleted_at", null);
+    }
 
     if (restaurant) invoiceQuery = invoiceQuery.eq("restaurant", restaurant);
     if (supplier) invoiceQuery = invoiceQuery.ilike("supplier", `%${supplier}%`);
@@ -146,6 +154,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     let query: any = supabase.from("line_items").select("supplier, total, invoice_date, description, id, restaurant, quantity, unit, unit_normalized, unit_price, category, ingredient_id, invoice_id, created_at, updated_at");
     query = query.or(foodFilter);
     if (tenantId) query = query.eq("tenant_id", tenantId);
+    query = query.is("deleted_at", null);
 
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
@@ -201,6 +210,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     let query: any = supabase.from("line_items").select("description, supplier").is("ingredient_id", null);
     query = query.or(foodFilter);
     if (tenantId) query = query.eq("tenant_id", tenantId);
+    query = query.is("deleted_at", null);
     if (restaurant) query = query.eq("restaurant", restaurant);
 
     const { data, error } = await query;

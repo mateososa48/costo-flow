@@ -57,10 +57,13 @@ export type DbInvoice = {
   total: number;
   concepto: string | null;
   cuenta_pnl: string | null;
+  comments: string | null;
   submitted_by: string;
   submitted_at: string;
   spreadsheet_url: string | null;
   file_url: string | null;
+  sheet_sync_status: string | null;
+  deleted_at: string | null;
   lineItems: DbLineItem[];
 };
 

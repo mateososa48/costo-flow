@@ -21,6 +21,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // Get all line items matching filters for aggregation
   let query = supabase.from("line_items").select("total, supplier");
   if (session.tenantId) query = query.eq("tenant_id", session.tenantId);
+  query = query.is("deleted_at", null);
   if (restaurant) query = query.eq("restaurant", restaurant);
   if (dateFrom) query = query.gte("invoice_date", dateFrom);
   if (dateTo) query = query.lte("invoice_date", dateTo);

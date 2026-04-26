@@ -45,6 +45,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (type === "invoices") {
     let query = supabase.from("invoices").select("*").order("invoice_date", { ascending: false });
     if (session.tenantId) query = query.eq("tenant_id", session.tenantId);
+    query = query.is("deleted_at", null);
     if (restaurant) query = query.eq("restaurant", restaurant);
     if (dateFrom) query = query.gte("invoice_date", dateFrom);
     if (dateTo) query = query.lte("invoice_date", dateTo);
@@ -67,6 +68,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .select("invoice_date, restaurant, supplier, description, quantity, unit, unit_price, total, category")
     .order("invoice_date", { ascending: false });
   if (session.tenantId) query = query.eq("tenant_id", session.tenantId);
+  query = query.is("deleted_at", null);
   if (restaurant) query = query.eq("restaurant", restaurant);
   if (dateFrom) query = query.gte("invoice_date", dateFrom);
   if (dateTo) query = query.lte("invoice_date", dateTo);

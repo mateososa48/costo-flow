@@ -29,6 +29,7 @@ export async function GET(): Promise<NextResponse> {
     .gt("unit_price", 0)
     .gte("invoice_date", dateStr)
     .eq("cost_type", "food")
+    .is("deleted_at", null)
     .limit(5000);
   if (session.tenantId) priceQuery = priceQuery.eq("tenant_id", session.tenantId);
   const { data } = await priceQuery;
