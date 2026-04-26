@@ -8,7 +8,6 @@ const updateSchema = z.object({
   aliases: z.array(z.string()).optional(),
   category: z.string().nullable().optional(),
   defaultUnit: z.string().nullable().optional(),
-  // Add a new alias without replacing the whole array
   addAlias: z.string().optional(),
 });
 
@@ -23,6 +22,7 @@ export async function PUT(
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
 
   const { id } = await params;
+  const tenantId = session.tenantId!;
 
   let body: unknown;
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
@@ -32,36 +32,35 @@ export async function PUT(
 
   const { canonicalName, aliases, category, defaultUnit, addAlias } = parsed.data;
 
-  // If addAlias is provided, append to existing aliases
+  // Verify ownership before mutating
+  const { data: existing, error: fetchError } = await supabase
+    .from("ingredients")
+    .select("aliases, category")
+    .eq("id", id)
+    .eq("tenant_id", tenantId)
+    .single();
+
+  if (fetchError || !existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   if (addAlias) {
-    const { data: existing, error: fetchError } = await supabase
-      .from("ingredients")
-      .select("aliases, category")
-      .eq("id", id)
-      .single();
-
-    if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 });
-
-    const currentAliases = (existing?.aliases as string[]) ?? [];
-    if (!currentAliases.includes(addAlias)) {
-      currentAliases.push(addAlias);
-    }
+    const currentAliases = (existing.aliases as string[]) ?? [];
+    if (!currentAliases.includes(addAlias)) currentAliases.push(addAlias);
 
     const { data, error } = await supabase
       .from("ingredients")
       .update({ aliases: currentAliases })
       .eq("id", id)
+      .eq("tenant_id", tenantId)
       .select()
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Map all unmatched line items with this description to this ingredient
-    // and propagate the ingredient's category
-    const ingCategory = existing?.category as string | null;
+    const ingCategory = existing.category as string | null;
     await supabase
       .from("line_items")
       .update({ ingredient_id: id, ...(ingCategory ? { category: ingCategory } : {}) })
+      .eq("tenant_id", tenantId)
       .is("ingredient_id", null)
       .ilike("description", addAlias);
 
@@ -80,16 +79,17 @@ export async function PUT(
     .from("ingredients")
     .update(updates)
     .eq("id", id)
+    .eq("tenant_id", tenantId)
     .select()
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // If category changed, backfill all already-linked line_items
   if (category !== undefined) {
     await supabase
       .from("line_items")
       .update({ category: category ?? null })
+      .eq("tenant_id", tenantId)
       .eq("ingredient_id", id);
   }
 
@@ -97,7 +97,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await getSession();
@@ -107,11 +107,31 @@ export async function DELETE(
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
 
   const { id } = await params;
+  const tenantId = session.tenantId!;
 
-  // Unlink line items before deleting
-  await supabase.from("line_items").update({ ingredient_id: null }).eq("ingredient_id", id);
+  // Verify ownership
+  const { data: existing } = await supabase
+    .from("ingredients")
+    .select("id")
+    .eq("id", id)
+    .eq("tenant_id", tenantId)
+    .single();
 
-  const { error } = await supabase.from("ingredients").delete().eq("id", id);
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Unlink tenant's line items before deleting
+  await supabase
+    .from("line_items")
+    .update({ ingredient_id: null })
+    .eq("tenant_id", tenantId)
+    .eq("ingredient_id", id);
+
+  const { error } = await supabase
+    .from("ingredients")
+    .delete()
+    .eq("id", id)
+    .eq("tenant_id", tenantId);
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });

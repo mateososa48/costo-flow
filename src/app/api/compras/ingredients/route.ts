@@ -19,6 +19,7 @@ export async function GET(): Promise<NextResponse> {
   const { data, error } = await supabase
     .from("ingredients")
     .select("*")
+    .eq("tenant_id", session.tenantId!)
     .order("canonical_name", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -42,19 +43,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const { data, error } = await supabase
     .from("ingredients")
-    .insert({ canonical_name: canonicalName, aliases, category })
+    .insert({ tenant_id: session.tenantId, canonical_name: canonicalName, aliases, category })
     .select()
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Auto-assign this new ingredient to all unmatched line items with a matching description
-  // and propagate category to those line items
+  // Auto-assign to unmatched line items scoped to this tenant
   const allDescriptions = [canonicalName, ...aliases];
   for (const desc of allDescriptions) {
     await supabase
       .from("line_items")
       .update({ ingredient_id: data.id, ...(category ? { category } : {}) })
+      .eq("tenant_id", session.tenantId!)
       .is("ingredient_id", null)
       .ilike("description", desc);
   }

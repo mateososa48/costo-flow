@@ -3,8 +3,7 @@ import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
 
 // POST /api/compras/ingredients/backfill
-// Propagates each ingredient's category to all linked line_items.
-// Safe to call multiple times.
+// Propagates each tenant ingredient's category to all linked line_items.
 export async function POST(): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -15,6 +14,7 @@ export async function POST(): Promise<NextResponse> {
   const { data: ingredients, error } = await supabase
     .from("ingredients")
     .select("id, category")
+    .eq("tenant_id", session.tenantId!)
     .not("category", "is", null);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -24,6 +24,7 @@ export async function POST(): Promise<NextResponse> {
     await supabase
       .from("line_items")
       .update({ category: ing.category })
+      .eq("tenant_id", session.tenantId!)
       .eq("ingredient_id", ing.id);
     updated++;
   }
