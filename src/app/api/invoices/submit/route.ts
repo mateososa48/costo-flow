@@ -1,40 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
-import { config } from "@/config";
-import { appendToSheet, checkDuplicates, appendAuditLog } from "@/lib/sheets";
-import dropdownOptions from "../../../../../data/dropdown_options.json";
-import type { ExtractedInvoice, SubmitApiResponse, SubmitResult } from "@/types";
-import getSupabase, { saveInvoiceWithItems, checkDuplicatesViaSupabase } from "@/lib/supabase";
+import { appendToSheet } from "@/lib/sheets";
 import { appendAuditEntries } from "@/lib/audit-log";
+import dropdownOptions from "../../../../../data/dropdown_options.json";
+import type { ExtractedInvoice, SubmitApiResponse, SubmitResult, SheetSyncStatus } from "@/types";
+import getSupabase, { saveInvoiceWithItems, checkDuplicatesViaSupabase, type SheetSyncParams } from "@/lib/supabase";
 import { getTenantRestaurantSlugs, getTenantSettings } from "@/lib/tenant";
 import log from "@/lib/logger";
 
 const validConceptos = new Set<string>(dropdownOptions.concepto as string[]);
 const validCuentasPnl = new Set<string>(dropdownOptions.cuentaPnl as string[]);
 
-function friendlySheetError(raw: string): string {
-  if (!raw) return "Error desconocido al enviar a Google Sheets.";
-  const msg = raw.toLowerCase();
-  if (msg.includes("protected cell") || msg.includes("protected range")) {
-    return "La hoja tiene celdas protegidas. Para solucionarlo: abre la hoja → menú Datos → Hojas y rangos protegidos → elimina la protección del rango o pestaña correspondiente.";
-  }
-  if (msg.includes("caller does not have permission") || msg.includes("403")) {
-    return "El sistema no tiene permiso para escribir en esta hoja. Verifica que la hoja esté compartida con la cuenta de servicio como Editor.";
-  }
-  if (msg.includes("unable to parse range") || msg.includes("invalid range") || msg.includes("no sheet")) {
-    return "No se encontró la pestaña 'Informe de Gastos' en la hoja. Verifica que exista con ese nombre exacto.";
-  }
-  if (msg.includes("spreadsheet not found") || msg.includes("404") || msg.includes("no spreadsheet registered")) {
-    return "No hay hoja registrada para este restaurante y mes. Agrégala en Configuración → Hojas de cálculo.";
-  }
-  if (msg.includes("quota") || msg.includes("rate limit") || msg.includes("429")) {
-    return "Se alcanzó el límite de solicitudes de Google Sheets. Espera unos segundos e intenta de nuevo.";
-  }
-  return raw;
-}
-
-// Restaurant is validated dynamically per tenant below; using string here.
 const invoiceSchema = z.object({
   id: z.string(),
   restaurant: z.string().min(1),
@@ -56,6 +33,7 @@ const invoiceSchema = z.object({
     unit: z.string().nullable(),
     unitPrice: z.number().nullable(),
     total: z.number(),
+    category: z.string().nullable().optional(),
   })).optional().default([]),
   extractionConfidence: z.number().optional(),
   extractionMethod: z.enum(["llm_vision", "llm_text"]),
@@ -91,9 +69,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const user = session.email ?? "";
   const tenantId = session.tenantId;
   const results: SubmitResult[] = [];
-  let appended = 0;
 
-  // Load this tenant's sheet registry from the DB (never from the global env var)
+  // Load sheet registry (optional — no sheet = skip sync, not an error)
   const tenantSettings = tenantId ? await getTenantSettings(tenantId) : null;
   const tenantRegistry = (tenantSettings?.sheetRegistry as Record<string, string>) ?? {};
 
@@ -114,69 +91,41 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   for (const invoice of invoices as ExtractedInvoice[]) {
     try {
-      const [yearStr, monthStr] = invoice.invoiceDate.split("-");
-      const year = parseInt(yearStr, 10);
-      const month = parseInt(monthStr, 10);
-
-      const sheetKey = `${invoice.restaurant}_${year}_${String(month).padStart(2, "0")}`;
-      const spreadsheetId = tenantRegistry[sheetKey];
-      if (!spreadsheetId) {
-        results.push({
-          invoiceId: invoice.id,
-          status: "error",
-          error: `No hay hoja registrada para "${sheetKey}". Agrégala en Configuración → Hojas de cálculo.`,
-        });
-        continue;
-      }
-
-      // Duplicate check — try Supabase first (fast, indexed), fall back to Sheets
+      // ── 1. Duplicate check (Supabase only — it's now the record of truth) ──
       if (!bypassDuplicates) {
-        let duplicates = await checkDuplicatesViaSupabase(invoice);
-        if (duplicates === null) {
-          // Supabase unavailable or empty — fall back to reading full sheet
-          duplicates = await checkDuplicates(spreadsheetId, invoice);
-        }
-        if (duplicates.length > 0) {
+        const duplicates = await checkDuplicatesViaSupabase(invoice);
+        if (duplicates && duplicates.length > 0) {
           results.push({
             invoiceId: invoice.id,
             status: "duplicate_warning",
-            spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`,
             duplicateMatches: duplicates,
           });
           continue;
         }
       }
 
-      // Append to sheet
-      const spreadsheetUrl = await appendToSheet(spreadsheetId, invoice);
-      appended++;
+      // ── 2. Optional Sheets sync (non-blocking — never fails the submission) ──
+      const [yearStr, monthStr] = invoice.invoiceDate.split("-");
+      const sheetKey = `${invoice.restaurant}_${yearStr}_${monthStr.padStart(2, "0")}`;
+      const spreadsheetId = tenantRegistry[sheetKey];
 
-      // Audit log (non-blocking)
-      await appendAuditLog({
-        user,
-        restaurant: invoice.restaurant,
-        invoiceDate: invoice.invoiceDate,
-        supplier: invoice.supplier,
-        invoiceNumber: invoice.invoiceNumber,
-        total: invoice.total,
-        status: bypassDuplicates ? "duplicate_bypassed" : "submitted",
-      });
+      let sheetSync: SheetSyncParams = { status: "skipped" };
 
-      results.push({
-        invoiceId: invoice.id,
-        status: "appended",
-        spreadsheetUrl,
-      });
-
-      // Save invoice + line items to Supabase (awaited for data integrity)
-      try {
-        await saveInvoiceWithItems(invoice, spreadsheetUrl, user, tenantId);
-      } catch (sbErr) {
-        log.error({ ctx: "submit", msg: "Supabase save failed", data: { invoiceId: invoice.id }, err: sbErr });
-        // Don't fail the request — Sheets write already succeeded
+      if (spreadsheetId) {
+        try {
+          const sheetUrl = await appendToSheet(spreadsheetId, invoice);
+          sheetSync = { status: "synced", sheetUrl };
+        } catch (sheetErr) {
+          const errMsg = sheetErr instanceof Error ? sheetErr.message : "Error desconocido";
+          sheetSync = { status: "failed", error: errMsg };
+          log.error({ ctx: "submit", msg: "Sheet sync failed (non-blocking)", data: { invoiceId: invoice.id, sheetKey }, err: sheetErr });
+        }
       }
 
-      // Durable audit log to Supabase (awaited)
+      // ── 3. Save to Supabase (primary write — this must succeed) ──
+      await saveInvoiceWithItems(invoice, user, tenantId, sheetSync);
+
+      // ── 4. Audit log (non-blocking) ──
       try {
         const supabase = getSupabase();
         if (supabase) {
@@ -190,22 +139,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             invoiceNumber: invoice.invoiceNumber,
             invoiceDate: invoice.invoiceDate,
             total: invoice.total,
-            spreadsheetUrl,
+            spreadsheetUrl: sheetSync.sheetUrl,
           }]);
         }
       } catch (auditErr) {
         log.error({ ctx: "submit", msg: "Audit log write failed", err: auditErr });
       }
+
+      results.push({
+        invoiceId: invoice.id,
+        status: "saved",
+        sheetSyncStatus: sheetSync.status as SheetSyncStatus,
+        sheetUrl: sheetSync.sheetUrl,
+      });
+
     } catch (err) {
       log.error({ ctx: "submit", msg: "Invoice submit failed", data: { invoiceId: invoice.id }, err });
       results.push({
         invoiceId: invoice.id,
         status: "error",
-        error: friendlySheetError(err instanceof Error ? err.message : ""),
+        error: err instanceof Error ? err.message : "Error al guardar la factura",
       });
     }
   }
 
-  const response: SubmitApiResponse = { results, appended };
+  const saved = results.filter((r) => r.status === "saved").length;
+  const response: SubmitApiResponse = { results, saved };
   return NextResponse.json(response);
 }

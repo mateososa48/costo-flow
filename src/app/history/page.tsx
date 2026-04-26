@@ -17,7 +17,8 @@ interface AuditEntry {
   invoiceNumber?: string;
   invoiceDate?: string;
   total: number;
-  spreadsheetUrl?: string;
+  spreadsheetUrl?: string;  // legacy
+  sheetUrl?: string;
   details?: Record<string, string>;
   createdAt: string;
 }
@@ -303,10 +304,10 @@ export default function HistoryPage() {
                               <span>{entry.user}</span>
                             </>
                           )}
-                          {entry.spreadsheetUrl && (
+                          {(entry.sheetUrl || entry.spreadsheetUrl) && (
                             <>
                               <span style={{ opacity: 0.4 }}>·</span>
-                              <a href={entry.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
+                              <a href={entry.sheetUrl ?? entry.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
                                 className="hover-blue transition-colors duration-150"
                                 style={{ color: "var(--text-dim)" }}>
                                 Hoja ↗

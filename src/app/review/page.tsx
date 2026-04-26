@@ -38,7 +38,7 @@ function appendToHistory(invoices: ExtractedInvoice[], results: SubmitApiRespons
   try {
     const existing = JSON.parse(localStorage.getItem("invoiceHistory") ?? "[]");
     const newEntries = results.results
-      .filter((r) => r.status === "appended")
+      .filter((r) => r.status === "saved")
       .map((r) => {
         const inv = invoices.find((i) => i.id === r.invoiceId);
         return {
@@ -47,7 +47,7 @@ function appendToHistory(invoices: ExtractedInvoice[], results: SubmitApiRespons
           total: inv?.total ?? 0,
           invoiceDate: inv?.invoiceDate ?? "—",
           submittedAt: new Date().toISOString(),
-          spreadsheetUrl: r.spreadsheetUrl ?? null,
+          sheetUrl: r.sheetUrl ?? null,
         };
       });
     localStorage.setItem("invoiceHistory", JSON.stringify([...newEntries, ...existing]));
@@ -127,7 +127,7 @@ export default function ReviewPage() {
       }
       if (warnings.length > 0 && !bypass) { setDuplicateWarnings(warnings); return; }
 
-      // Surface any Sheets-write failures immediately — don't silently go to success
+      // Surface hard failures (Supabase write errors) — sheet sync failures are non-blocking
       const failed = data.results.filter((r) => r.status === "error");
       if (failed.length > 0) {
         const msg = failed.map((r) => r.error ?? "Error desconocido").join("\n");
@@ -278,12 +278,11 @@ export default function ReviewPage() {
             onClick={() => doSubmit(false)}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="flex-shrink-0" style={{ opacity: 0.85 }}>
-              <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/>
-              <line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" strokeWidth="1.8"/>
-              <line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" strokeWidth="1.8"/>
-              <line x1="9" y1="9" x2="9" y2="21" stroke="currentColor" strokeWidth="1.8"/>
+              <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2 17l10 5 10-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Enviar {invoices.length} factura{invoices.length !== 1 ? "s" : ""} a Google Sheets
+            Registrar {invoices.length} factura{invoices.length !== 1 ? "s" : ""}
             {restaurant && <span className="hidden sm:inline"> — {dropdowns?.restaurants?.find((r) => r.value === restaurant)?.label ?? restaurant}</span>}
           </Button>
         </div>

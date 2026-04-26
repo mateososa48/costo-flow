@@ -76,15 +76,18 @@ export type SubmitApiBody = {
   bypassDuplicates?: boolean;
 };
 
+export type SheetSyncStatus = "synced" | "failed" | "skipped" | "pending";
+
 export type SubmitResult = {
   invoiceId: string;
-  status: "appended" | "duplicate_warning" | "error";
-  spreadsheetUrl?: string;
+  status: "saved" | "duplicate_warning" | "error";
+  sheetSyncStatus?: SheetSyncStatus;
+  sheetUrl?: string;
   duplicateMatches?: DuplicateMatch[];
   error?: string;
 };
 
 export type SubmitApiResponse = {
   results: SubmitResult[];
-  appended: number;
+  saved: number;
 };

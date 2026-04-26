@@ -18,20 +18,29 @@ function getSupabase(): SupabaseClient | null {
 
 export default getSupabase;
 
+export type SheetSyncParams = {
+  status: "synced" | "failed" | "skipped";
+  sheetUrl?: string;
+  error?: string;
+};
+
 /**
- * Save invoice header + line items to Supabase.
- * Fire-and-forget — caller should .catch() errors.
+ * Save invoice header + line items to Supabase (primary write).
+ * sheetSync describes the outcome of the optional Sheets export that
+ * already happened (or was skipped) before this call.
  */
 export async function saveInvoiceWithItems(
   invoice: ExtractedInvoice,
-  spreadsheetUrl: string,
   submittedBy: string,
-  tenantId?: string
+  tenantId?: string,
+  sheetSync: SheetSyncParams = { status: "skipped" }
 ): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) return;
 
-  // Upsert invoice header (dedup on id)
+  const now = new Date().toISOString();
+
+  // Upsert invoice header (idempotent on id)
   const { error: invoiceError } = await supabase.from("invoices").upsert(
     {
       id: invoice.id,
@@ -46,7 +55,12 @@ export async function saveInvoiceWithItems(
       concepto: invoice.concepto,
       cuenta_pnl: invoice.cuentaPnl,
       submitted_by: submittedBy,
-      spreadsheet_url: spreadsheetUrl,
+      // Sheet sync state (written once; updated later by re-sync endpoint)
+      sheet_sync_status: sheetSync.status,
+      sheet_sync_error: sheetSync.error ?? null,
+      sheet_synced_at: sheetSync.status === "synced" ? now : null,
+      // Keep spreadsheet_url for backwards compat with existing rows
+      ...(sheetSync.sheetUrl ? { spreadsheet_url: sheetSync.sheetUrl } : {}),
     },
     { onConflict: "id" }
   );
@@ -55,48 +69,50 @@ export async function saveInvoiceWithItems(
     throw new Error(`Supabase invoice upsert failed: ${invoiceError.message}`);
   }
 
-  // Insert line items
-  if (invoice.lineItems && invoice.lineItems.length > 0) {
-    // Fetch existing ingredients for auto-matching
-    const { data: ingredients } = await supabase
-      .from("ingredients")
-      .select("id, canonical_name, aliases");
+  if (!invoice.lineItems || invoice.lineItems.length === 0) return;
 
-    function matchIngredient(description: string): string | null {
-      if (!ingredients) return null;
-      const lower = description.toLowerCase().trim();
-      for (const ing of ingredients) {
-        if ((ing.canonical_name as string).toLowerCase().trim() === lower) return ing.id as string;
-        const aliases = (ing.aliases as string[]) ?? [];
-        if (aliases.some((a) => a.toLowerCase().trim() === lower)) return ing.id as string;
-      }
-      return null;
+  // Fetch existing ingredients for auto-matching
+  const { data: ingredients } = await supabase
+    .from("ingredients")
+    .select("id, canonical_name, aliases");
+
+  function matchIngredient(description: string): string | null {
+    if (!ingredients) return null;
+    const lower = description.toLowerCase().trim();
+    for (const ing of ingredients) {
+      if ((ing.canonical_name as string).toLowerCase().trim() === lower) return ing.id as string;
+      const aliases = (ing.aliases as string[]) ?? [];
+      if (aliases.some((a) => a.toLowerCase().trim() === lower)) return ing.id as string;
     }
+    return null;
+  }
 
-    const costType = getCostType(invoice.cuentaPnl);
+  const costType = getCostType(invoice.cuentaPnl);
 
-    const { error: itemsError } = await supabase.from("line_items").insert(
-      invoice.lineItems.map((item) => ({
-        invoice_id: invoice.id,
-        ...(tenantId ? { tenant_id: tenantId } : {}),
-        restaurant: invoice.restaurant,
-        supplier: invoice.supplier,
-        invoice_date: invoice.invoiceDate,
-        description: item.description,
-        quantity: item.quantity,
-        unit: item.unit,
-        unit_normalized: normalizeUnit(item.unit),
-        unit_price: item.unitPrice,
-        total: item.total,
-        category: item.category ?? null,
-        ingredient_id: matchIngredient(item.description),
-        cost_type: costType,
-      }))
-    );
+  // Upsert line items with line_index for idempotency
+  const { error: itemsError } = await supabase.from("line_items").upsert(
+    invoice.lineItems.map((item, idx) => ({
+      invoice_id: invoice.id,
+      line_index: idx,
+      ...(tenantId ? { tenant_id: tenantId } : {}),
+      restaurant: invoice.restaurant,
+      supplier: invoice.supplier,
+      invoice_date: invoice.invoiceDate,
+      description: item.description,
+      quantity: item.quantity,
+      unit: item.unit,
+      unit_normalized: normalizeUnit(item.unit),
+      unit_price: item.unitPrice,
+      total: item.total,
+      category: item.category ?? null,
+      ingredient_id: matchIngredient(item.description),
+      cost_type: costType,
+    })),
+    { onConflict: "tenant_id,invoice_id,line_index" }
+  );
 
-    if (itemsError) {
-      throw new Error(`Supabase line_items insert failed: ${itemsError.message}`);
-    }
+  if (itemsError) {
+    throw new Error(`Supabase line_items upsert failed: ${itemsError.message}`);
   }
 }
 
