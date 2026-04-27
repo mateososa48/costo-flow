@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
-import { DbInvoice, formatCurrency, formatDate, restaurantLabel } from "../types";
+import { DbInvoice, formatCurrency, formatDate } from "../types";
 import dropdownOptions from "../../../../data/dropdown_options.json";
 
 interface InvoicesViewProps {
@@ -32,12 +33,44 @@ const FIELD_LABELS: Record<string, string> = {
   comments:   "Comentarios",
 };
 
-function getCategoryColor(cuentaPnl: string | null) {
-  if (!cuentaPnl) return "var(--border)";
-  if (cuentaPnl.toLowerCase().includes("alimento")) return "var(--blue)";
-  if (cuentaPnl.toLowerCase().includes("bebida")) return "#0d9488";
-  return "var(--text-dim)";
+const GRID = "28px 1fr 96px 116px 140px 112px 60px";
+
+const COL_HEADER: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  color: "var(--text-muted)",
+  padding: "0 12px",
+};
+
+function RestaurantPill({ name }: { name: string }) {
+  return (
+    <span style={{
+      display: "inline-block",
+      padding: "2px 10px",
+      borderRadius: 6,
+      fontSize: 11,
+      fontWeight: 500,
+      letterSpacing: "0.01em",
+      background: "var(--blue-light)",
+      color: "var(--blue)",
+      border: "1px solid color-mix(in srgb, var(--blue) 22%, transparent)",
+      whiteSpace: "nowrap",
+      lineHeight: 1.6,
+    }}>
+      {name}
+    </span>
+  );
 }
+
+const ROW_VARIANTS: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.045, duration: 0.24, ease: [0.25, 0.46, 0.45, 0.94] as const },
+  }),
+};
 
 export default function InvoicesView({
   invoices,
@@ -59,12 +92,12 @@ export default function InvoicesView({
   const [invoiceSearch,         setInvoiceSearch]         = useState("");
   const [invoiceSortMode,       setInvoiceSortMode]       = useState<"recent" | "date" | "alpha">("date");
 
-  const [editDrawerId,      setEditDrawerId]      = useState<string | null>(null);
-  const [editConcepto,      setEditConcepto]      = useState("");
-  const [editCuentaPnl,     setEditCuentaPnl]     = useState("");
-  const [editComments,      setEditComments]      = useState("");
-  const [editSaving,        setEditSaving]        = useState(false);
-  const [editHistory,       setEditHistory]       = useState<EditHistory[]>([]);
+  const [editDrawerId,       setEditDrawerId]       = useState<string | null>(null);
+  const [editConcepto,       setEditConcepto]       = useState("");
+  const [editCuentaPnl,      setEditCuentaPnl]      = useState("");
+  const [editComments,       setEditComments]       = useState("");
+  const [editSaving,         setEditSaving]         = useState(false);
+  const [editHistory,        setEditHistory]        = useState<EditHistory[]>([]);
   const [editHistoryLoading, setEditHistoryLoading] = useState(false);
 
   const [showPapelera,    setShowPapelera]    = useState(false);
@@ -203,417 +236,333 @@ export default function InvoicesView({
           from { opacity: 0; }
           to   { opacity: 1; }
         }
-        .inv-card {
-          transition: box-shadow 140ms ease, border-color 140ms ease;
-          cursor: pointer;
-        }
-        .inv-card:hover {
-          box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-        }
-        .inv-card .inv-actions {
-          opacity: 0;
-          transition: opacity 120ms ease;
-        }
-        .inv-card:hover .inv-actions,
-        .inv-card.inv-selected .inv-actions {
-          opacity: 1;
-        }
-        .inv-action-btn {
-          transition: background 120ms ease, color 120ms ease;
-        }
-        .inv-action-btn:hover {
-          background: var(--surface-raised) !important;
-        }
-        .inv-line-item {
-          transition: background 100ms ease;
-        }
-        .inv-line-item:hover {
-          background: color-mix(in srgb, var(--blue) 4%, transparent);
-        }
-        .drawer-field select,
-        .drawer-field textarea {
+        .inv-row-actions { opacity: 0; transition: opacity 100ms ease; }
+        .inv-row:hover .inv-row-actions,
+        .inv-row-actions.always-visible { opacity: 1; }
+        .inv-row:hover { background: var(--surface-raised) !important; }
+        .inv-action-btn { transition: background 100ms ease, color 100ms ease; }
+        .drawer-field select, .drawer-field textarea {
           transition: border-color 120ms ease, box-shadow 120ms ease;
         }
-        .drawer-field select:focus,
-        .drawer-field textarea:focus {
+        .drawer-field select:focus, .drawer-field textarea:focus {
           border-color: var(--blue) !important;
           box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 12%, transparent);
           outline: none;
         }
       `}</style>
 
-      <div className="space-y-1.5">
-        {/* ── Toolbar ── */}
-        <div className="flex flex-col gap-2 mb-3">
-          <div className="relative w-full">
-            <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: "var(--text-muted)" }}>
-              <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
-              <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-            </svg>
-            <input
-              type="text"
-              value={invoiceSearch}
-              onChange={(e) => setInvoiceSearch(e.target.value)}
-              placeholder="Buscar proveedor o número..."
-              className="w-full pl-8 pr-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none"
-              style={{
-                background: "var(--surface)",
-                borderColor: invoiceSearch ? "var(--blue)" : "var(--border)",
-                color: "var(--text)",
-                boxShadow: invoiceSearch ? "0 0 0 3px color-mix(in srgb, var(--blue) 12%, transparent)" : "none",
-                transition: "border-color 120ms ease, box-shadow 120ms ease",
-              }}
-            />
-            {invoiceSearch && (
-              <button type="button" onClick={() => setInvoiceSearch("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded"
-                style={{ color: "var(--text-muted)" }}>
-                <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-                  <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Sort pills */}
-            <div className="flex items-center gap-0.5 p-0.5 rounded-[var(--radius-sm)]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border-subtle)" }}>
-              {([["recent", "Recientes"], ["date", "Fecha"], ["alpha", "A–Z"]] as [typeof invoiceSortMode, string][]).map(([mode, label]) => (
-                <button key={mode} type="button"
-                  className="text-[11px] px-2.5 py-1 rounded transition-all duration-100"
-                  style={{
-                    background: invoiceSortMode === mode ? "var(--surface)" : "transparent",
-                    color: invoiceSortMode === mode ? "var(--text)" : "var(--text-muted)",
-                    fontWeight: invoiceSortMode === mode ? 600 : 400,
-                    boxShadow: invoiceSortMode === mode ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-                  }}
-                  onClick={() => setInvoiceSortMode(mode)}>
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
-              <button type="button"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium"
-                style={{ background: "var(--danger-dim, #fee2e2)", color: "var(--danger, #ef4444)", border: "1px solid var(--danger-border, #fca5a5)" }}
-                onClick={() => setConfirmDeleteInvoices(true)}
-              >
-                <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
-                  <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Eliminar ({selectedInvoiceIds.size})
-              </button>
-            )}
-
-            <button type="button"
-              className="px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-all duration-100"
-              style={{
-                background: invoiceSelectMode ? "var(--surface-raised)" : "transparent",
-                color: invoiceSelectMode ? "var(--text)" : "var(--text-muted)",
-                border: "1px solid var(--border-subtle)",
-              }}
-              onClick={() => { setInvoiceSelectMode((m) => !m); setSelectedInvoiceIds(new Set()); }}
-            >
-              {invoiceSelectMode ? "Cancelar" : "Seleccionar"}
-              {invoiceSelectMode && selectedInvoiceIds.size > 0 && <span className="ml-1 font-semibold">({selectedInvoiceIds.size})</span>}
+      {/* ── Toolbar ── */}
+      <div className="flex flex-col gap-2 mb-3">
+        <div className="relative w-full">
+          <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: "var(--text-muted)" }}>
+            <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
+            <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+          <input
+            type="text"
+            value={invoiceSearch}
+            onChange={(e) => setInvoiceSearch(e.target.value)}
+            placeholder="Buscar proveedor o número..."
+            className="w-full pl-8 pr-3 py-2 rounded-[var(--radius-sm)] border text-sm focus:outline-none"
+            style={{
+              background: "var(--surface)",
+              borderColor: invoiceSearch ? "var(--blue)" : "var(--border)",
+              color: "var(--text)",
+              boxShadow: invoiceSearch ? "0 0 0 3px color-mix(in srgb, var(--blue) 12%, transparent)" : "none",
+              transition: "border-color 120ms ease, box-shadow 120ms ease",
+            }}
+          />
+          {invoiceSearch && (
+            <button type="button" onClick={() => setInvoiceSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded"
+              style={{ color: "var(--text-muted)" }}>
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+                <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
             </button>
-
-            <button type="button"
-              className="ml-auto px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-all duration-100"
-              style={{
-                background: showPapelera ? "var(--surface-raised)" : "transparent",
-                color: "var(--text-muted)",
-                border: "1px solid var(--border-subtle)",
-              }}
-              onClick={() => setShowPapelera((v) => !v)}
-            >
-              Papelera{deletedInvoices.length > 0 && !showPapelera ? ` (${deletedInvoices.length})` : ""}
-            </button>
-          </div>
+          )}
         </div>
 
-        {/* ── Invoice cards ── */}
-        {filtered.map((inv) => {
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 p-0.5 rounded-[var(--radius-sm)]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border-subtle)" }}>
+            {([["recent", "Recientes"], ["date", "Fecha"], ["alpha", "A–Z"]] as [typeof invoiceSortMode, string][]).map(([mode, label]) => (
+              <button key={mode} type="button"
+                className="text-[11px] px-2.5 py-1 rounded transition-all duration-100"
+                style={{
+                  background: invoiceSortMode === mode ? "var(--surface)" : "transparent",
+                  color: invoiceSortMode === mode ? "var(--text)" : "var(--text-muted)",
+                  fontWeight: invoiceSortMode === mode ? 600 : 400,
+                  boxShadow: invoiceSortMode === mode ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                }}
+                onClick={() => setInvoiceSortMode(mode)}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {invoiceSelectMode && selectedInvoiceIds.size > 0 && (
+            <button type="button"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium"
+              style={{ background: "var(--danger-dim, #fee2e2)", color: "var(--danger, #ef4444)", border: "1px solid var(--danger-border, #fca5a5)" }}
+              onClick={() => setConfirmDeleteInvoices(true)}>
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+                <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Eliminar ({selectedInvoiceIds.size})
+            </button>
+          )}
+
+          <button type="button"
+            className="px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-all duration-100"
+            style={{
+              background: invoiceSelectMode ? "var(--surface-raised)" : "transparent",
+              color: invoiceSelectMode ? "var(--text)" : "var(--text-muted)",
+              border: "1px solid var(--border-subtle)",
+            }}
+            onClick={() => { setInvoiceSelectMode((m) => !m); setSelectedInvoiceIds(new Set()); }}>
+            {invoiceSelectMode ? "Cancelar" : "Seleccionar"}
+            {invoiceSelectMode && selectedInvoiceIds.size > 0 && <span className="ml-1 font-semibold">({selectedInvoiceIds.size})</span>}
+          </button>
+
+          <button type="button"
+            className="ml-auto px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-all duration-100"
+            style={{
+              background: showPapelera ? "var(--surface-raised)" : "transparent",
+              color: "var(--text-muted)",
+              border: "1px solid var(--border-subtle)",
+            }}
+            onClick={() => setShowPapelera((v) => !v)}>
+            Papelera{deletedInvoices.length > 0 && !showPapelera ? ` (${deletedInvoices.length})` : ""}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Invoices table ── */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", overflow: "hidden", background: "var(--surface)", boxShadow: "0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
+        {/* Column headers */}
+        <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: 36, borderBottom: "1px solid var(--border)", background: "var(--surface-raised)", padding: "0 4px 0 0" }}>
+          <span />
+          <span style={{ ...COL_HEADER, paddingLeft: 8 }}>Proveedor</span>
+          <span style={{ ...COL_HEADER, textAlign: "right" }}>Factura</span>
+          <span style={{ ...COL_HEADER, textAlign: "right" }}>Fecha</span>
+          <span style={{ ...COL_HEADER, textAlign: "right" }}>Sucursal</span>
+          <span style={{ ...COL_HEADER, textAlign: "right" }}>Total</span>
+          <span />
+        </div>
+
+        {filtered.map((inv, i) => {
           const isExpanded = expandedInvoices.has(inv.id);
           const isSelected = selectedInvoiceIds.has(inv.id);
-          const accentColor = getCategoryColor(inv.cuenta_pnl);
+
+          function toggleExpand() {
+            if (invoiceSelectMode) {
+              setSelectedInvoiceIds((prev) => {
+                const next = new Set(prev);
+                isSelected ? next.delete(inv.id) : next.add(inv.id);
+                return next;
+              });
+            } else {
+              setExpandedInvoices((prev) => {
+                const next = new Set(prev);
+                isExpanded ? next.delete(inv.id) : next.add(inv.id);
+                return next;
+              });
+            }
+          }
 
           return (
-            <div
-              key={inv.id}
-              className={`inv-card rounded-[var(--radius)] border overflow-hidden${isSelected ? " inv-selected" : ""}`}
-              style={{
-                borderColor: isSelected ? "var(--blue)" : "var(--border)",
-                background: "var(--surface)",
-                borderLeftWidth: "3px",
-                borderLeftColor: isSelected ? "var(--blue)" : accentColor,
-              }}
-            >
-              <div className="flex items-stretch">
-                {/* Checkbox column */}
-                {invoiceSelectMode && (
-                  <div className="flex items-center pl-3 pr-1"
-                    onClick={() => setSelectedInvoiceIds((prev) => {
-                      const next = new Set(prev);
-                      isSelected ? next.delete(inv.id) : next.add(inv.id);
-                      return next;
-                    })}>
-                    <div className="w-4 h-4 rounded border-2 flex items-center justify-center cursor-pointer"
-                      style={{ borderColor: isSelected ? "var(--blue)" : "var(--border)", background: isSelected ? "var(--blue)" : "transparent" }}>
+            <motion.div key={inv.id} custom={i} initial="hidden" animate="visible" variants={ROW_VARIANTS}>
+              {/* Main row */}
+              <div
+                className="inv-row"
+                onClick={toggleExpand}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: GRID,
+                  alignItems: "center",
+                  height: 50,
+                  padding: "0 4px 0 0",
+                  borderBottom: isExpanded ? "none" : "1px solid var(--border)",
+                  background: isSelected
+                    ? "color-mix(in srgb, var(--blue) 6%, var(--surface))"
+                    : isExpanded
+                    ? "var(--surface-raised)"
+                    : "var(--surface)",
+                  cursor: "pointer",
+                  transition: "background 100ms ease",
+                  borderLeft: isSelected ? "2px solid var(--blue)" : "2px solid transparent",
+                }}
+              >
+                {/* Chevron / checkbox */}
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", color: "var(--text-dim)" }}>
+                  {invoiceSelectMode ? (
+                    <div style={{
+                      width: 14, height: 14, borderRadius: 4, border: `2px solid ${isSelected ? "var(--blue)" : "var(--border)"}`,
+                      background: isSelected ? "var(--blue)" : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
                       {isSelected && <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2 3-3" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
-                  </div>
-                )}
-
-                {/* Main clickable area */}
-                <button
-                  type="button"
-                  className="flex-1 min-w-0 px-4 py-3 text-left"
-                  onClick={() => {
-                    if (invoiceSelectMode) {
-                      setSelectedInvoiceIds((prev) => {
-                        const next = new Set(prev);
-                        isSelected ? next.delete(inv.id) : next.add(inv.id);
-                        return next;
-                      });
-                    } else {
-                      setExpandedInvoices((prev) => {
-                        const next = new Set(prev);
-                        isExpanded ? next.delete(inv.id) : next.add(inv.id);
-                        return next;
-                      });
-                    }
-                  }}
-                >
-                  {/* Row 1: supplier + amount */}
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span
-                      className="text-[13.5px] font-semibold leading-tight truncate"
-                      style={{ color: "var(--text)", letterSpacing: "-0.012em" }}
-                    >
-                      {inv.supplier}
-                    </span>
-                    <span
-                      className="text-[15px] font-bold flex-shrink-0 leading-tight"
-                      style={{
-                        color: "var(--blue)",
-                        fontVariantNumeric: "tabular-nums",
-                        letterSpacing: "-0.02em",
-                      }}
-                    >
-                      {formatCurrency(inv.total)}
-                    </span>
-                  </div>
-
-                  {/* Row 2: invoice# · date · items */}
-                  <div className="flex items-center gap-1.5 mt-1">
-                    {inv.invoice_number && (
-                      <>
-                        <span className="text-[11px] font-mono font-medium" style={{ color: "var(--text-muted)" }}>
-                          #{inv.invoice_number}
-                        </span>
-                        <span style={{ color: "var(--border)", fontSize: "10px" }}>·</span>
-                      </>
-                    )}
-                    <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                      {formatDate(inv.invoice_date)}
-                    </span>
-                    <span style={{ color: "var(--border)", fontSize: "10px" }}>·</span>
-                    <span className="text-[11px]" style={{ color: "var(--text-dim)" }}>
-                      {inv.lineItems.length} artículo{inv.lineItems.length !== 1 ? "s" : ""}
-                    </span>
-                    <svg
-                      width="8" height="8" viewBox="0 0 8 8" fill="none"
-                      className={`ml-auto flex-shrink-0 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
-                      style={{ color: "var(--text-dim)", opacity: invoiceSelectMode ? 0 : 1 }}
-                    >
-                      <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  ) : (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+                      style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 180ms ease" }}>
+                      <path d="M4 2.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                  </div>
+                  )}
+                </div>
 
-                  {/* Row 3: tags */}
-                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                    <span
-                      className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full font-medium"
-                      style={{ background: "var(--pink-glow)", color: "var(--pink-dark)" }}
-                    >
-                      {restaurantLabel(inv.restaurant)}
-                    </span>
-                    {inv.cuenta_pnl && (
-                      <span
-                        className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full"
-                        style={{
-                          background: `color-mix(in srgb, ${accentColor} 8%, transparent)`,
-                          color: accentColor,
-                          border: `1px solid color-mix(in srgb, ${accentColor} 18%, transparent)`,
-                        }}
-                      >
-                        {inv.cuenta_pnl}
-                      </span>
-                    )}
-                  </div>
-                </button>
+                {/* Supplier */}
+                <div style={{ padding: "0 12px 0 8px", overflow: "hidden", display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.015em" }}>
+                    {inv.supplier}
+                  </span>
+                </div>
 
-                {/* Action buttons */}
-                <div className="inv-actions flex flex-col items-center justify-center gap-0.5 px-2">
+                {/* Invoice # */}
+                <span style={{ fontSize: 12, fontFamily: "monospace", color: "var(--text-muted)", textAlign: "right", padding: "0 12px" }}>
+                  {inv.invoice_number ? `#${inv.invoice_number}` : "—"}
+                </span>
+
+                {/* Date */}
+                <span style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "right", padding: "0 12px" }}>
+                  {formatDate(inv.invoice_date)}
+                </span>
+
+                {/* Sucursal */}
+                <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 12px" }}>
+                  <RestaurantPill name={inv.restaurant} />
+                </div>
+
+                {/* Total */}
+                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", textAlign: "right", padding: "0 12px", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.025em" }}>
+                  {formatCurrency(inv.total)}
+                </span>
+
+                {/* Actions */}
+                <div className={`inv-row-actions${isExpanded ? " always-visible" : ""}`}
+                  style={{ display: "flex", justifyContent: "flex-end", gap: 2, padding: "0 8px" }}>
                   <button
-                    type="button"
-                    title="Editar"
-                    className="inv-action-btn p-2 rounded-lg"
-                    style={{ color: "var(--text-dim)" }}
                     onClick={(e) => { e.stopPropagation(); openEditDrawer(inv); }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--blue)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-dim)")}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                      <path d="M11.5 2.5a2.121 2.121 0 013 3L5 15H2v-3L11.5 2.5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                    className="inv-action-btn"
+                    style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-dim)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-raised)"; e.currentTarget.style.color = "var(--text)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}>
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11.5 2.5a2.121 2.121 0 013 3L5 15H2v-3L11.5 2.5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                   <button
-                    type="button"
-                    title="Eliminar"
-                    className="inv-action-btn p-2 rounded-lg"
-                    style={{ color: "var(--text-dim)" }}
                     onClick={(e) => { e.stopPropagation(); setDeleteInvoiceId(inv.id); }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--danger, #ef4444)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-dim)")}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                      <path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                    className="inv-action-btn"
+                    style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-dim)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--danger-dim)"; e.currentTarget.style.color = "var(--danger)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}>
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M6 2h4M2 5h12M4.5 5l1 9a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l1-9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                 </div>
               </div>
 
-              {/* ── Expanded: line items ── */}
-              {isExpanded && !invoiceSelectMode && (
-                <div className="border-t" style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
-                  {/* File + meta row */}
-                  {(inv.file_url || inv.concepto || inv.comments) && (
-                    <div className="flex items-center gap-2 px-4 py-2 border-b flex-wrap" style={{ borderColor: "var(--border-subtle)" }}>
-                      {inv.file_url && (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium"
-                          style={{ background: "var(--blue-glow)", color: "var(--blue)", border: "1px solid color-mix(in srgb, var(--blue) 20%, transparent)" }}
-                          onClick={() => openFileViewer(inv.file_url!)}
-                        >
-                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
-                          </svg>
-                          Ver archivo
-                        </button>
-                      )}
-                      {inv.concepto && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: "var(--surface)", color: "var(--text-dim)", border: "1px solid var(--border-subtle)" }}>
-                          {inv.concepto}
-                        </span>
-                      )}
-                      {inv.comments && (
-                        <span className="text-[11px] italic" style={{ color: "var(--text-muted)" }}>"{inv.comments}"</span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Line items */}
-                  {inv.lineItems.length === 0 ? (
-                    <p className="text-xs px-4 py-3" style={{ color: "var(--text-dim)" }}>Sin artículos individuales</p>
-                  ) : (
-                    <div className="px-2 py-1.5">
-                      {inv.lineItems.map((item, idx) => (
-                        <div
-                          key={item.id}
-                          className="inv-line-item flex items-center justify-between gap-3 px-2 py-2 rounded-[var(--radius-sm)]"
-                          style={{ borderBottom: idx < inv.lineItems.length - 1 ? "1px solid var(--border-subtle)" : "none" }}
-                        >
-                          <span className="flex-1 text-[12px] truncate" style={{ color: "var(--text)" }}>
-                            {item.description}
-                          </span>
-                          {item.quantity != null && (
-                            <span className="text-[11px] flex-shrink-0 font-mono" style={{ color: "var(--text-muted)" }}>
-                              {item.quantity} {item.unit_normalized ?? item.unit ?? ""}
-                            </span>
+              {/* Expanded: line items */}
+              <AnimatePresence>
+                {isExpanded && !invoiceSelectMode && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <div style={{ background: "var(--surface-raised)", borderBottom: "1px solid var(--border)", borderTop: "1px solid var(--border)" }}>
+                      {/* File / notes strip */}
+                      {(inv.file_url || inv.concepto || inv.comments) && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 20px 6px 44px", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
+                          {inv.file_url && (
+                            <button type="button"
+                              onClick={() => openFileViewer(inv.file_url!)}
+                              style={{ fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 99, background: "var(--blue-glow)", color: "var(--blue)", border: "1px solid color-mix(in srgb, var(--blue) 20%, transparent)", cursor: "pointer" }}>
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                              </svg>
+                              Ver archivo
+                            </button>
                           )}
-                          <span className="text-[12px] flex-shrink-0 font-semibold" style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
-                            {formatCurrency(item.total)}
-                          </span>
+                          {inv.concepto && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{inv.concepto}</span>}
+                          {inv.comments && <span style={{ fontSize: 11, fontStyle: "italic", color: "var(--text-muted)" }}>"{inv.comments}"</span>}
                         </div>
-                      ))}
+                      )}
+
+                      {/* Line items */}
+                      {inv.lineItems.length === 0 ? (
+                        <p style={{ fontSize: 12, color: "var(--text-dim)", padding: "10px 20px 10px 44px" }}>Sin artículos individuales</p>
+                      ) : (
+                        <>
+                          {/* Mini header */}
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 60px 96px", padding: "7px 20px 5px 44px" }}>
+                            {["Artículo", "Cantidad", "Unidad", "Total"].map((h, idx) => (
+                              <span key={h} style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-dim)", textAlign: idx > 0 ? "right" : "left" }}>{h}</span>
+                            ))}
+                          </div>
+                          {inv.lineItems.map((item, idx) => (
+                            <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 60px 96px", padding: "5px 20px", paddingLeft: 44, borderTop: "1px solid var(--border)" }}>
+                              <span style={{ fontSize: 12, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.description}</span>
+                              <span style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{item.quantity ?? "—"}</span>
+                              <span style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "right" }}>{item.unit_normalized ?? item.unit ?? "—"}</span>
+                              <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{formatCurrency(item.total)}</span>
+                            </div>
+                          ))}
+                          {/* Total row */}
+                          <div style={{ display: "flex", justifyContent: "flex-end", padding: "6px 20px 7px", borderTop: "2px solid var(--border)" }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>{formatCurrency(inv.total)}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           );
         })}
-
-        {/* ── Papelera ── */}
-        {showPapelera && (
-          <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--border-subtle)" }}>
-            <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-              Papelera
-            </p>
-            {papeleraLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
-              </div>
-            ) : deletedInvoices.length === 0 ? (
-              <p className="text-xs py-3 text-center" style={{ color: "var(--text-dim)" }}>Papelera vacía</p>
-            ) : (
-              <div className="space-y-1">
-                {deletedInvoices.map((inv) => (
-                  <div key={inv.id} className="flex items-center gap-3 px-4 py-2.5 rounded-[var(--radius)] border"
-                    style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)", opacity: 0.7 }}>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[12px] font-medium truncate block" style={{ color: "var(--text)", textDecoration: "line-through", textDecorationColor: "var(--text-dim)" }}>
-                        {inv.supplier}
-                      </span>
-                      <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                        {formatDate(inv.invoice_date)} · {formatCurrency(inv.total)}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={restoringId === inv.id}
-                      className="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-[var(--radius-sm)] font-medium"
-                      style={{ background: "var(--surface)", color: "var(--blue)", border: "1px solid color-mix(in srgb, var(--blue) 25%, transparent)" }}
-                      onClick={() => restoreInvoice(inv.id)}
-                    >
-                      {restoringId === inv.id ? "..." : "Restaurar"}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* ── Papelera ── */}
+      {showPapelera && (
+        <div className="mt-4 pt-3 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+          <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Papelera</p>
+          {papeleraLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
+            </div>
+          ) : deletedInvoices.length === 0 ? (
+            <p className="text-xs py-3 text-center" style={{ color: "var(--text-dim)" }}>Papelera vacía</p>
+          ) : (
+            <div className="space-y-1">
+              {deletedInvoices.map((inv) => (
+                <div key={inv.id} className="flex items-center gap-3 px-4 py-2.5 rounded-[var(--radius)] border"
+                  style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)", opacity: 0.7 }}>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[12px] font-medium truncate block" style={{ color: "var(--text)", textDecoration: "line-through", textDecorationColor: "var(--text-dim)" }}>{inv.supplier}</span>
+                    <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>{formatDate(inv.invoice_date)} · {formatCurrency(inv.total)}</span>
+                  </div>
+                  <button type="button" disabled={restoringId === inv.id}
+                    className="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-[var(--radius-sm)] font-medium"
+                    style={{ background: "var(--surface)", color: "var(--blue)", border: "1px solid color-mix(in srgb, var(--blue) 25%, transparent)" }}
+                    onClick={() => restoreInvoice(inv.id)}>
+                    {restoringId === inv.id ? "..." : "Restaurar"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Edit drawer ── */}
       {editDrawerId && (
-        <div
-          className="fixed inset-0 z-50 flex justify-end"
-          style={{
-            background: "rgba(0, 0, 0, 0.48)",
-            backdropFilter: "blur(3px)",
-            WebkitBackdropFilter: "blur(3px)",
-            animation: "boh-backdropIn 0.2s ease",
-          }}
-          onClick={closeEditDrawer}
-        >
-          <div
-            className="relative h-full flex flex-col"
-            style={{
-              width: "min(380px, 92vw)",
-              background: "var(--surface)",
-              borderLeft: "1px solid var(--border)",
-              boxShadow: "-24px 0 64px rgba(0,0,0,0.18)",
-              animation: "boh-slideInRight 0.28s cubic-bezier(0.32, 0.72, 0, 1)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex justify-end"
+          style={{ background: "rgba(0,0,0,0.48)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)", animation: "boh-backdropIn 0.2s ease" }}
+          onClick={closeEditDrawer}>
+          <div className="relative h-full flex flex-col"
+            style={{ width: "min(380px, 92vw)", background: "var(--surface)", borderLeft: "1px solid var(--border)", boxShadow: "-24px 0 64px rgba(0,0,0,0.18)", animation: "boh-slideInRight 0.28s cubic-bezier(0.32,0.72,0,1)" }}
+            onClick={(e) => e.stopPropagation()}>
             {/* Drawer header */}
             <div className="px-5 pt-5 pb-4 border-b" style={{ borderColor: "var(--border-subtle)" }}>
               <div className="flex items-start justify-between gap-3">
@@ -623,49 +572,30 @@ export default function InvoicesView({
                   </p>
                   {editingInvoice && (
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                        {formatDate(editingInvoice.invoice_date)}
-                      </span>
+                      <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>{formatDate(editingInvoice.invoice_date)}</span>
                       <span style={{ color: "var(--border)", fontSize: "10px" }}>·</span>
-                      <span className="text-[12px] font-semibold" style={{ color: "var(--blue)", fontVariantNumeric: "tabular-nums" }}>
-                        {formatCurrency(editingInvoice.total)}
-                      </span>
+                      <span className="text-[12px] font-semibold" style={{ color: "var(--blue)", fontVariantNumeric: "tabular-nums" }}>{formatCurrency(editingInvoice.total)}</span>
                     </div>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={closeEditDrawer}
-                  className="p-1.5 rounded-lg flex-shrink-0"
-                  style={{ color: "var(--text-muted)" }}
+                <button type="button" onClick={closeEditDrawer} className="p-1.5 rounded-lg flex-shrink-0" style={{ color: "var(--text-muted)" }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-raised)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                >
-                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                    <path d="M1.5 1.5l11 11M12.5 1.5l-11 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M1.5 1.5l11 11M12.5 1.5l-11 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
                 </button>
               </div>
             </div>
 
             {/* Drawer form */}
             <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-              {/* Concepto */}
               <div className="drawer-field">
-                <label className="text-[10px] font-semibold uppercase tracking-widest block mb-1.5" style={{ color: "var(--text-muted)" }}>
-                  Concepto
-                </label>
+                <label className="text-[10px] font-semibold uppercase tracking-widest block mb-1.5" style={{ color: "var(--text-muted)" }}>Concepto</label>
                 <div className="relative">
-                  <select
-                    value={editConcepto}
-                    className="w-full px-3 py-2.5 pr-9 rounded-[var(--radius-sm)] border text-sm appearance-none"
+                  <select value={editConcepto} className="w-full px-3 py-2.5 pr-9 rounded-[var(--radius-sm)] border text-sm appearance-none"
                     style={{ background: "var(--surface-raised)", borderColor: "var(--border)", color: editConcepto ? "var(--text)" : "var(--text-dim)" }}
-                    onChange={(e) => setEditConcepto(e.target.value)}
-                  >
+                    onChange={(e) => setEditConcepto(e.target.value)}>
                     <option value="">Sin concepto</option>
-                    {(dropdownOptions.concepto as string[]).map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
+                    {(dropdownOptions.concepto as string[]).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                   <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
                     <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -673,22 +603,14 @@ export default function InvoicesView({
                 </div>
               </div>
 
-              {/* Cuenta P&L */}
               <div className="drawer-field">
-                <label className="text-[10px] font-semibold uppercase tracking-widest block mb-1.5" style={{ color: "var(--text-muted)" }}>
-                  Cuenta P&L
-                </label>
+                <label className="text-[10px] font-semibold uppercase tracking-widest block mb-1.5" style={{ color: "var(--text-muted)" }}>Cuenta P&L</label>
                 <div className="relative">
-                  <select
-                    value={editCuentaPnl}
-                    className="w-full px-3 py-2.5 pr-9 rounded-[var(--radius-sm)] border text-sm appearance-none"
+                  <select value={editCuentaPnl} className="w-full px-3 py-2.5 pr-9 rounded-[var(--radius-sm)] border text-sm appearance-none"
                     style={{ background: "var(--surface-raised)", borderColor: "var(--border)", color: editCuentaPnl ? "var(--text)" : "var(--text-dim)" }}
-                    onChange={(e) => setEditCuentaPnl(e.target.value)}
-                  >
+                    onChange={(e) => setEditCuentaPnl(e.target.value)}>
                     <option value="">Sin categoría</option>
-                    {(dropdownOptions.cuentaPnl as string[]).map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
+                    {(dropdownOptions.cuentaPnl as string[]).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                   <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ color: "var(--text-dim)" }}>
                     <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -696,27 +618,18 @@ export default function InvoicesView({
                 </div>
               </div>
 
-              {/* Comentarios */}
               <div className="drawer-field">
-                <label className="text-[10px] font-semibold uppercase tracking-widest block mb-1.5" style={{ color: "var(--text-muted)" }}>
-                  Comentarios
-                </label>
-                <textarea
-                  value={editComments}
-                  rows={3}
-                  placeholder="Notas opcionales..."
+                <label className="text-[10px] font-semibold uppercase tracking-widest block mb-1.5" style={{ color: "var(--text-muted)" }}>Comentarios</label>
+                <textarea value={editComments} rows={3} placeholder="Notas opcionales..."
                   className="w-full px-3 py-2.5 rounded-[var(--radius-sm)] border text-sm resize-none"
                   style={{ background: "var(--surface-raised)", borderColor: "var(--border)", color: "var(--text)", lineHeight: "1.5" }}
-                  onChange={(e) => setEditComments(e.target.value)}
-                />
+                  onChange={(e) => setEditComments(e.target.value)} />
               </div>
 
               {/* Edit history */}
               <div className="pt-1">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
-                    Historial
-                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Historial</span>
                   <div className="flex-1 border-t" style={{ borderColor: "var(--border-subtle)" }} />
                 </div>
                 {editHistoryLoading ? (
@@ -730,7 +643,6 @@ export default function InvoicesView({
                   <div className="space-y-2">
                     {editHistory.map((h, idx) => (
                       <div key={h.id} className="relative pl-4">
-                        {/* Timeline dot */}
                         <div className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full" style={{ background: idx === 0 ? "var(--blue)" : "var(--border)" }} />
                         <div className="flex items-center justify-between mb-0.5">
                           <span className="text-[11px] font-medium" style={{ color: "var(--text)" }}>{h.edited_by}</span>
@@ -755,7 +667,6 @@ export default function InvoicesView({
               </div>
             </div>
 
-            {/* Drawer footer */}
             <div className="px-5 py-4 border-t flex items-center justify-end gap-2" style={{ borderColor: "var(--border-subtle)", background: "var(--surface-raised)" }}>
               <Button variant="secondary" size="sm" onClick={closeEditDrawer}>Cancelar</Button>
               <Button size="sm" loading={editSaving} onClick={saveEdit}>Guardar cambios</Button>
@@ -767,9 +678,7 @@ export default function InvoicesView({
       {/* ── Delete confirmation ── */}
       <Modal open={!!deleteInvoiceId} onClose={() => setDeleteInvoiceId(null)} title="Eliminar factura" maxWidth="max-w-sm">
         <div className="space-y-4">
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            ¿Mover esta factura a la papelera? Podrás restaurarla desde ahí.
-          </p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>¿Mover esta factura a la papelera? Podrás restaurarla desde ahí.</p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={() => setDeleteInvoiceId(null)}>Cancelar</Button>
             <Button variant="danger" size="sm" loading={deletingInvoice} onClick={confirmDeleteInvoice}>Eliminar</Button>
@@ -777,7 +686,6 @@ export default function InvoicesView({
         </div>
       </Modal>
 
-      {/* ── Bulk delete confirmation ── */}
       <Modal open={confirmDeleteInvoices} onClose={() => setConfirmDeleteInvoices(false)} title="Eliminar facturas" maxWidth="max-w-sm">
         <div className="space-y-4">
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -790,7 +698,6 @@ export default function InvoicesView({
         </div>
       </Modal>
 
-      {/* ── File viewer ── */}
       <Modal open={fileViewerUrl !== null || fileViewerLoading} onClose={() => { setFileViewerUrl(null); setFileViewerLoading(false); }} title="Archivo original" maxWidth="max-w-3xl">
         <div className="min-h-[300px] flex items-center justify-center">
           {fileViewerLoading ? (
