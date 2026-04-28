@@ -239,7 +239,7 @@ export default function InvoicesView({
         .inv-row-actions { opacity: 0; transition: opacity 100ms ease; }
         .inv-row:hover .inv-row-actions,
         .inv-row-actions.always-visible { opacity: 1; }
-        .inv-row:hover { background: var(--surface-raised) !important; }
+        .inv-row:hover { background: color-mix(in srgb, var(--text) 4%, transparent) !important; }
         .inv-action-btn { transition: background 100ms ease, color 100ms ease; }
         .drawer-field select, .drawer-field textarea {
           transition: border-color 120ms ease, box-shadow 120ms ease;
@@ -252,8 +252,8 @@ export default function InvoicesView({
       `}</style>
 
       {/* ── Toolbar ── */}
-      <div className="flex flex-col gap-2 mb-3">
-        <div className="relative w-full">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="relative" style={{ width: 220, flexShrink: 0 }}>
           <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: "var(--text-muted)" }}>
             <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
             <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -337,10 +337,11 @@ export default function InvoicesView({
         </div>
       </div>
 
+
       {/* ── Invoices table ── */}
       <div>
         {/* Column headers */}
-        <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: 36, borderBottom: "1px solid var(--border)", background: "var(--surface-raised)", padding: "0 4px 0 0" }}>
+        <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: 36, borderBottom: "1px solid var(--text)", background: "transparent", padding: "0 4px 0 0" }}>
           <span />
           <span style={{ ...COL_HEADER, paddingLeft: 8 }}>Proveedor</span>
           <span style={{ ...COL_HEADER, textAlign: "right" }}>Factura</span>
@@ -382,12 +383,12 @@ export default function InvoicesView({
                   alignItems: "center",
                   height: 50,
                   padding: "0 4px 0 0",
-                  borderBottom: isExpanded ? "none" : "1px solid var(--border)",
+                  borderBottom: isExpanded ? "none" : "1px solid var(--text)",
                   background: isSelected
-                    ? "color-mix(in srgb, var(--blue) 6%, var(--surface))"
+                    ? "color-mix(in srgb, var(--blue) 6%, transparent)"
                     : isExpanded
                     ? "var(--surface-raised)"
-                    : "var(--surface)",
+                    : "transparent",
                   cursor: "pointer",
                   transition: "background 100ms ease",
                   borderLeft: isSelected ? "2px solid var(--blue)" : "2px solid transparent",
@@ -470,7 +471,7 @@ export default function InvoicesView({
                     transition={{ duration: 0.2, ease: "easeInOut" }}
                     style={{ overflow: "hidden" }}
                   >
-                    <div style={{ background: "var(--surface-raised)", borderBottom: "1px solid var(--border)", borderTop: "1px solid var(--border)" }}>
+                    <div style={{ background: "var(--surface-raised)", borderBottom: "1px solid var(--text)", borderTop: "1px solid var(--text)" }}>
                       {/* File / notes strip */}
                       {(inv.file_url || inv.concepto || inv.comments) && (
                         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 20px 6px 44px", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
@@ -509,7 +510,7 @@ export default function InvoicesView({
                             </div>
                           ))}
                           {/* Total row */}
-                          <div style={{ display: "flex", justifyContent: "flex-end", padding: "6px 20px 7px", borderTop: "2px solid var(--border)" }}>
+                          <div style={{ display: "flex", justifyContent: "flex-end", padding: "6px 20px 7px", borderTop: "2px solid var(--text)" }}>
                             <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>{formatCurrency(inv.total)}</span>
                           </div>
                         </>
