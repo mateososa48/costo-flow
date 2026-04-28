@@ -338,7 +338,7 @@ export default function InvoicesView({
       </div>
 
       {/* ── Invoices table ── */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", overflow: "hidden", background: "var(--surface)", boxShadow: "0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
+      <div>
         {/* Column headers */}
         <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: 36, borderBottom: "1px solid var(--border)", background: "var(--surface-raised)", padding: "0 4px 0 0" }}>
           <span />
