@@ -1,0 +1,34 @@
+{
+  "cuentas": [
+    { "label": "Costo de Alimentos",          "cost_type": "food",        "sort_order": 1 },
+    { "label": "Costo de Bebidas",             "cost_type": "beverage",    "sort_order": 2 },
+    { "label": "Nómina",                       "cost_type": "operational", "sort_order": 3 },
+    { "label": "Renta y Servicios",            "cost_type": "operational", "sort_order": 4 },
+    { "label": "Operación y Mantenimiento",    "cost_type": "operational", "sort_order": 5 },
+    { "label": "Mercadotecnia y Plataformas",  "cost_type": "operational", "sort_order": 6 }
+  ],
+  "conceptos": [
+    { "label": "Carnes",                    "cuenta": "Costo de Alimentos", "sort_order": 1  },
+    { "label": "Aves",                      "cuenta": "Costo de Alimentos", "sort_order": 2  },
+    { "label": "Pescados y Mariscos",       "cuenta": "Costo de Alimentos", "sort_order": 3  },
+    { "label": "Lácteos",                   "cuenta": "Costo de Alimentos", "sort_order": 4  },
+    { "label": "Quesos",                    "cuenta": "Costo de Alimentos", "sort_order": 5  },
+    { "label": "Mantequilla",               "cuenta": "Costo de Alimentos", "sort_order": 6  },
+    { "label": "Huevo",                     "cuenta": "Costo de Alimentos", "sort_order": 7  },
+    { "label": "Frutas y Verduras",         "cuenta": "Costo de Alimentos", "sort_order": 8  },
+    { "label": "Tortillas",                 "cuenta": "Costo de Alimentos", "sort_order": 9  },
+    { "label": "Panadería",                 "cuenta": "Costo de Alimentos", "sort_order": 10 },
+    { "label": "Postres y Pastelería",      "cuenta": "Costo de Alimentos", "sort_order": 11 },
+    { "label": "Abarrotes Secos",           "cuenta": "Costo de Alimentos", "sort_order": 12 },
+    { "label": "Aceites y Grasas",          "cuenta": "Costo de Alimentos", "sort_order": 13 },
+    { "label": "Congelados",                "cuenta": "Costo de Alimentos", "sort_order": 14 },
+    { "label": "Café y Té",                 "cuenta": "Costo de Bebidas",   "sort_order": 15 },
+    { "label": "Refrescos y Aguas",         "cuenta": "Costo de Bebidas",   "sort_order": 16 },
+    { "label": "Cerveza",                   "cuenta": "Costo de Bebidas",   "sort_order": 17 },
+    { "label": "Vinos y Destilados",        "cuenta": "Costo de Bebidas",   "sort_order": 18 },
+    { "label": "Nómina",                    "cuenta": "Nómina",                       "sort_order": 19 },
+    { "label": "Renta y Servicios",         "cuenta": "Renta y Servicios",            "sort_order": 20 },
+    { "label": "Operación y Mantenimiento", "cuenta": "Operación y Mantenimiento",    "sort_order": 21 },
+    { "label": "Mercadotecnia y Plataformas","cuenta": "Mercadotecnia y Plataformas", "sort_order": 22 }
+  ]
+}

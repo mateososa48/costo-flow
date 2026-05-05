@@ -1,0 +1,461 @@
+{
+  "cuentas": [
+    {
+      "label": "Costo de Alimentos",
+      "cost_type": "food",
+      "sort_order": 1
+    },
+    {
+      "label": "Costo de Bebidas sin Alcohol",
+      "cost_type": "beverage",
+      "sort_order": 2
+    },
+    {
+      "label": "Mantenimiento",
+      "cost_type": "operational",
+      "sort_order": 3
+    },
+    {
+      "label": "Mobiliario",
+      "cost_type": "operational",
+      "sort_order": 4
+    },
+    {
+      "label": "Renta",
+      "cost_type": "operational",
+      "sort_order": 5
+    },
+    {
+      "label": "Gas",
+      "cost_type": "operational",
+      "sort_order": 6
+    },
+    {
+      "label": "Varios de Administración",
+      "cost_type": "operational",
+      "sort_order": 7
+    }
+  ],
+  "conceptos": [
+    {
+      "label": "Refrescos",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 1
+    },
+    {
+      "label": "Abarrotes Alimentos",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 2
+    },
+    {
+      "label": "Abarrotes Bebidas",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 3
+    },
+    {
+      "label": "Abarrotes Bebidas con Alcohol",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 4
+    },
+    {
+      "label": "Agua",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 5
+    },
+    {
+      "label": "Agua /provisión",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 6
+    },
+    {
+      "label": "Alimentos de Personal",
+      "cuenta": "Varios de Administración",
+      "sort_order": 7
+    },
+    {
+      "label": "Audio y video",
+      "cuenta": "Mobiliario",
+      "sort_order": 8
+    },
+    {
+      "label": "Audio y Video /provisión",
+      "cuenta": "Mobiliario",
+      "sort_order": 9
+    },
+    {
+      "label": "Aves",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 10
+    },
+    {
+      "label": "Bebidas Alcohólicas",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 11
+    },
+    {
+      "label": "Bonos de Gerentes",
+      "cuenta": "Varios de Administración",
+      "sort_order": 12
+    },
+    {
+      "label": "Café",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 13
+    },
+    {
+      "label": "Capacitación",
+      "cuenta": "Varios de Administración",
+      "sort_order": 14
+    },
+    {
+      "label": "Carnes",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 15
+    },
+    {
+      "label": "Cerveza",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 16
+    },
+    {
+      "label": "Comisión Tarjetas Bancarias",
+      "cuenta": "Varios de Administración",
+      "sort_order": 17
+    },
+    {
+      "label": "Comisiones Plataforma",
+      "cuenta": "Varios de Administración",
+      "sort_order": 18
+    },
+    {
+      "label": "Contadores",
+      "cuenta": "Varios de Administración",
+      "sort_order": 19
+    },
+    {
+      "label": "Contadores /provisión",
+      "cuenta": "Varios de Administración",
+      "sort_order": 20
+    },
+    {
+      "label": "Cremería",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 21
+    },
+    {
+      "label": "Cuota por Administración",
+      "cuenta": "Varios de Administración",
+      "sort_order": 22
+    },
+    {
+      "label": "Equipo de Restaurante",
+      "cuenta": "Mobiliario",
+      "sort_order": 23
+    },
+    {
+      "label": "Frutas y Verduras",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 24
+    },
+    {
+      "label": "Frutas y Verduras Bar",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 25
+    },
+    {
+      "label": "Frutas y Verduras Bebidas",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 26
+    },
+    {
+      "label": "Fumigación",
+      "cuenta": "Mantenimiento",
+      "sort_order": 27
+    },
+    {
+      "label": "Fumigación /provisión",
+      "cuenta": "Mantenimiento",
+      "sort_order": 28
+    },
+    {
+      "label": "Gas",
+      "cuenta": "Gas",
+      "sort_order": 29
+    },
+    {
+      "label": "Gas /provisión",
+      "cuenta": "Gas",
+      "sort_order": 30
+    },
+    {
+      "label": "Gastos Legales",
+      "cuenta": "Varios de Administración",
+      "sort_order": 31
+    },
+    {
+      "label": "Gastos Legales /provisión",
+      "cuenta": "Varios de Administración",
+      "sort_order": 32
+    },
+    {
+      "label": "Helado",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 33
+    },
+    {
+      "label": "Hielo",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 34
+    },
+    {
+      "label": "Huevo",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 35
+    },
+    {
+      "label": "Iguala Mantenimiento",
+      "cuenta": "Mantenimiento",
+      "sort_order": 36
+    },
+    {
+      "label": "Iguala Mantenimiento / provisión",
+      "cuenta": "Mantenimiento",
+      "sort_order": 37
+    },
+    {
+      "label": "Impresos y consumibles RES",
+      "cuenta": "Varios de Administración",
+      "sort_order": 38
+    },
+    {
+      "label": "Impresos y Consumibles SAD",
+      "cuenta": "Varios de Administración",
+      "sort_order": 39
+    },
+    {
+      "label": "Inversión de Publicidad",
+      "cuenta": "Varios de Administración",
+      "sort_order": 40
+    },
+    {
+      "label": "Kombucha",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 41
+    },
+    {
+      "label": "Leche",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 42
+    },
+    {
+      "label": "Licencias y permisos",
+      "cuenta": "Varios de Administración",
+      "sort_order": 43
+    },
+    {
+      "label": "Licencias y permisos /provisión",
+      "cuenta": "Varios de Administración",
+      "sort_order": 44
+    },
+    {
+      "label": "Loza, plaqué y cristalería",
+      "cuenta": "Varios de Administración",
+      "sort_order": 45
+    },
+    {
+      "label": "Luz",
+      "cuenta": "Varios de Administración",
+      "sort_order": 46
+    },
+    {
+      "label": "Luz /provisión",
+      "cuenta": "Varios de Administración",
+      "sort_order": 47
+    },
+    {
+      "label": "Mantenimiento",
+      "cuenta": "Mantenimiento",
+      "sort_order": 48
+    },
+    {
+      "label": "Mantenimiento de Imagen",
+      "cuenta": "Mantenimiento",
+      "sort_order": 49
+    },
+    {
+      "label": "Mantequilla",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 50
+    },
+    {
+      "label": "Mobiliario",
+      "cuenta": "Mobiliario",
+      "sort_order": 51
+    },
+    {
+      "label": "Otros Ingresos",
+      "cuenta": "Varios de Administración",
+      "sort_order": 52
+    },
+    {
+      "label": "Papelería",
+      "cuenta": "Varios de Administración",
+      "sort_order": 53
+    },
+    {
+      "label": "Panadería",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 54
+    },
+    {
+      "label": "Pastelería",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 55
+    },
+    {
+      "label": "Pescados y Mariscos",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 56
+    },
+    {
+      "label": "Postres",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 57
+    },
+    {
+      "label": "Quesos",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 58
+    },
+    {
+      "label": "Remodelaciones",
+      "cuenta": "Mobiliario",
+      "sort_order": 59
+    },
+    {
+      "label": "Renta",
+      "cuenta": "Renta",
+      "sort_order": 60
+    },
+    {
+      "label": "Renta /provisión",
+      "cuenta": "Renta",
+      "sort_order": 61
+    },
+    {
+      "label": "Seguros GMM",
+      "cuenta": "Varios de Administración",
+      "sort_order": 62
+    },
+    {
+      "label": "Seguros GMM /provisión",
+      "cuenta": "Varios de Administración",
+      "sort_order": 63
+    },
+    {
+      "label": "Seguros y fianzas",
+      "cuenta": "Varios de Administración",
+      "sort_order": 64
+    },
+    {
+      "label": "Seguros y fianzas /provisión",
+      "cuenta": "Varios de Administración",
+      "sort_order": 65
+    },
+    {
+      "label": "Servicios Profesionales",
+      "cuenta": "Varios de Administración",
+      "sort_order": 66
+    },
+    {
+      "label": "Servicios Profesionales /provisión",
+      "cuenta": "Varios de Administración",
+      "sort_order": 67
+    },
+    {
+      "label": "Software y Sistemas",
+      "cuenta": "Varios de Administración",
+      "sort_order": 68
+    },
+    {
+      "label": "Suministro de limpieza",
+      "cuenta": "Varios de Administración",
+      "sort_order": 69
+    },
+    {
+      "label": "Té",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 70
+    },
+    {
+      "label": "Teléfono",
+      "cuenta": "Varios de Administración",
+      "sort_order": 71
+    },
+    {
+      "label": "Teléfono /provisión",
+      "cuenta": "Varios de Administración",
+      "sort_order": 72
+    },
+    {
+      "label": "Tortillas",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 73
+    },
+    {
+      "label": "Transporte de Personal",
+      "cuenta": "Varios de Administración",
+      "sort_order": 74
+    },
+    {
+      "label": "Uniformes",
+      "cuenta": "Varios de Administración",
+      "sort_order": 75
+    },
+    {
+      "label": "Utensilios de cocina",
+      "cuenta": "Mobiliario",
+      "sort_order": 76
+    },
+    {
+      "label": "Varios Alimentos",
+      "cuenta": "Costo de Alimentos",
+      "sort_order": 77
+    },
+    {
+      "label": "Varios Bebidas",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 78
+    },
+    {
+      "label": "Varios Capitalizables",
+      "cuenta": "Varios de Administración",
+      "sort_order": 79
+    },
+    {
+      "label": "Varios de Administración",
+      "cuenta": "Varios de Administración",
+      "sort_order": 80
+    },
+    {
+      "label": "Varios de Operación",
+      "cuenta": "Varios de Administración",
+      "sort_order": 81
+    },
+    {
+      "label": "Varios de Personal",
+      "cuenta": "Varios de Administración",
+      "sort_order": 82
+    },
+    {
+      "label": "Venta Tienda",
+      "cuenta": "Varios de Administración",
+      "sort_order": 83
+    },
+    {
+      "label": "Vinos",
+      "cuenta": "Costo de Bebidas sin Alcohol",
+      "sort_order": 84
+    }
+  ]
+}
