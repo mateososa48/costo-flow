@@ -1,6 +1,11 @@
 // Run with: npx tsx scripts/generate-aventura-template.ts
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+// ESM-safe __dirname (works in both CJS emulation and true ESM)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const dropdowns = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, "../data/dropdown_options.json"), "utf-8")
