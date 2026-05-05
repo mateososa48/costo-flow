@@ -36,4 +36,5 @@ CREATE INDEX IF NOT EXISTS idx_tenant_cuenta_pnl_tenant   ON tenant_cuenta_pnl(t
 CREATE INDEX IF NOT EXISTS idx_tenant_concepts_tenant      ON tenant_concepts(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_tenant_concepts_cuenta_pnl ON tenant_concepts(cuenta_pnl_id);
 CREATE INDEX IF NOT EXISTS idx_line_items_concept          ON line_items(concept_id);
+CREATE INDEX IF NOT EXISTS idx_line_items_cuenta_pnl       ON line_items(cuenta_pnl_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_cuenta_pnl         ON invoices(cuenta_pnl_id);
