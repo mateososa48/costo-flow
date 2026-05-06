@@ -3,14 +3,13 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { appendToSheet } from "@/lib/sheets";
 import { appendAuditEntries } from "@/lib/audit-log";
-import dropdownOptions from "../../../../../data/dropdown_options.json";
 import type { ExtractedInvoice, SubmitApiResponse, SubmitResult, SheetSyncStatus } from "@/types";
+import { getConceptLabels, getCuentaLabels } from "@/lib/catalogo";
 import getSupabase, { saveInvoiceWithItems, checkDuplicatesViaSupabase, type SheetSyncParams } from "@/lib/supabase";
 import { getTenantRestaurantSlugs, getTenantSettings } from "@/lib/tenant";
 import log from "@/lib/logger";
+import { isReadonly, readonlyForbidden } from "@/lib/authorization";
 
-const validConceptos = new Set<string>(dropdownOptions.concepto as string[]);
-const validCuentasPnl = new Set<string>(dropdownOptions.cuentaPnl as string[]);
 
 const invoiceSchema = z.object({
   id: z.string(),
@@ -24,8 +23,8 @@ const invoiceSchema = z.object({
   importe: z.number(),
   iva: z.number(),
   total: z.number(),
-  concepto: z.string().min(1, "Concepto is required").refine((v) => validConceptos.has(v), "Concepto inválido"),
-  cuentaPnl: z.string().min(1, "Cuenta P&L is required").refine((v) => validCuentasPnl.has(v), "Cuenta P&L inválida"),
+  concepto: z.string().min(1, "Concepto is required"),
+  cuentaPnl: z.string().min(1, "Cuenta P&L is required"),
   comments: z.string().optional(),
   lineItems: z.array(z.object({
     description: z.string(),
@@ -49,6 +48,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!session.isLoggedIn) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (isReadonly(session)) return readonlyForbidden();
 
   let body: unknown;
   try {
@@ -82,6 +82,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         if (!validSlugs.includes(invoice.restaurant)) {
           return NextResponse.json(
             { error: `Restaurante inválido: "${invoice.restaurant}"` },
+            { status: 422 }
+          );
+        }
+      }
+    }
+  }
+
+  // ── Per-tenant catálogo validation ────────────────────────────────────────
+  if (tenantId) {
+    const tenantConceptLabels = await getConceptLabels(tenantId);
+    const tenantCuentaLabels = await getCuentaLabels(tenantId);
+
+    if (tenantConceptLabels.length > 0 && tenantCuentaLabels.length > 0) {
+      const validConceptos = new Set(tenantConceptLabels);
+      const validCuentas = new Set(tenantCuentaLabels);
+      for (const invoice of parsed.data.invoices) {
+        if (!validConceptos.has(invoice.concepto)) {
+          return NextResponse.json(
+            { error: `Concepto inválido: "${invoice.concepto}"` },
+            { status: 422 }
+          );
+        }
+        if (!validCuentas.has(invoice.cuentaPnl)) {
+          return NextResponse.json(
+            { error: `Cuenta P&L inválida: "${invoice.cuentaPnl}"` },
             { status: 422 }
           );
         }
