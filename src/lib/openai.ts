@@ -1,6 +1,5 @@
 import OpenAI from "openai";
 import { config } from "@/config";
-import dropdownOptions from "../../data/dropdown_options.json";
 
 let _client: OpenAI | null = null;
 
@@ -38,10 +37,10 @@ export type LLMExtraction = {
   extractionConfidence: number;  // 0-1
 };
 
-const conceptoList = (dropdownOptions.concepto as string[]).join(" | ");
-const cuentaPnlList = (dropdownOptions.cuentaPnl as string[]).join(" | ");
-
-const SYSTEM_PROMPT = `You are an expert invoice parser for a Mexican restaurant group.
+function buildSystemPrompt(conceptos: string[], cuentas: string[]): string {
+  const conceptoList = conceptos.join(" | ");
+  const cuentaPnlList = cuentas.join(" | ");
+  return `You are an expert invoice parser for a Mexican restaurant group.
 Extract the following fields from the invoice and return STRICT JSON.
 Currency is MXN unless otherwise stated. IMPORTANT - Number formatting: Mexican invoices use a period as the DECIMAL separator, not a thousands separator. "230.000" means $230.00, NOT $230,000. Always treat digits after a period as cents. Sanity-check: does the total make sense for the items on this invoice?
 If you are uncertain about a value, provide your best estimate and set extractionConfidence lower.
@@ -73,6 +72,7 @@ Do NOT invent values. Read only what is explicitly printed on the invoice.
 - Never assume or calculate IVA from a percentage if it is not explicitly printed.
 - ALWAYS verify: importe + iva = total. If this does not hold, your values are wrong — re-examine.
 Return only the JSON object, no extra text.`;
+}
 
 const RESPONSE_SCHEMA = {
   type: "object",
@@ -115,7 +115,9 @@ const RESPONSE_SCHEMA = {
  */
 export async function extractInvoiceFromImage(
   base64: string | string[],
-  mimeType: string
+  mimeType: string,
+  conceptos: string[],
+  cuentas: string[]
 ): Promise<LLMExtraction> {
   const client = getClient();
   const pages = Array.isArray(base64) ? base64 : [base64];
@@ -136,7 +138,7 @@ export async function extractInvoiceFromImage(
       },
     },
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: buildSystemPrompt(conceptos, cuentas) },
       {
         role: "user",
         content: [
@@ -158,7 +160,11 @@ export async function extractInvoiceFromImage(
 /**
  * Extract invoice data from raw text (text-based PDF path).
  */
-export async function extractInvoiceFromText(text: string): Promise<LLMExtraction> {
+export async function extractInvoiceFromText(
+  text: string,
+  conceptos: string[],
+  cuentas: string[]
+): Promise<LLMExtraction> {
   const client = getClient();
 
   const response = await client.beta.chat.completions.parse({
@@ -172,7 +178,7 @@ export async function extractInvoiceFromText(text: string): Promise<LLMExtractio
       },
     },
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: buildSystemPrompt(conceptos, cuentas) },
       {
         role: "user",
         content: `Extract all invoice fields from the following invoice text:\n\n${text}`,

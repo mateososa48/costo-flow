@@ -7,6 +7,8 @@ import { extractInvoiceFromImage, extractInvoiceFromText } from "@/lib/openai";
 import { lookupSupplier } from "@/lib/supplier-mapping";
 import { getSession } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getConceptLabels, getCuentaLabels } from "@/lib/catalogo";
+import dropdownOptions from "../../../../data/dropdown_options.json";
 import getSupabase from "@/lib/supabase";
 import log from "@/lib/logger";
 import type { ExtractedInvoice, Restaurant, ParseApiResponse } from "@/types";
@@ -38,6 +40,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // Load tenant catálogo lists for LLM prompt — fall back to global list if not seeded
+  const tenantConceptos = session.tenantId
+    ? await getConceptLabels(session.tenantId)
+    : [];
+  const tenantCuentas = session.tenantId
+    ? await getCuentaLabels(session.tenantId)
+    : [];
+  const conceptos = tenantConceptos.length > 0
+    ? tenantConceptos
+    : (dropdownOptions.concepto as string[]);
+  const cuentas = tenantCuentas.length > 0
+    ? tenantCuentas
+    : (dropdownOptions.cuentaPnl as string[]);
+
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -66,9 +82,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (file.type === "application/pdf") {
       const pdfResult = await extractFromPdf(imageBuffer);
       if (pdfResult.mode === "text") {
-        extraction = await extractInvoiceFromText(pdfResult.text);
+        extraction = await extractInvoiceFromText(pdfResult.text, conceptos, cuentas);
       } else {
-        extraction = await extractInvoiceFromImage(pdfResult.pages, pdfResult.mimeType);
+        extraction = await extractInvoiceFromImage(pdfResult.pages, pdfResult.mimeType, conceptos, cuentas);
       }
     } else {
       // Server-side compression: resize any image > 1.5 MB to max 1600px JPEG.
@@ -90,7 +106,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
       }
       const base64 = imageBuffer.toString("base64");
-      extraction = await extractInvoiceFromImage(base64, "image/jpeg");
+      extraction = await extractInvoiceFromImage(base64, "image/jpeg", conceptos, cuentas);
     }
 
     // Validate extraction — model may return empty object for unreadable images
