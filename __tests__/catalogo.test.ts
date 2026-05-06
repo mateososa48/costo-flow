@@ -14,17 +14,26 @@ import {
 function mockSupabase(rows: Record<string, unknown[]>): SupabaseClient {
   const fromMock = jest.fn((table: string) => {
     const tableRows = rows[table] ?? [];
+
+    // Chainable filter: select().eq().eq()... is awaitable as {data, error}
+    const makeFilter = (data: unknown[]): Record<string, unknown> => {
+      const filter: Record<string, unknown> = {};
+      filter.eq = jest.fn().mockReturnValue(filter);
+      filter.single = jest.fn().mockResolvedValue({ data: data[0] ?? null, error: null });
+      filter.then = (
+        resolve: (v: { data: unknown; error: null }) => unknown,
+        reject?: (e: unknown) => unknown
+      ) => Promise.resolve({ data, error: null }).then(resolve, reject);
+      filter.catch = (fn: (e: unknown) => unknown) =>
+        Promise.resolve({ data, error: null }).catch(fn);
+      return filter;
+    };
+
     return {
-      select: jest.fn().mockResolvedValue({ data: tableRows, error: null }),
-      eq: jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue(makeFilter(tableRows)),
+      insert: jest.fn().mockReturnValue({
         select: jest.fn().mockResolvedValue({ data: tableRows, error: null }),
-        eq: jest.fn().mockReturnValue({
-          select: jest.fn().mockResolvedValue({ data: tableRows, error: null }),
-          single: jest.fn().mockResolvedValue({ data: tableRows[0] ?? null, error: null }),
-        }),
-        single: jest.fn().mockResolvedValue({ data: tableRows[0] ?? null, error: null }),
       }),
-      insert: jest.fn().mockResolvedValue({ error: null }),
     };
   });
 

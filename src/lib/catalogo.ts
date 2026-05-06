@@ -41,9 +41,9 @@ export async function getTenantCuentas(
   if (!db) return [];
   const { data, error } = await db
     .from("tenant_cuenta_pnl")
+    .select("id, tenant_id, label, cost_type, is_active, sort_order")
     .eq("tenant_id", tenantId)
-    .eq("is_active", true)
-    .select("id, tenant_id, label, cost_type, is_active, sort_order");
+    .eq("is_active", true);
   if (error || !data) return [];
   return (data as Record<string, unknown>[]).map((row) => ({
     id: row.id as string,
@@ -63,9 +63,9 @@ export async function getTenantConcepts(
   if (!db) return [];
   const { data, error } = await db
     .from("tenant_concepts")
+    .select("id, tenant_id, label, cuenta_pnl_id, is_active, sort_order, tenant_cuenta_pnl(cost_type)")
     .eq("tenant_id", tenantId)
-    .eq("is_active", true)
-    .select("id, tenant_id, label, cuenta_pnl_id, is_active, sort_order, tenant_cuenta_pnl(cost_type)");
+    .eq("is_active", true);
   if (error || !data) return [];
   return (data as Record<string, unknown>[]).map((row) => ({
     id: row.id as string,
@@ -103,13 +103,13 @@ export async function getCostTypeForCuenta(
   if (!db || !tenantId || !cuentaLabel) return getCostType(cuentaLabel);
   const { data } = await db
     .from("tenant_cuenta_pnl")
+    .select("cost_type")
     .eq("tenant_id", tenantId)
     .eq("label", cuentaLabel)
+    .eq("is_active", true)
     .single();
   if (!data) return getCostType(cuentaLabel);
-  const row = data as { cost_type: string; is_active?: boolean };
-  if (row.is_active === false) return getCostType(cuentaLabel);
-  return row.cost_type as "food" | "beverage" | "operational";
+  return (data as { cost_type: string }).cost_type as "food" | "beverage" | "operational";
 }
 
 export async function resolveConceptId(
@@ -121,8 +121,10 @@ export async function resolveConceptId(
   if (!db || !tenantId || !conceptLabel) return null;
   const { data } = await db
     .from("tenant_concepts")
+    .select("id, cuenta_pnl_id, tenant_cuenta_pnl(cost_type)")
     .eq("tenant_id", tenantId)
     .eq("label", conceptLabel)
+    .eq("is_active", true)
     .single();
   if (!data) return null;
   const row = data as Record<string, unknown>;
