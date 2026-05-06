@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { ExtractedInvoice, DuplicateMatch } from "@/types";
-import { getCostType } from "@/lib/cost-classification";
 import { normalizeUnit } from "@/lib/unit-normalizer";
+import { getCostTypeForCuenta, getTenantConcepts } from "@/lib/catalogo";
 
 let _client: SupabaseClient | null = null;
 
@@ -40,6 +40,19 @@ export async function saveInvoiceWithItems(
 
   const now = new Date().toISOString();
 
+  // Look up invoice-level cuenta_pnl_id FK before the invoice upsert
+  let invoiceCuentaPnlId: string | null = null;
+  if (tenantId && invoice.cuentaPnl) {
+    const { data: cuentaRow } = await supabase
+      .from("tenant_cuenta_pnl")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("label", invoice.cuentaPnl)
+      .eq("is_active", true)
+      .single();
+    invoiceCuentaPnlId = (cuentaRow as { id: string } | null)?.id ?? null;
+  }
+
   // Upsert invoice header (idempotent on id)
   const { error: invoiceError } = await supabase.from("invoices").upsert(
     {
@@ -54,6 +67,7 @@ export async function saveInvoiceWithItems(
       total: invoice.total,
       concepto: invoice.concepto,
       cuenta_pnl: invoice.cuentaPnl,
+      cuenta_pnl_id: invoiceCuentaPnlId,
       submitted_by: submittedBy,
       // Sheet sync state (written once; updated later by re-sync endpoint)
       sheet_sync_status: sheetSync.status,
@@ -90,7 +104,12 @@ export async function saveInvoiceWithItems(
     return null;
   }
 
-  const costType = getCostType(invoice.cuentaPnl);
+  // Derive cost_type from tenant catálogo; legacy getCostType as fallback
+  const costType = await getCostTypeForCuenta(tenantId ?? "", invoice.cuentaPnl, supabase);
+
+  // Build concept label→row map for line items (one query for all items)
+  const conceptRows = tenantId ? await getTenantConcepts(tenantId, supabase) : [];
+  const conceptMap = new Map(conceptRows.map((c) => [c.label, c]));
 
   // Upsert line items with line_index for idempotency
   const { error: itemsError } = await supabase.from("line_items").upsert(
@@ -109,7 +128,9 @@ export async function saveInvoiceWithItems(
       total: item.total,
       category: item.category ?? null,
       ingredient_id: matchIngredient(item.description),
-      cost_type: costType,
+      cost_type: conceptMap.get(item.category ?? "")?.costType ?? costType,
+      concept_id: conceptMap.get(item.category ?? "")?.id ?? null,
+      cuenta_pnl_id: conceptMap.get(item.category ?? "")?.cuentaPnlId ?? null,
     })),
     { onConflict: "tenant_id,invoice_id,line_index" }
   );
