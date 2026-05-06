@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
+import { seedTenantCatalogo } from "@/lib/catalogo";
 
 const SLUG_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
 
@@ -74,6 +75,13 @@ export async function POST(request: Request) {
     .single();
   if (tenantErr || !tenant) {
     return NextResponse.json({ error: "Error al crear el grupo" }, { status: 500 });
+  }
+
+  // Seed catálogo for new tenant (non-blocking — failure logged, not surfaced)
+  try {
+    await seedTenantCatalogo(tenant.id, "universal", supabase);
+  } catch (err) {
+    console.error("[onboard] Failed to seed tenant catálogo:", err);
   }
 
   // Create restaurants
