@@ -7,11 +7,11 @@ const STEPS = [
     emoji: "👋",
     bg: "linear-gradient(135deg, #0350A9 0%, #3B82F6 100%)",
     title: "¡Bienvenido al sistema!",
-    body: "Te damos la bienvenida al gestor de facturas de **Aventura Gourmet**. En menos de un minuto aprenderás a usar cada función del sistema.",
+    body: "Te damos la bienvenida a **CostoFlow**. En menos de un minuto aprenderás a usar cada función del sistema.",
   },
   {
     emoji: "📤",
-    bg: "linear-gradient(135deg, #C97F7E 0%, #ECB8B7 100%)",
+    bg: "linear-gradient(135deg, #033D82 0%, #4A8AE8 100%)",
     title: "Sube tus facturas",
     body: "Ve a **Subir** y elige el restaurante. Luego arrastra tus **PDFs o fotografías** al área de carga — o toma una foto directo desde tu celular. Puedes subir varias a la vez 🗂️",
   },
