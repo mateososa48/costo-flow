@@ -8,7 +8,7 @@ import { lookupSupplier } from "@/lib/supplier-mapping";
 import { getSession } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getConceptLabels, getCuentaLabels } from "@/lib/catalogo";
-import dropdownOptions from "../../../../data/dropdown_options.json";
+import dropdownOptions from "../../../../../data/dropdown_options.json";
 import getSupabase from "@/lib/supabase";
 import log from "@/lib/logger";
 import type { ExtractedInvoice, Restaurant, ParseApiResponse } from "@/types";
