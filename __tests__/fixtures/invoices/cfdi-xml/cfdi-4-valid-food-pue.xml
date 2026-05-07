@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante
+  xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
+  xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital"
+  Version="4.0"
+  Serie="A"
+  Folio="143439"
+  Fecha="2026-04-02T10:15:00"
+  Sello="SYNTHETIC_NOT_VALID"
+  NoCertificado="30001000000500000001"
+  Certificado="SYNTHETIC_NOT_VALID"
+  SubTotal="1000.00"
+  Moneda="MXN"
+  Total="1160.00"
+  TipoDeComprobante="I"
+  Exportacion="01"
+  MetodoPago="PUE"
+  FormaPago="03"
+  LugarExpedicion="06700">
+  <cfdi:Emisor Rfc="DVP260101ABC" Nombre="DISTRIBUIDORA DE VERDURAS PRUEBA SA DE CV" RegimenFiscal="601"/>
+  <cfdi:Receptor Rfc="MOT260101ABC" Nombre="MOTIN RESTAURANTES PRUEBA SA DE CV" DomicilioFiscalReceptor="06700" RegimenFiscalReceptor="601" UsoCFDI="G03"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="50406500" NoIdentificacion="JITO-SAL" Cantidad="25.000" ClaveUnidad="KGM" Unidad="kg" Descripcion="Jitomate saladet" ValorUnitario="20.00" Importe="500.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="500.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="80.00"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+    <cfdi:Concepto ClaveProdServ="50111500" NoIdentificacion="POLLO-ENTERO" Cantidad="10.000" ClaveUnidad="KGM" Unidad="kg" Descripcion="Pollo entero" ValorUnitario="50.00" Importe="500.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="500.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="80.00"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+  </cfdi:Conceptos>
+  <cfdi:Impuestos TotalImpuestosTrasladados="160.00">
+    <cfdi:Traslados>
+      <cfdi:Traslado Base="1000.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="160.00"/>
+    </cfdi:Traslados>
+  </cfdi:Impuestos>
+  <cfdi:Complemento>
+    <tfd:TimbreFiscalDigital Version="1.1" UUID="99999999-9999-4999-8999-999999999999" FechaTimbrado="2026-04-02T10:15:35" RfcProvCertif="PAC010101ABC" SelloCFD="SYNTHETIC_NOT_VALID" NoCertificadoSAT="30001000000500000002" SelloSAT="SYNTHETIC_NOT_VALID"/>
+  </cfdi:Complemento>
+  <cfdi:Addenda>
+    <test:Notice xmlns:test="urn:costoflow:test">SYNTHETIC FIXTURE - NOT A VALID TAX DOCUMENT</test:Notice>
+  </cfdi:Addenda>
+</cfdi:Comprobante>

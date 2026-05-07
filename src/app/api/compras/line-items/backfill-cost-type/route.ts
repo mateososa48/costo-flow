@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
 import { getCostType } from "@/lib/cost-classification";
+import { isReadonly, readonlyForbidden } from "@/lib/authorization";
 
 // POST /api/compras/line-items/backfill-cost-type
 // For each invoice, derives cost_type from cuenta_pnl and stamps all its line_items.
@@ -9,6 +10,7 @@ import { getCostType } from "@/lib/cost-classification";
 export async function POST(): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (isReadonly(session)) return readonlyForbidden();
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });

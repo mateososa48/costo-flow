@@ -70,7 +70,7 @@ export default function ReviewPage() {
   }
 
   useEffect(() => {
-    document.title = "Revisar facturas — BOH";
+    document.title = "Revisar facturas — CostoFlow";
     const raw = sessionStorage.getItem("invoices");
     if (!raw) { router.push("/upload"); return; }
     try {
@@ -101,8 +101,14 @@ export default function ReviewPage() {
     }, 250);
   }, []);
 
-  const allValid = invoices.every((inv) => inv.concepto && inv.cuentaPnl);
-  const pendingCount = invoices.filter((inv) => !inv.concepto || !inv.cuentaPnl).length;
+  const validConceptoSet = new Set((dropdowns?.concepto ?? []) as string[]);
+  const validCuentaPnlSet = new Set((dropdowns?.cuentaPnl ?? []) as string[]);
+  const isInvoiceValid = (inv: ExtractedInvoice) =>
+    validConceptoSet.size > 0
+      ? validConceptoSet.has(inv.concepto) && validCuentaPnlSet.has(inv.cuentaPnl)
+      : inv.concepto && inv.cuentaPnl;
+  const allValid = invoices.every(isInvoiceValid);
+  const pendingCount = invoices.filter((inv) => !isInvoiceValid(inv)).length;
 
   async function doSubmit(bypass = false) {
     setSubmitting(true);

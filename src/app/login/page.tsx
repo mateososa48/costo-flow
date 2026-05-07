@@ -70,11 +70,11 @@ export default function LoginPage() {
       <div className="login-panel-gradient hidden lg:flex flex-col justify-between w-96 flex-shrink-0 p-10 relative overflow-hidden">
         <div className="relative z-10">
           <p className="font-display text-3xl font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>
-            BOH
+            CostoFlow
           </p>
         </div>
         <div className="relative z-10">
-          <p className="text-white/50 text-sm">Back-of-house automation para restaurantes</p>
+          <p className="text-white/50 text-sm">Control de costos para restaurantes</p>
         </div>
       </div>
 
@@ -84,13 +84,13 @@ export default function LoginPage() {
           <div className="w-full max-w-sm animate-fade-up">
             {/* Mobile logo */}
             <div className="lg:hidden text-center mb-8">
-              <p className="font-display text-2xl font-bold" style={{ color: "var(--text)" }}>BOH</p>
+              <p className="font-display text-2xl font-bold" style={{ color: "var(--text)" }}>CostoFlow</p>
             </div>
 
             <div className="mb-7">
               <h1 className="text-2xl font-semibold" style={{ color: "var(--text)" }}>Iniciar sesión</h1>
               <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-                Accede a tu cuenta de BOH
+                Accede a tu cuenta de CostoFlow
               </p>
             </div>
 

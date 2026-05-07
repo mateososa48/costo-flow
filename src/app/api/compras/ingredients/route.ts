@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
+import { isReadonly, readonlyForbidden } from "@/lib/authorization";
 
 const createSchema = z.object({
   canonicalName: z.string().min(1),
@@ -12,6 +13,7 @@ const createSchema = z.object({
 export async function GET(): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (isReadonly(session)) return readonlyForbidden();
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });

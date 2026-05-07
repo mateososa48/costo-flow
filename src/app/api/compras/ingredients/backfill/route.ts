@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
+import { isReadonly, readonlyForbidden } from "@/lib/authorization";
 
 // POST /api/compras/ingredients/backfill
 // Propagates each tenant ingredient's category to all linked line_items.
 export async function POST(): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (isReadonly(session)) return readonlyForbidden();
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });

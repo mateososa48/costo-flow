@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
 import { normalizeUnit } from "@/lib/unit-normalizer";
+import { isReadonly, readonlyForbidden } from "@/lib/authorization";
 
 // POST /api/compras/line-items/backfill-units
 // Re-normalizes unit_normalized for all line_items using the server-side normalizer.
@@ -9,6 +10,7 @@ import { normalizeUnit } from "@/lib/unit-normalizer";
 export async function POST(): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (isReadonly(session)) return readonlyForbidden();
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });

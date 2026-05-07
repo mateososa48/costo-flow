@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
+import { loadFoodData, summarizeFoodData } from "@/lib/analytics/food-cost";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const session = await getSession();
@@ -15,32 +16,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const searchParams = request.nextUrl.searchParams;
   const restaurant = searchParams.get("restaurant");
+  const supplier = searchParams.get("supplier");
+  const search = searchParams.get("search");
+  const category = searchParams.get("category");
   const dateFrom = searchParams.get("dateFrom");
   const dateTo = searchParams.get("dateTo");
 
-  // Get all line items matching filters for aggregation
-  let query = supabase.from("line_items").select("total, supplier");
-  if (session.tenantId) query = query.eq("tenant_id", session.tenantId);
-  query = query.is("deleted_at", null);
-  if (restaurant) query = query.eq("restaurant", restaurant);
-  if (dateFrom) query = query.gte("invoice_date", dateFrom);
-  if (dateTo) query = query.lte("invoice_date", dateTo);
-
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  const items = data ?? [];
-  const totalItems = items.length;
-  const totalSpend = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+  const data = await loadFoodData(supabase, session.tenantId, {
+    restaurant: restaurant ?? undefined,
+    supplier: supplier ?? undefined,
+    search: search ?? undefined,
+    category: category ?? undefined,
+    dateFrom: dateFrom ?? undefined,
+    dateTo: dateTo ?? undefined,
+  });
+  const summary = summarizeFoodData(data.items, data.invoices);
   const supplierSet = new Set<string>();
-  for (const item of items) {
-    if (item.supplier) supplierSet.add(item.supplier);
-  }
+  for (const item of data.items) supplierSet.add(item.supplier);
 
   return NextResponse.json({
-    totalItems,
-    totalSpend,
-    uniqueSuppliers: supplierSet.size,
+    totalItems: summary.itemCount,
+    totalSpend: summary.totalSpend,
+    uniqueSuppliers: summary.supplierCount,
     supplierList: Array.from(supplierSet).sort(),
   }, {
     headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" },

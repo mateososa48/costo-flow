@@ -1,0 +1,91 @@
+[
+  {
+    "id": "cfdi-4-valid-food-pue",
+    "file": "cfdi-xml/cfdi-4-valid-food-pue.xml",
+    "purpose": "Valid CFDI-like ingreso for food purchases, paid at issuance.",
+    "expected": {
+      "tipoComprobante": "I",
+      "metodoPago": "PUE",
+      "shouldBookExpense": true,
+      "shouldRequirePaymentComplement": false,
+      "shouldRequireReview": false
+    }
+  },
+  {
+    "id": "cfdi-4-ppd-original",
+    "file": "cfdi-xml/cfdi-4-ppd-original.xml",
+    "purpose": "Deferred/partial payment invoice that should be booked but tracked for payment complement.",
+    "expected": {
+      "tipoComprobante": "I",
+      "metodoPago": "PPD",
+      "shouldBookExpense": true,
+      "shouldRequirePaymentComplement": true,
+      "paymentComplementUuid": "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB"
+    }
+  },
+  {
+    "id": "cfdi-4-payment-complement",
+    "file": "cfdi-xml/cfdi-4-payment-complement.xml",
+    "purpose": "Payment CFDI that links to the PPD invoice and should not be booked as a new expense.",
+    "expected": {
+      "tipoComprobante": "P",
+      "shouldBookExpense": false,
+      "shouldLinkToInvoiceUuid": "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"
+    }
+  },
+  {
+    "id": "cfdi-4-credit-note-egreso",
+    "file": "cfdi-xml/cfdi-4-credit-note-egreso.xml",
+    "purpose": "Egreso credit note related to an original invoice.",
+    "expected": {
+      "tipoComprobante": "E",
+      "shouldBookExpense": false,
+      "shouldApplyAsCredit": true,
+      "relatedUuid": "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"
+    }
+  },
+  {
+    "id": "cfdi-4-mixed-taxes-ieps",
+    "file": "cfdi-xml/cfdi-4-mixed-taxes-ieps.xml",
+    "purpose": "Invoice with multiple tax transfers, useful for tax parsing and total reconciliation.",
+    "expected": {
+      "tipoComprobante": "I",
+      "hasMultipleTaxTypes": true,
+      "taxes": ["002", "003"],
+      "shouldRequireReview": false
+    }
+  },
+  {
+    "id": "cfdi-4-carta-porte-31",
+    "file": "cfdi-xml/cfdi-4-carta-porte-31.xml",
+    "purpose": "Transportation-service invoice with Carta Porte 3.1 complement.",
+    "expected": {
+      "tipoComprobante": "I",
+      "hasCartaPorte": true,
+      "cartaPorteVersion": "3.1",
+      "shouldStoreComplement": true
+    }
+  },
+  {
+    "id": "cfdi-4-replacement-with-related",
+    "file": "cfdi-xml/cfdi-4-replacement-with-related.xml",
+    "purpose": "Replacement invoice using CFDI relation type 04.",
+    "expected": {
+      "tipoComprobante": "I",
+      "relationType": "04",
+      "replacesUuid": "CCCCCCCC-CCCC-4CCC-8CCC-CCCCCCCCCCCC",
+      "shouldSupersedeOldInvoice": true
+    }
+  },
+  {
+    "id": "cfdi-4-missing-timbre",
+    "file": "cfdi-xml/cfdi-4-missing-timbre.xml",
+    "purpose": "Looks invoice-like but lacks TimbreFiscalDigital; should fail fiscal validation.",
+    "expected": {
+      "shouldParseXml": true,
+      "shouldPassFiscalValidation": false,
+      "validationError": "missing_timbre"
+    }
+  }
+]
+

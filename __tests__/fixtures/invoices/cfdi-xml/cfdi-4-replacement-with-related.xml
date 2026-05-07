@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante
+  xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
+  xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital"
+  Version="4.0"
+  Serie="R"
+  Folio="7789"
+  Fecha="2026-04-20T10:00:00"
+  Sello="SYNTHETIC_NOT_VALID"
+  NoCertificado="30001000000500000013"
+  Certificado="SYNTHETIC_NOT_VALID"
+  SubTotal="750.00"
+  Moneda="MXN"
+  Total="870.00"
+  TipoDeComprobante="I"
+  Exportacion="01"
+  MetodoPago="PUE"
+  FormaPago="03"
+  LugarExpedicion="06700">
+  <cfdi:CfdiRelacionados TipoRelacion="04">
+    <cfdi:CfdiRelacionado UUID="CCCCCCCC-CCCC-4CCC-8CCC-CCCCCCCCCCCC"/>
+  </cfdi:CfdiRelacionados>
+  <cfdi:Emisor Rfc="LAC260101ABC" Nombre="LACTEOS CORREGIDOS PRUEBA SA DE CV" RegimenFiscal="601"/>
+  <cfdi:Receptor Rfc="MOT260101ABC" Nombre="MOTIN RESTAURANTES PRUEBA SA DE CV" DomicilioFiscalReceptor="06700" RegimenFiscalReceptor="601" UsoCFDI="G03"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="50131700" Cantidad="15" ClaveUnidad="KGM" Unidad="kg" Descripcion="Queso Oaxaca" ValorUnitario="50.00" Importe="750.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="750.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="120.00"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+  </cfdi:Conceptos>
+  <cfdi:Impuestos TotalImpuestosTrasladados="120.00">
+    <cfdi:Traslados>
+      <cfdi:Traslado Base="750.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="120.00"/>
+    </cfdi:Traslados>
+  </cfdi:Impuestos>
+  <cfdi:Complemento>
+    <tfd:TimbreFiscalDigital Version="1.1" UUID="12121212-1212-4121-8121-121212121212" FechaTimbrado="2026-04-20T10:00:30" RfcProvCertif="PAC010101ABC" SelloCFD="SYNTHETIC_NOT_VALID" NoCertificadoSAT="30001000000500000014" SelloSAT="SYNTHETIC_NOT_VALID"/>
+  </cfdi:Complemento>
+</cfdi:Comprobante>
+

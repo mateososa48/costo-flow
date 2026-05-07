@@ -10,7 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Aventura / Motín brand palette
+        // CostoFlow brand palette
         brand: {
           bg: "#1a1714",         // warm dark background
           surface: "#211e1b",    // card surface

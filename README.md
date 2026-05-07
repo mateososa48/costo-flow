@@ -1,6 +1,6 @@
-# Aventura Gourmet — Invoice Processing Webapp
+# CostoFlow
 
-Internal webapp for Aventura Gourmet BOH admins to upload supplier invoices (PDFs or photos), extract key fields using AI vision, and append results to the correct monthly Google Sheets P&L workbook. Also provides a Compras (purchasing) dashboard for browsing, editing, and analyzing line-item data stored in Supabase.
+Restaurant cost management webapp for uploading supplier invoices (PDFs or photos), extracting key fields with AI vision, and syncing clean data into monthly Google Sheets P&L workbooks. CostoFlow also provides purchasing and expense dashboards for browsing, editing, and analyzing line-item data stored in Supabase.
 
 ---
 
@@ -278,8 +278,8 @@ Copy `.env.example` to `.env.local` and fill in all values.
 
 ```env
 # Auth
-ADMIN_NAMES="Maria,Juan,Sofia,Carlos"   # Comma-separated names for login dropdown
-SHARED_PASSWORD="..."                    # Shared password for all users
+ADMIN_NAMES="Ana,Luis,Sofia,Carlos"      # Legacy auth names; Supabase Auth is the active login flow
+SHARED_PASSWORD="..."                    # Legacy shared password; kept for older environments
 SESSION_PASSWORD="..."                   # >=32 random chars — signs session cookies
 
 # OpenAI

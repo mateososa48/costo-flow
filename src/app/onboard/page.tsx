@@ -226,7 +226,7 @@ function Step1({
             <span>
               Tu URL de acceso:{" "}
               <span className="font-mono" style={{ color: "var(--text-muted)" }}>
-                boh-saas.vercel.app/login?tenant=
+                costoflow.vercel.app/login?tenant=
               </span>
               <span className="font-mono font-medium" style={{ color: "var(--text)" }}>
                 {groupSlug || "…"}
@@ -542,7 +542,7 @@ export default function OnboardPage() {
       {/* Top bar */}
       <header className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--border-subtle)" }}>
         <p className="font-display text-lg font-bold" style={{ fontFamily: "var(--font-display)", color: "var(--text)" }}>
-          BOH
+          CostoFlow
         </p>
         <p className="text-xs" style={{ color: "var(--text-dim)" }}>Crea tu cuenta gratuita</p>
       </header>

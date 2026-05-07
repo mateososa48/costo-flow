@@ -1,0 +1,155 @@
+[
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "restaurant": "motin_juarez",
+    "invoiceDate": "2026-04-02",
+    "supplier": "DISTRIBUIDORA DE VERDURAS PRUEBA SA DE CV",
+    "invoiceNumber": "143439",
+    "importe": 1000,
+    "iva": 160,
+    "total": 1160,
+    "concepto": "Frutas y Verduras",
+    "cuentaPnl": "Costo de Alimentos",
+    "comments": "",
+    "lineItems": [
+      {
+        "description": "Jitomate saladet",
+        "quantity": 25,
+        "unit": "kg",
+        "unitNormalized": "kg",
+        "unitPrice": 20,
+        "total": 500,
+        "category": "Frutas y Verduras"
+      },
+      {
+        "description": "Pollo entero",
+        "quantity": 10,
+        "unit": "kg",
+        "unitNormalized": "kg",
+        "unitPrice": 50,
+        "total": 500,
+        "category": "Aves"
+      }
+    ],
+    "extractionConfidence": 0.97,
+    "mathWarning": false,
+    "extractionMethod": "llm_text",
+    "fileUrl": "invoices/11111111-1111-4111-8111-111111111111.xml"
+  },
+  {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "restaurant": "motin_juarez",
+    "invoiceDate": "2026-04-03",
+    "supplier": "PANADERIA SIN IVA PRUEBA SA DE CV",
+    "invoiceNumber": "9001",
+    "importe": 850,
+    "iva": 0,
+    "total": 850,
+    "concepto": "Pan y Tortillas",
+    "cuentaPnl": "Costo de Alimentos",
+    "comments": "No IVA shown on source document.",
+    "lineItems": [
+      {
+        "description": "Bolillo",
+        "quantity": 100,
+        "unit": "pz",
+        "unitNormalized": "pz",
+        "unitPrice": 8.5,
+        "total": 850,
+        "category": "Pan y Tortillas"
+      }
+    ],
+    "extractionConfidence": 0.91,
+    "mathWarning": false,
+    "extractionMethod": "llm_vision"
+  },
+  {
+    "id": "33333333-3333-4333-8333-333333333333",
+    "restaurant": "motin_roma",
+    "invoiceDate": "2026-04-04",
+    "supplier": "PROVEEDOR DECIMAL PRUEBA SA DE CV",
+    "invoiceNumber": "21180",
+    "importe": 230,
+    "iva": 36.8,
+    "total": 266.8,
+    "concepto": "Lacteos",
+    "cuentaPnl": "Costo de Alimentos",
+    "comments": "Source displayed 230.000; expected app behavior is 230.00, not 230000.",
+    "lineItems": [
+      {
+        "description": "Queso fresco",
+        "quantity": 1,
+        "unit": "kg",
+        "unitNormalized": "kg",
+        "unitPrice": 230,
+        "total": 230,
+        "category": "Lacteos"
+      }
+    ],
+    "extractionConfidence": 0.84,
+    "mathWarning": false,
+    "extractionMethod": "llm_vision"
+  },
+  {
+    "id": "44444444-4444-4444-8444-444444444444",
+    "restaurant": "queseria",
+    "invoiceDate": "2026-04-05",
+    "supplier": "NUMEROS QUE NO CUADRAN PRUEBA SA DE CV",
+    "invoiceNumber": "7007",
+    "importe": 1000,
+    "iva": 160,
+    "total": 1300,
+    "concepto": "Carnes",
+    "cuentaPnl": "Costo de Alimentos",
+    "comments": "Expected parse route to lower confidence and set mathWarning.",
+    "lineItems": [
+      {
+        "description": "Arrachera",
+        "quantity": 5,
+        "unit": "kg",
+        "unitNormalized": "kg",
+        "unitPrice": 200,
+        "total": 1000,
+        "category": "Carnes"
+      }
+    ],
+    "extractionConfidence": 0.4,
+    "mathWarning": true,
+    "extractionMethod": "llm_text"
+  },
+  {
+    "id": "55555555-5555-4555-8555-555555555555",
+    "restaurant": "motin_juarez",
+    "invoiceDate": "2026-04-06",
+    "supplier": "CLASIFICACION PENDIENTE PRUEBA SA DE CV",
+    "invoiceNumber": "8080",
+    "importe": 1200,
+    "iva": 192,
+    "total": 1392,
+    "concepto": "",
+    "cuentaPnl": "",
+    "comments": "Valid parse output but review must block submit until dropdowns are selected.",
+    "lineItems": [],
+    "extractionConfidence": 0.62,
+    "mathWarning": false,
+    "extractionMethod": "llm_vision"
+  },
+  {
+    "id": "66666666-6666-4666-8666-666666666666",
+    "restaurant": "motin_juarez",
+    "invoiceDate": "2026-04-07",
+    "supplier": "DROPDOWN INVALIDO PRUEBA SA DE CV",
+    "invoiceNumber": "9090",
+    "importe": 500,
+    "iva": 80,
+    "total": 580,
+    "concepto": "Categoria Que No Existe",
+    "cuentaPnl": "Cuenta Que No Existe",
+    "comments": "Submit schema should reject non-empty invalid dropdown values.",
+    "lineItems": [],
+    "extractionConfidence": 0.75,
+    "mathWarning": false,
+    "extractionMethod": "llm_text"
+  }
+]
+

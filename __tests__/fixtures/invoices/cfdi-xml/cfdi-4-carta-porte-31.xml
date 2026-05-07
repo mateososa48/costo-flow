@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante
+  xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
+  xmlns:cartaporte31="http://www.sat.gob.mx/CartaPorte31"
+  xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital"
+  Version="4.0"
+  Serie="CP"
+  Folio="3100"
+  Fecha="2026-04-12T06:20:00"
+  Sello="SYNTHETIC_NOT_VALID"
+  NoCertificado="30001000000500000011"
+  Certificado="SYNTHETIC_NOT_VALID"
+  SubTotal="3000.00"
+  Moneda="MXN"
+  Total="3480.00"
+  TipoDeComprobante="I"
+  Exportacion="01"
+  MetodoPago="PUE"
+  FormaPago="03"
+  LugarExpedicion="06700">
+  <cfdi:Emisor Rfc="TRA260101ABC" Nombre="TRANSPORTES REFRIGERADOS PRUEBA SA DE CV" RegimenFiscal="624"/>
+  <cfdi:Receptor Rfc="MOT260101ABC" Nombre="MOTIN RESTAURANTES PRUEBA SA DE CV" DomicilioFiscalReceptor="06700" RegimenFiscalReceptor="601" UsoCFDI="G03"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="78101802" Cantidad="1" ClaveUnidad="E48" Unidad="servicio" Descripcion="Servicio de transporte refrigerado de alimentos" ValorUnitario="3000.00" Importe="3000.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="3000.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="480.00"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+  </cfdi:Conceptos>
+  <cfdi:Impuestos TotalImpuestosTrasladados="480.00">
+    <cfdi:Traslados>
+      <cfdi:Traslado Base="3000.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="480.00"/>
+    </cfdi:Traslados>
+  </cfdi:Impuestos>
+  <cfdi:Complemento>
+    <cartaporte31:CartaPorte Version="3.1" IdCCP="CCC11111-2222-4333-8444-555555555555" TranspInternac="No" TotalDistRec="12.50">
+      <cartaporte31:Ubicaciones>
+        <cartaporte31:Ubicacion TipoUbicacion="Origen" RFCRemitenteDestinatario="TRA260101ABC" FechaHoraSalidaLlegada="2026-04-12T06:00:00">
+          <cartaporte31:Domicilio Pais="MEX" CodigoPostal="54000"/>
+        </cartaporte31:Ubicacion>
+        <cartaporte31:Ubicacion TipoUbicacion="Destino" RFCRemitenteDestinatario="MOT260101ABC" FechaHoraSalidaLlegada="2026-04-12T07:00:00" DistanciaRecorrida="12.50">
+          <cartaporte31:Domicilio Pais="MEX" CodigoPostal="06700"/>
+        </cartaporte31:Ubicacion>
+      </cartaporte31:Ubicaciones>
+      <cartaporte31:Mercancias PesoBrutoTotal="120.00" UnidadPeso="KGM" NumTotalMercancias="1">
+        <cartaporte31:Mercancia BienesTransp="50111500" Descripcion="Alimentos refrigerados" Cantidad="120.00" ClaveUnidad="KGM" PesoEnKg="120.00"/>
+      </cartaporte31:Mercancias>
+    </cartaporte31:CartaPorte>
+    <tfd:TimbreFiscalDigital Version="1.1" UUID="FFFFFFFF-FFFF-4FFF-8FFF-FFFFFFFFFFFF" FechaTimbrado="2026-04-12T06:20:30" RfcProvCertif="PAC010101ABC" SelloCFD="SYNTHETIC_NOT_VALID" NoCertificadoSAT="30001000000500000012" SelloSAT="SYNTHETIC_NOT_VALID"/>
+  </cfdi:Complemento>
+</cfdi:Comprobante>
+

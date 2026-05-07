@@ -48,7 +48,7 @@ function RestaurantPill({ name }: { name: string }) {
   return (
     <span style={{
       display: "inline-block",
-      padding: "2px 10px",
+      padding: "1px 5px",
       borderRadius: 6,
       fontSize: 11,
       fontWeight: 500,
@@ -228,11 +228,11 @@ export default function InvoicesView({
   return (
     <>
       <style>{`
-        @keyframes boh-slideInRight {
+        @keyframes costoflow-slideInRight {
           from { transform: translateX(100%); }
           to   { transform: translateX(0); }
         }
-        @keyframes boh-backdropIn {
+        @keyframes costoflow-backdropIn {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
@@ -252,8 +252,8 @@ export default function InvoicesView({
       `}</style>
 
       {/* ── Toolbar ── */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="relative" style={{ width: 220, flexShrink: 0 }}>
+      <div className="flex items-center gap-2">
+        <div className="relative" style={{ flex: "1 1 0", minWidth: 0 }}>
           <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: "var(--text-muted)" }}>
             <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3" />
             <path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -313,25 +313,32 @@ export default function InvoicesView({
           )}
 
           <button type="button"
-            className="px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-all duration-100"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-all duration-100"
             style={{
-              background: invoiceSelectMode ? "var(--surface-raised)" : "transparent",
+              background: invoiceSelectMode ? "var(--surface-raised)" : "var(--surface)",
               color: invoiceSelectMode ? "var(--text)" : "var(--text-muted)",
-              border: "1px solid var(--border-subtle)",
+              border: "1px solid var(--border)",
             }}
             onClick={() => { setInvoiceSelectMode((m) => !m); setSelectedInvoiceIds(new Set()); }}>
+            {invoiceSelectMode
+              ? <svg width="11" height="11" viewBox="0 0 10 10" fill="none"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              : <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.4"/><rect x="9" y="2" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.4"/><rect x="2" y="9" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.4"/><rect x="9" y="9" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.4"/></svg>
+            }
             {invoiceSelectMode ? "Cancelar" : "Seleccionar"}
-            {invoiceSelectMode && selectedInvoiceIds.size > 0 && <span className="ml-1 font-semibold">({selectedInvoiceIds.size})</span>}
+            {invoiceSelectMode && selectedInvoiceIds.size > 0 && <span className="font-semibold">({selectedInvoiceIds.size})</span>}
           </button>
 
           <button type="button"
-            className="ml-auto px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-all duration-100"
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-all duration-100"
             style={{
-              background: showPapelera ? "var(--surface-raised)" : "transparent",
-              color: "var(--text-muted)",
-              border: "1px solid var(--border-subtle)",
+              background: showPapelera ? "var(--surface-raised)" : "var(--surface)",
+              color: showPapelera ? "var(--text)" : "var(--text-muted)",
+              border: "1px solid var(--border)",
             }}
             onClick={() => setShowPapelera((v) => !v)}>
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+              <path d="M6 2h4M2 5h12M4.5 5l.8 8.5a.5.5 0 00.5.5h4.4a.5.5 0 00.5-.5L11.5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
             Papelera{deletedInvoices.length > 0 && !showPapelera ? ` (${deletedInvoices.length})` : ""}
           </button>
         </div>
@@ -339,9 +346,9 @@ export default function InvoicesView({
 
 
       {/* ── Invoices table ── */}
-      <div>
+      <div style={{ marginTop: 24 }}>
         {/* Column headers */}
-        <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: 36, borderBottom: "1px solid var(--text)", background: "transparent", padding: "0 4px 0 0" }}>
+        <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: 36, borderBottom: "0.8px solid var(--text-muted)", background: "transparent", padding: "0 4px 0 0" }}>
           <span />
           <span style={{ ...COL_HEADER, paddingLeft: 8 }}>Proveedor</span>
           <span style={{ ...COL_HEADER, textAlign: "right" }}>Factura</span>
@@ -383,11 +390,11 @@ export default function InvoicesView({
                   alignItems: "center",
                   height: 50,
                   padding: "0 4px 0 0",
-                  borderBottom: isExpanded ? "none" : "1px solid var(--text)",
+                  borderBottom: isExpanded ? "none" : "0.8px solid var(--text-muted)",
                   background: isSelected
                     ? "color-mix(in srgb, var(--blue) 6%, transparent)"
                     : isExpanded
-                    ? "var(--surface-raised)"
+                    ? "transparent"
                     : "transparent",
                   cursor: "pointer",
                   transition: "background 100ms ease",
@@ -435,7 +442,7 @@ export default function InvoicesView({
                 </div>
 
                 {/* Total */}
-                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", textAlign: "right", padding: "0 12px", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.025em" }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--blue)", textAlign: "right", padding: "0 12px", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.025em" }}>
                   {formatCurrency(inv.total)}
                 </span>
 
@@ -471,7 +478,7 @@ export default function InvoicesView({
                     transition={{ duration: 0.2, ease: "easeInOut" }}
                     style={{ overflow: "hidden" }}
                   >
-                    <div style={{ background: "var(--surface-raised)", borderBottom: "1px solid var(--text)", borderTop: "1px solid var(--text)" }}>
+                    <div style={{ background: "var(--bg)", borderBottom: "0.8px solid var(--text-muted)", borderTop: "0.8px solid var(--bg" }}>
                       {/* File / notes strip */}
                       {(inv.file_url || inv.concepto || inv.comments) && (
                         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 20px 6px 44px", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
@@ -510,7 +517,7 @@ export default function InvoicesView({
                             </div>
                           ))}
                           {/* Total row */}
-                          <div style={{ display: "flex", justifyContent: "flex-end", padding: "6px 20px 7px", borderTop: "2px solid var(--text)" }}>
+                          <div style={{ display: "flex", justifyContent: "flex-end", padding: "6px 20px 7px", borderTop: "1px solid var(--border)" }}>
                             <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>{formatCurrency(inv.total)}</span>
                           </div>
                         </>
@@ -559,10 +566,10 @@ export default function InvoicesView({
       {/* ── Edit drawer ── */}
       {editDrawerId && (
         <div className="fixed inset-0 z-50 flex justify-end"
-          style={{ background: "rgba(0,0,0,0.48)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)", animation: "boh-backdropIn 0.2s ease" }}
+          style={{ background: "rgba(0,0,0,0.48)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)", animation: "costoflow-backdropIn 0.2s ease" }}
           onClick={closeEditDrawer}>
           <div className="relative h-full flex flex-col"
-            style={{ width: "min(380px, 92vw)", background: "var(--surface)", borderLeft: "1px solid var(--border)", boxShadow: "-24px 0 64px rgba(0,0,0,0.18)", animation: "boh-slideInRight 0.28s cubic-bezier(0.32,0.72,0,1)" }}
+            style={{ width: "min(380px, 92vw)", background: "var(--surface)", borderLeft: "1px solid var(--border)", boxShadow: "-24px 0 64px rgba(0,0,0,0.18)", animation: "costoflow-slideInRight 0.28s cubic-bezier(0.32,0.72,0,1)" }}
             onClick={(e) => e.stopPropagation()}>
             {/* Drawer header */}
             <div className="px-5 pt-5 pb-4 border-b" style={{ borderColor: "var(--border-subtle)" }}>

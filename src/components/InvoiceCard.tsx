@@ -44,8 +44,10 @@ export default function InvoiceCard({
   onChange,
   onRemove,
 }: InvoiceCardProps) {
-  const needsConcepto   = !invoice.concepto;
-  const needsCuentaPnl  = !invoice.cuentaPnl;
+  const validConceptos  = new Set(conceitoOptions.map((o) => o.value));
+  const validCuentas    = new Set(cuentaPnlOptions.map((o) => o.value));
+  const needsConcepto   = !invoice.concepto || (validConceptos.size > 0 && !validConceptos.has(invoice.concepto));
+  const needsCuentaPnl  = !invoice.cuentaPnl || (validCuentas.size > 0 && !validCuentas.has(invoice.cuentaPnl));
   const hasRequiredGaps = needsConcepto || needsCuentaPnl;
 
   const [expanded, setExpanded] = useState(hasRequiredGaps);

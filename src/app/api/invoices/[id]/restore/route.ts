@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
+import { isReadonly, readonlyForbidden } from "@/lib/authorization";
 
 export async function POST(
   _req: NextRequest,
@@ -8,6 +9,7 @@ export async function POST(
 ): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (isReadonly(session)) return readonlyForbidden();
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });

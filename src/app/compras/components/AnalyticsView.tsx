@@ -19,6 +19,16 @@ export default function AnalyticsView({
 }: AnalyticsViewProps) {
   return (
     <div className="space-y-4">
+      {!analyticsLoading && (
+        <div className="rounded-[var(--radius)] border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+          <p className="text-sm font-medium" style={{ color: "var(--text)" }}>Inteligencia de costos</p>
+          <a href="/analytics" className="text-sm font-semibold" style={{ color: "var(--blue)" }}>
+            Abrir Inteligencia
+          </a>
+        </div>
+      )}
+
       {analyticsLoading && <SkeletonAnalytics />}
 
       {!analyticsLoading && analyticsData && (() => {
@@ -54,7 +64,7 @@ export default function AnalyticsView({
               {[
                 { label: "Facturas", value: d.kpis.uniqueInvoices.toLocaleString("es-MX") },
                 { label: "Proveedores", value: d.kpis.uniqueSuppliers.toLocaleString("es-MX") },
-                { label: "Prom / Factura", value: formatCurrency(d.kpis.avgPerInvoice) },
+                { label: "Promedio/factura", value: formatCurrency(d.kpis.avgPerInvoice) },
               ].map(kpi => (
                 <div key={kpi.label} className="rounded-[var(--radius)] border p-4"
                   style={{ borderColor: "var(--border)", background: "var(--surface)" }}>

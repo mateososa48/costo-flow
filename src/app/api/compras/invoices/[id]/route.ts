@@ -5,6 +5,7 @@ import getSupabase from "@/lib/supabase";
 import { getCostType } from "@/lib/cost-classification";
 import { appendAuditEntries } from "@/lib/audit-log";
 import log from "@/lib/logger";
+import { isReadonly, readonlyForbidden } from "@/lib/authorization";
 
 const updateSchema = z.object({
   cuentaPnl: z.string().min(1),
@@ -16,6 +17,7 @@ export async function PUT(
 ): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (isReadonly(session)) return readonlyForbidden();
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
@@ -76,6 +78,7 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (isReadonly(session)) return readonlyForbidden();
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });

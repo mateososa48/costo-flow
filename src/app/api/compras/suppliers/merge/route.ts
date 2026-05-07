@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
+import { isReadonly, readonlyForbidden } from "@/lib/authorization";
 
 const SETTINGS_KEY = "supplier_tags";
 
@@ -13,6 +14,7 @@ const bodySchema = z.object({
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (isReadonly(session)) return readonlyForbidden();
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });

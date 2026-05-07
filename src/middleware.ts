@@ -6,6 +6,7 @@ const PROTECTED_PREFIXES = [
   "/review",
   "/success",
   "/history",
+  "/analytics",
   "/settings",
   "/compras",
   "/gastos",

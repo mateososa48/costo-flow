@@ -986,7 +986,7 @@ export default function SettingsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    document.title = "Configuración — BOH";
+    document.title = "Configuración — CostoFlow";
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => {

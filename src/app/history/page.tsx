@@ -74,7 +74,7 @@ export default function HistoryPage() {
   const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
-    document.title = "Historial — Aventura Gourmet";
+    document.title = "Historial — CostoFlow";
     fetch("/api/audit-log")
       .then((r) => (r.ok ? r.json() : { entries: [] }))
       .then((d) => setEntries(d.entries ?? []))

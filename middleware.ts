@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const protectedPaths = ["/upload", "/review", "/success", "/history", "/settings", "/compras", "/gastos"];
+const protectedPaths = ["/upload", "/review", "/success", "/history", "/analytics", "/settings", "/compras", "/gastos"];
 
 function redirectToLogin(request: NextRequest) {
   const loginUrl = new URL("/login", request.url);
@@ -54,6 +54,7 @@ export const config = {
     "/review/:path*",
     "/success/:path*",
     "/history/:path*",
+    "/analytics/:path*",
     "/settings/:path*",
     "/compras/:path*",
     "/gastos/:path*",

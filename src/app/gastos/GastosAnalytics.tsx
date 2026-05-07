@@ -52,7 +52,7 @@ export default function GastosAnalytics({ analytics }: { analytics: AnalyticsDat
         {[
           { label: "Facturas", value: analytics.kpis.invoiceCount.toLocaleString("es-MX") },
           { label: "Proveedores", value: analytics.kpis.uniqueSuppliers.toLocaleString("es-MX") },
-          { label: "Prom / Factura", value: fmt(avgPerInvoice) },
+          { label: "Promedio/factura", value: fmt(avgPerInvoice) },
         ].map(kpi => (
           <div key={kpi.label} className="rounded-[var(--radius)] border p-4"
             style={{ borderColor: "var(--border)", background: "var(--surface)" }}>

@@ -53,7 +53,7 @@ export default function SuccessPage() {
   const [result, setResult] = useState<SubmitApiResponse | null>(null);
 
   useEffect(() => {
-    document.title = "Facturas registradas — BOH";
+    document.title = "Facturas registradas — CostoFlow";
     const raw = sessionStorage.getItem("submitResult");
     if (!raw) { router.push("/upload"); return; }
     try { setResult(JSON.parse(raw) as SubmitApiResponse); }

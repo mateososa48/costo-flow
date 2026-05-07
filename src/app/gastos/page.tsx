@@ -167,7 +167,7 @@ export default function GastosPage() {
   }
 
   useEffect(() => {
-    document.title = "Gastos Operativos — Aventura Gourmet";
+    document.title = "Gastos Operativos — CostoFlow";
     fetchStats();
     // Fetch tenant restaurants for filter dropdown
     fetch("/api/config/dropdowns")
@@ -271,8 +271,8 @@ export default function GastosPage() {
               {[
                 { key: "thisMonth", label: "Este mes" },
                 { key: "lastMonth", label: "Mes pasado" },
-                { key: "last30", label: "Últ. 30d" },
-                { key: "ytd", label: "YTD" },
+                { key: "last30", label: "Últimos 30 días" },
+                { key: "ytd", label: "Año actual" },
               ].map(({ key, label }) => (
                 <button key={key} type="button" onClick={() => applyPreset(key)}
                   className="text-xs px-2 py-1.5 rounded border transition-colors duration-150"
@@ -318,7 +318,7 @@ export default function GastosPage() {
             <FilterChips
               chips={[
                 ...(restaurant ? [{ label: restaurantOptions.find((r) => r.value === restaurant)?.label ?? restaurant, onRemove: () => setRestaurant("") }] : []),
-                ...(activePreset ? [{ label: activePreset === "thisMonth" ? "Este mes" : activePreset === "lastMonth" ? "Mes pasado" : activePreset === "last30" ? "Últ. 30d" : "YTD", onRemove: () => { setActivePreset(""); setDateFrom(""); setDateTo(""); } }] : []),
+                ...(activePreset ? [{ label: activePreset === "thisMonth" ? "Este mes" : activePreset === "lastMonth" ? "Mes pasado" : activePreset === "last30" ? "Últimos 30 días" : "Año actual", onRemove: () => { setActivePreset(""); setDateFrom(""); setDateTo(""); } }] : []),
                 ...(!activePreset && dateFrom ? [{ label: `Desde ${dateFrom}`, onRemove: () => setDateFrom("") }] : []),
                 ...(!activePreset && dateTo ? [{ label: `Hasta ${dateTo}`, onRemove: () => setDateTo("") }] : []),
               ]}

@@ -25,6 +25,7 @@ export default function ComprasPage() {
   const [restaurant, setRestaurant] = useState("");
   const [restaurantOptions, setRestaurantOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [supplier, setSupplier] = useState("");
+  const [category, setCategory] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
@@ -63,16 +64,28 @@ export default function ComprasPage() {
   // ── Fetchers ──────────────────────────────────────────────────────
   const fetchAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
+    setError("");
     try {
       const params = new URLSearchParams();
       if (restaurant) params.set("restaurant", restaurant);
+      if (supplier) params.set("supplier", supplier);
+      if (category) params.set("category", category);
+      if (search) params.set("search", search);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo) params.set("dateTo", dateTo);
       const res = await fetch(`/api/compras/analytics?${params}`);
-      if (res.ok) setAnalyticsData(await res.json());
-    } catch { /* ignore */ }
+      if (!res.ok) {
+        setAnalyticsData(null);
+        setError("Error al cargar análisis");
+        return;
+      }
+      setAnalyticsData(await res.json());
+    } catch {
+      setAnalyticsData(null);
+      setError("Error de conexión");
+    }
     finally { setAnalyticsLoading(false); }
-  }, [restaurant, dateFrom, dateTo]);
+  }, [restaurant, supplier, category, search, dateFrom, dateTo]);
 
   const fetchNormalize = useCallback(async () => {
     setNormalizeLoading(true);
@@ -94,13 +107,16 @@ export default function ComprasPage() {
   const fetchStats = useCallback(async () => {
     try {
       const params = new URLSearchParams();
+      if (search) params.set("search", search);
       if (restaurant) params.set("restaurant", restaurant);
+      if (supplier) params.set("supplier", supplier);
+      if (category) params.set("category", category);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo) params.set("dateTo", dateTo);
       const res = await fetch(`/api/compras/stats?${params}`);
       if (res.ok) setStats(await res.json());
     } catch { /* ignore */ }
-  }, [restaurant, dateFrom, dateTo]);
+  }, [search, restaurant, supplier, category, dateFrom, dateTo]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -110,6 +126,7 @@ export default function ComprasPage() {
       if (search) params.set("search", search);
       if (restaurant) params.set("restaurant", restaurant);
       if (supplier) params.set("supplier", supplier);
+      if (category) params.set("category", category);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo) params.set("dateTo", dateTo);
 
@@ -123,19 +140,38 @@ export default function ComprasPage() {
       else if (view === "suppliers") setSuppliers(data.suppliers ?? []);
     } catch { setError("Error de conexión"); }
     finally { setLoading(false); }
-  }, [view, page, sortBy, sortDir, search, restaurant, supplier, dateFrom, dateTo]);
+  }, [view, page, sortBy, sortDir, search, restaurant, supplier, category, dateFrom, dateTo]);
 
   // ── Effects ───────────────────────────────────────────────────────
   useEffect(() => {
-    document.title = "Gastos de Alimentos — BOH";
+    document.title = "Gastos de Alimentos — CostoFlow";
     fetch("/api/config/dropdowns")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d?.restaurants) setRestaurantOptions(d.restaurants); })
       .catch(() => {});
   }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get("view");
+    if (viewParam === "items" || viewParam === "invoices" || viewParam === "suppliers" || viewParam === "analytics" || viewParam === "normalize") {
+      setView(viewParam);
+    }
+    const nextSearch = params.get("search");
+    const nextRestaurant = params.get("restaurant");
+    const nextSupplier = params.get("supplier");
+    const nextCategory = params.get("category");
+    const nextDateFrom = params.get("dateFrom");
+    const nextDateTo = params.get("dateTo");
+    if (nextSearch) setSearch(nextSearch);
+    if (nextRestaurant) setRestaurant(nextRestaurant);
+    if (nextSupplier) setSupplier(nextSupplier);
+    if (nextCategory) setCategory(nextCategory);
+    if (nextDateFrom) setDateFrom(nextDateFrom);
+    if (nextDateTo) setDateTo(nextDateTo);
+  }, []);
   useEffect(() => { if (view !== "analytics" && view !== "normalize") fetchData(); }, [fetchData, view]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
-  useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [view, search, restaurant, supplier, category, dateFrom, dateTo]);
   useEffect(() => { if (view === "analytics") fetchAnalytics(); }, [view, fetchAnalytics]);
   useEffect(() => { if (view === "normalize") fetchNormalize(); }, [view, fetchNormalize]);
   useEffect(() => {
@@ -184,7 +220,7 @@ export default function ComprasPage() {
   }
 
   function resetFilters() {
-    setSearch(""); setRestaurant(""); setSupplier(""); setDateFrom(""); setDateTo("");
+    setSearch(""); setRestaurant(""); setSupplier(""); setCategory(""); setDateFrom(""); setDateTo("");
     setSelectedMonth(""); setSelectedWeek(""); setActivePreset("");
   }
 
@@ -201,7 +237,7 @@ export default function ComprasPage() {
     else { setSortBy(col); setSortDir("desc"); }
   }
 
-  const hasFilters = !!(search || restaurant || supplier || dateFrom || dateTo || selectedMonth || selectedWeek);
+  const hasFilters = !!(search || restaurant || supplier || category || dateFrom || dateTo || selectedMonth || selectedWeek);
 
   // ─── Render ─────────────────────────────────────────────────────
   return (
@@ -231,8 +267,8 @@ export default function ComprasPage() {
         <div className="flex items-center justify-between gap-2 border-b" style={{ borderColor: "var(--border)" }}>
           <div className="flex items-center gap-0 -mb-px overflow-x-auto">
             {([
-              { key: "items", label: "Artículos" },
               { key: "invoices", label: "Facturas" },
+              { key: "items", label: "Artículos" },
               { key: "suppliers", label: "Proveedores" },
               { key: "analytics", label: "Análisis" },
               { key: "normalize", label: "Ingredientes" },
@@ -303,7 +339,8 @@ export default function ComprasPage() {
                 ...(search ? [{ label: `"${search}"`, onRemove: () => setSearch("") }] : []),
                 ...(restaurant ? [{ label: restaurantOptions.find((r) => r.value === restaurant)?.label ?? restaurant, onRemove: () => setRestaurant("") }] : []),
                 ...(supplier ? [{ label: supplier, onRemove: () => setSupplier("") }] : []),
-                ...(activePreset ? [{ label: activePreset === "thisMonth" ? "Este mes" : activePreset === "lastMonth" ? "Mes pasado" : activePreset === "last30" ? "Últ. 30d" : "YTD", onRemove: () => { setActivePreset(""); setDateFrom(""); setDateTo(""); } }] : []),
+                ...(category ? [{ label: category, onRemove: () => setCategory("") }] : []),
+                ...(activePreset ? [{ label: activePreset === "thisMonth" ? "Este mes" : activePreset === "lastMonth" ? "Mes pasado" : activePreset === "last30" ? "Últimos 30 días" : "Año actual", onRemove: () => { setActivePreset(""); setDateFrom(""); setDateTo(""); } }] : []),
                 ...(!activePreset && selectedMonth ? [{ label: selectedMonth, onRemove: () => { setSelectedMonth(""); setDateFrom(""); setDateTo(""); } }] : []),
                 ...(!activePreset && !selectedMonth && selectedWeek ? [{ label: `Sem. ${selectedWeek}`, onRemove: () => { setSelectedWeek(""); setDateFrom(""); setDateTo(""); } }] : []),
                 ...(!activePreset && !selectedMonth && !selectedWeek && dateFrom ? [{ label: `Desde ${dateFrom}`, onRemove: () => setDateFrom("") }] : []),

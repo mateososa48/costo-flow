@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante
+  xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
+  xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital"
+  Version="4.0"
+  Serie="PPD"
+  Folio="8801"
+  Fecha="2026-04-03T12:00:00"
+  Sello="SYNTHETIC_NOT_VALID"
+  NoCertificado="30001000000500000003"
+  Certificado="SYNTHETIC_NOT_VALID"
+  SubTotal="2500.00"
+  Moneda="MXN"
+  Total="2900.00"
+  TipoDeComprobante="I"
+  Exportacion="01"
+  MetodoPago="PPD"
+  FormaPago="99"
+  LugarExpedicion="06700">
+  <cfdi:Emisor Rfc="ABA260101ABC" Nombre="ABARROTES AL MAYOREO PRUEBA SA DE CV" RegimenFiscal="601"/>
+  <cfdi:Receptor Rfc="MOT260101ABC" Nombre="MOTIN RESTAURANTES PRUEBA SA DE CV" DomicilioFiscalReceptor="06700" RegimenFiscalReceptor="601" UsoCFDI="G03"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="50161500" Cantidad="50.000" ClaveUnidad="H87" Unidad="pz" Descripcion="Azucar refinada 1kg" ValorUnitario="50.00" Importe="2500.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="2500.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="400.00"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+  </cfdi:Conceptos>
+  <cfdi:Impuestos TotalImpuestosTrasladados="400.00">
+    <cfdi:Traslados>
+      <cfdi:Traslado Base="2500.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="400.00"/>
+    </cfdi:Traslados>
+  </cfdi:Impuestos>
+  <cfdi:Complemento>
+    <tfd:TimbreFiscalDigital Version="1.1" UUID="AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA" FechaTimbrado="2026-04-03T12:00:25" RfcProvCertif="PAC010101ABC" SelloCFD="SYNTHETIC_NOT_VALID" NoCertificadoSAT="30001000000500000004" SelloSAT="SYNTHETIC_NOT_VALID"/>
+  </cfdi:Complemento>
+</cfdi:Comprobante>
+

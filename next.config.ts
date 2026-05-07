@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: __dirname,
+  turbopack: {
+    root: __dirname,
+  },
   // Required for pdfjs-dist and @napi-rs/canvas in Node.js API routes
   serverExternalPackages: ["@napi-rs/canvas", "pdfjs-dist"],
   // Force Vercel's output file tracing to include the pdfjs worker files

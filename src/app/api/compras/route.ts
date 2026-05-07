@@ -10,6 +10,7 @@ const filtersSchema = z.object({
   search: z.string().optional(),
   restaurant: z.string().optional(),
   supplier: z.string().optional(),
+  category: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   sortBy: z.enum(["date", "description", "total", "supplier"]).default("date"),
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid parameters", details: parsed.error.flatten() }, { status: 422 });
   }
 
-  const { view, search, restaurant, supplier, dateFrom, dateTo, sortBy, sortDir, page, pageSize, showDeleted } = parsed.data;
+  const { view, search, restaurant, supplier, category, dateFrom, dateTo, sortBy, sortDir, page, pageSize, showDeleted } = parsed.data;
   const tenantId = session.tenantId;
 
   const FOOD_BEV_CUENTAPNL = ["Costo de Alimentos", "Costo de Bebidas sin Alcohol"];
@@ -78,6 +79,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
     if (supplier) query = query.eq("supplier", supplier);
+    if (category) query = query.eq("category", category);
     if (dateFrom) query = query.gte("invoice_date", dateFrom);
     if (dateTo) query = query.lte("invoice_date", dateTo);
 
@@ -159,6 +161,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (search) query = query.ilike("description", `%${search}%`);
     if (restaurant) query = query.eq("restaurant", restaurant);
     if (supplier) query = query.eq("supplier", supplier);
+    if (category) query = query.eq("category", category);
     if (dateFrom) query = query.gte("invoice_date", dateFrom);
     if (dateTo) query = query.lte("invoice_date", dateTo);
     query = query.order("supplier", { ascending: true }).order("invoice_date", { ascending: false });
@@ -212,6 +215,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (tenantId) query = query.eq("tenant_id", tenantId);
     query = query.is("deleted_at", null);
     if (restaurant) query = query.eq("restaurant", restaurant);
+    if (category) query = query.eq("category", category);
 
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

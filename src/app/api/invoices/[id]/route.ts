@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import getSupabase from "@/lib/supabase";
 import { getCostType } from "@/lib/cost-classification";
+import { isReadonly, readonlyForbidden } from "@/lib/authorization";
 
 const patchSchema = z.object({
   concepto:  z.string().optional(),
@@ -18,6 +19,7 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, { params }: Params): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (isReadonly(session)) return readonlyForbidden();
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
@@ -45,6 +47,7 @@ export async function GET(_req: NextRequest, { params }: Params): Promise<NextRe
 export async function PATCH(req: NextRequest, { params }: Params): Promise<NextResponse> {
   const session = await getSession();
   if (!session.isLoggedIn) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (isReadonly(session)) return readonlyForbidden();
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });

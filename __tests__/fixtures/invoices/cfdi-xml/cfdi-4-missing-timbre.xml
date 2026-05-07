@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante
+  xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
+  Version="4.0"
+  Serie="BAD"
+  Folio="1"
+  Fecha="2026-04-21T08:00:00"
+  Sello="SYNTHETIC_NOT_VALID"
+  NoCertificado="30001000000500000015"
+  Certificado="SYNTHETIC_NOT_VALID"
+  SubTotal="100.00"
+  Moneda="MXN"
+  Total="116.00"
+  TipoDeComprobante="I"
+  Exportacion="01"
+  MetodoPago="PUE"
+  FormaPago="01"
+  LugarExpedicion="06700">
+  <cfdi:Emisor Rfc="BAD260101ABC" Nombre="SIN TIMBRE PRUEBA SA DE CV" RegimenFiscal="601"/>
+  <cfdi:Receptor Rfc="MOT260101ABC" Nombre="MOTIN RESTAURANTES PRUEBA SA DE CV" DomicilioFiscalReceptor="06700" RegimenFiscalReceptor="601" UsoCFDI="G03"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="50111500" Cantidad="1" ClaveUnidad="H87" Unidad="pz" Descripcion="Documento sin timbre fiscal" ValorUnitario="100.00" Importe="100.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="100.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="16.00"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+  </cfdi:Conceptos>
+  <cfdi:Impuestos TotalImpuestosTrasladados="16.00">
+    <cfdi:Traslados>
+      <cfdi:Traslado Base="100.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="16.00"/>
+    </cfdi:Traslados>
+  </cfdi:Impuestos>
+</cfdi:Comprobante>

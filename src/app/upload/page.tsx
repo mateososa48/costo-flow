@@ -31,7 +31,7 @@ export default function UploadPage() {
   const [drafts, setDrafts] = useState<InvoiceDraft[]>([]);
 
   useEffect(() => {
-    document.title = "Subir facturas — BOH";
+    document.title = "Subir facturas — CostoFlow";
     try {
       const raw = localStorage.getItem("invoiceDrafts");
       if (raw) setDrafts(JSON.parse(raw));

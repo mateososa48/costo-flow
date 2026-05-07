@@ -19,8 +19,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Aventura Gourmet — Facturas",
-  description: "Sistema interno de procesamiento de facturas con IA",
+  title: "CostoFlow",
+  description: "Gestión de costos, facturas y compras para restaurantes",
 };
 
 // Inlined theme init — runs before paint to avoid flash
@@ -45,12 +45,13 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-[var(--bg)] text-[var(--text)] antialiased">
         <Providers>
-          <div className="relative min-h-screen">
-            {children}
-          </div>
+          {children}
         </Providers>
         <Analytics />
-      </body>
+      {/* impeccable-live-start */}
+<script src="http://localhost:8400/live.js"></script>
+{/* impeccable-live-end */}
+</body>
     </html>
   );
 }
