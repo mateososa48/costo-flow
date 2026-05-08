@@ -19,15 +19,6 @@ export default function AnalyticsView({
 }: AnalyticsViewProps) {
   return (
     <div className="space-y-4">
-      {!analyticsLoading && (
-        <div className="rounded-[var(--radius)] border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
-          style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-          <p className="text-sm font-medium" style={{ color: "var(--text)" }}>Inteligencia de costos</p>
-          <a href="/analytics" className="text-sm font-semibold" style={{ color: "var(--blue)" }}>
-            Abrir Inteligencia
-          </a>
-        </div>
-      )}
 
       {analyticsLoading && <SkeletonAnalytics />}
 
